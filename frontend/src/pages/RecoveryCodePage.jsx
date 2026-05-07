@@ -52,19 +52,18 @@ export default function RecoveryCodePage() {
       if (!data.success) {
         setCodeSecours("");
         window.setTimeout(() => codeInputRef.current?.focus(), 0);
-
-        if (
-          data.status === "cooldown" ||
-          data.status === "recovery_code_cooldown" ||
-          data.status === "recovery_code_direct_blocked"
-        ) {
-          setCooldownSeconds(Number(data.remaining_seconds) || 0);
-        }
-
+        setCooldownSeconds(Number(data.remaining_seconds) || 0);
         setError(data.message || "Code de secours invalide ou déjà utilisé.");
 
         if (data.status === "mfa_session_expired" || data.status === "missing_mfa_token") {
           sessionStorage.removeItem("mfa_token");
+        }
+
+        if (data.status === "recovery_code_direct_blocked") {
+          window.setTimeout(
+            () => navigate(data.redirect_to || "/auth/totp", { replace: true }),
+            1200
+          );
         }
 
         return;

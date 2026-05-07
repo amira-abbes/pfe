@@ -1,0 +1,176 @@
+[API] /elt/run/start user_mode=LOCAL_ONLY
+[SERVICE] start_runtime_run user_mode=LOCAL_ONLY
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[RUNTIME] import platform_runtime.elt_run_manager
+[ELT WATCH] status called
+[ELT WATCH] response JSON={'success': True, 'active': False, 'watching': False, 'oracle_ok': True, 'ftp_ok': False, 'oracle_label': 'Oracle connecté', 'ftp_label': 'FTP indisponible', 'state': 'STOPPED', 'state_label': 'Surveillance arrêtée', 'last_detected_file': None, 'message': 'Surveillance arrêtée', 'watch_dir': 'C:\\Users\\benab\\OneDrive\\Bureau\\PFE TT\\sos', 'timestamp': '2026-05-06 03:00:13'}
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[RUNTIME] import platform_runtime.elt_run_manager
+03:01:45 | [RUNTIME] Démarrage du pipeline via manager | mode=LOCAL_ONLY
+03:01:45 | ========================================================================================================================
+03:01:45 | SYSTÈME ELT ADAPTATIF MULTI-AGENTS
+[RUNTIME] start_run result={"success": true, "message": "Traitement ELT démarré avec succès."}
+03:01:45 | ========================================================================================================================
+INFO:     127.0.0.1:55259 - "POST /elt/run/start?user_mode=LOCAL_ONLY HTTP/1.1" 200 OK
+03:01:45 | Couche intelligente     : True
+03:01:45 | Workers parallèles      : 4
+03:01:45 | Mode utilisateur demandé: LOCAL_ONLY
+03:01:45 | [ConnectionAgent] Démarrage des tests de connexion...
+
+[TEST] Connexion Oracle...
+[ECHEC] Connexion Oracle impossible (0.0s)
+Cause : [Errno 2] No such file or directory: 'config.txt'
+
+[TEST] Connexion FTP...
+DEBUG FTP_HOST = '10.57.63.109'
+DEBUG FTP_PORT = 21
+DEBUG FTP_USER = 'RAFTP'
+DEBUG FTP_DIR  = '/home/sos/'
+03:01:46 | [RUNTIME] Impossible d'écrire current_run_status.json
+03:01:48 | [RUNTIME] Impossible d'écrire current_run_status.json
+03:01:50 | [RUNTIME] Impossible d'écrire current_run_status.json
+03:01:52 | [RUNTIME] Impossible d'écrire current_run_status.json
+03:01:54 | [RUNTIME] Impossible d'écrire current_run_status.json
+[ECHEC] Connexion FTP impossible (10.01s)
+Cause : timed out
+03:01:56 | [ConnectionAgent] Connexion Oracle indisponible
+03:01:56 | [ConnectionAgent] Connexion FTP indisponible
+03:01:56 | EVENT PUBLISHED | ts=2026-05-06 03:01:56 | run_id=-1778032905998 | source=ConnectionAgent | name=ORACLE_FAILED | payload={'oracle_ok': False}
+03:01:56 | [CONNEXION] Oracle indisponible
+03:01:56 | EVENT PUBLISHED | ts=2026-05-06 03:01:56 | run_id=-1778032905998 | source=ConnectionAgent | name=FTP_FAILED | payload={'ftp_ok': False}
+03:01:56 | [CONNEXION] FTP indisponible
+03:01:56 | [ConnectionAgent] Scénario choisi | scenario=STOP | user_mode=LOCAL_ONLY | oracle_ok=False | ftp_ok=False
+03:01:56 | EVENT PUBLISHED | ts=2026-05-06 03:01:56 | run_id=-1778032905998 | source=ConnectionAgent | name=SCENARIO_CHOSEN | payload={'scenario': 'STOP', 'user_mode': 'LOCAL_ONLY', 'oracle_ok': False, 'ftp_ok': False}
+03:01:56 | [SCÉNARIO] Choisi=STOP | oracle_ok=False | ftp_ok=False | mode=LOCAL_ONLY
+03:01:56 | [PIPELINE] Arrêt avant exécution : Oracle indisponible ou scénario STOP
+03:01:56 | ==========================================================================================================================================================================
+03:01:56 | EXECUTION REPORT
+03:01:56 | ==========================================================================================================================================================================
+03:01:56 | Run ID                    : -1778032905998
+03:01:56 | Generated At              : 2026-05-06 03:01:56
+03:01:56 | Scenario                  : STOP
+03:01:56 | User Mode                 : LOCAL_ONLY
+03:01:56 | Oracle OK                 : Non
+03:01:56 | FTP OK                    : Non
+03:01:56 | Global Status             : STOPPED
+03:01:56 | Global Status Description : Pipeline arrêté sans exécution complète, par exemple à cause d'une indisponibilité Oracle ou d'un arrêt contrôlé.
+03:01:56 | Total Tasks               : 11
+03:01:56 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:01:56 | PENDING            : 11
+03:01:56 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:01:56 | TASK_NAME          TASK_LABEL                             TABLE                        STATUS             RC    RETRY   FALLBACK   DUR(s)   START_TIME           END_TIME            
+03:01:56 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:01:56 | ADV_AGG            Agrégation avance                      ADV_AGG                      PENDING            None  0       N          None     None                 None                
+03:01:56 | ADV_ARCHIVE        Archivage historique avance            ARCHIVE ADV DETAIL           PENDING            None  0       N          None     None                 None                
+03:01:56 | ADV_DETAIL         Construction détail avance             TT_AVANCE_DETAIL             PENDING            None  0       N          None     None                 None                
+03:01:56 | ADV_LOAD           Chargement fichier avance              TT_AVANCE_TMP / TT_AVANCE    PENDING            None  0       N          None     None                 None                
+03:01:56 | DWH_LOAD           Chargement entrepôt de données         TT_DWH                       PENDING            None  0       N          None     None                 None                
+03:01:56 | PARC_SOS           Mise à jour parc SOS                   RA_PARC_SOS                  PENDING            None  0       N          None     None                 None                
+03:01:56 | REV_AGG            Agrégation remboursement               REV_AGG                      PENDING            None  0       N          None     None                 None                
+03:01:56 | REV_ARCHIVE        Archivage historique remboursement     ARCHIVE REV DETAIL           PENDING            None  0       N          None     None                 None                
+03:01:56 | REV_DETAIL         Construction détail remboursement      TT_REMBOURSEMENT_DETAIL      PENDING            None  0       N          None     None                 None                
+03:01:56 | REV_LOAD           Chargement fichier remboursement       TT_REMBOURSEMENT_TMP / TT_RE PENDING            None  0       N          None     None                 None                
+03:01:56 | SERVICE_DAILY      Mise à jour service journalier         TT_SERVICE_DAILY             PENDING            None  0       N          None     None                 None                
+03:01:56 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:01:56 | TASK STATUS LEGEND
+03:01:56 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:01:56 | PENDING            : Tâche en attente d'évaluation.
+03:01:56 | ==========================================================================================================================================================================
+03:01:56 | [PIPELINE] Erreur fatale : [Errno 2] No such file or directory: 'reports\\run_-1778032905998_STOP_20260506_030156.json'
+Traceback (most recent call last):
+  File "C:\Users\benab\PycharmProjects\PythonProject1\main_orchestrator.py", line 596, in main
+    return generate_platform_reports(
+  File "C:\Users\benab\PycharmProjects\PythonProject1\main_orchestrator.py", line 437, in generate_platform_reports
+    internal_json_path = export_run_json(summary)
+  File "C:\Users\benab\PycharmProjects\PythonProject1\orchestrator\reporting.py", line 331, in export_run_json
+    with open(file_path, "w", encoding="utf-8") as f:
+FileNotFoundError: [Errno 2] No such file or directory: 'reports\\run_-1778032905998_STOP_20260506_030156.json'
+03:01:56 | ==========================================================================================================================================================================
+03:01:56 | EXECUTION REPORT
+03:01:56 | ==========================================================================================================================================================================
+03:01:56 | Run ID                    : -1778032905998
+03:01:56 | Generated At              : 2026-05-06 03:01:56
+03:01:56 | Scenario                  : STOP
+03:01:56 | User Mode                 : LOCAL_ONLY
+03:01:56 | Oracle OK                 : Non
+03:01:56 | FTP OK                    : Non
+03:01:56 | Global Status             : FAILED
+03:01:56 | Global Status Description : Pipeline en échec : au moins une tâche critique a échoué définitivement.
+03:01:56 | Total Tasks               : 11
+03:01:56 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:01:56 | PENDING            : 11
+03:01:56 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:01:56 | TASK_NAME          TASK_LABEL                             TABLE                        STATUS             RC    RETRY   FALLBACK   DUR(s)   START_TIME           END_TIME            
+03:01:56 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:01:56 | ADV_AGG            Agrégation avance                      ADV_AGG                      PENDING            None  0       N          None     None                 None                
+03:01:56 | ADV_ARCHIVE        Archivage historique avance            ARCHIVE ADV DETAIL           PENDING            None  0       N          None     None                 None                
+03:01:56 | ADV_DETAIL         Construction détail avance             TT_AVANCE_DETAIL             PENDING            None  0       N          None     None                 None                
+03:01:56 | ADV_LOAD           Chargement fichier avance              TT_AVANCE_TMP / TT_AVANCE    PENDING            None  0       N          None     None                 None                
+03:01:56 | DWH_LOAD           Chargement entrepôt de données         TT_DWH                       PENDING            None  0       N          None     None                 None                
+03:01:56 | PARC_SOS           Mise à jour parc SOS                   RA_PARC_SOS                  PENDING            None  0       N          None     None                 None                
+03:01:56 | REV_AGG            Agrégation remboursement               REV_AGG                      PENDING            None  0       N          None     None                 None                
+03:01:56 | REV_ARCHIVE        Archivage historique remboursement     ARCHIVE REV DETAIL           PENDING            None  0       N          None     None                 None                
+03:01:56 | REV_DETAIL         Construction détail remboursement      TT_REMBOURSEMENT_DETAIL      PENDING            None  0       N          None     None                 None                
+03:01:56 | REV_LOAD           Chargement fichier remboursement       TT_REMBOURSEMENT_TMP / TT_RE PENDING            None  0       N          None     None                 None                
+03:01:56 | SERVICE_DAILY      Mise à jour service journalier         TT_SERVICE_DAILY             PENDING            None  0       N          None     None                 None                
+03:01:56 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:01:56 | TASK STATUS LEGEND
+03:01:56 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:01:56 | PENDING            : Tâche en attente d'évaluation.
+03:01:56 | ==========================================================================================================================================================================
+03:01:56 | [REPORTING] Impossible de générer le rapport métier
+Traceback (most recent call last):
+  File "C:\Users\benab\PycharmProjects\PythonProject1\main_orchestrator.py", line 596, in main
+    return generate_platform_reports(
+  File "C:\Users\benab\PycharmProjects\PythonProject1\main_orchestrator.py", line 437, in generate_platform_reports
+    internal_json_path = export_run_json(summary)
+  File "C:\Users\benab\PycharmProjects\PythonProject1\orchestrator\reporting.py", line 331, in export_run_json
+    with open(file_path, "w", encoding="utf-8") as f:
+FileNotFoundError: [Errno 2] No such file or directory: 'reports\\run_-1778032905998_STOP_20260506_030156.json'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\benab\PycharmProjects\PythonProject1\main_orchestrator.py", line 759, in main
+    print_employee_report(store, registry)
+  File "C:\Users\benab\PycharmProjects\PythonProject1\main_orchestrator.py", line 396, in print_employee_report
+    employee_report = builder.build()
+  File "C:\Users\benab\PycharmProjects\PythonProject1\intelligent_layer\employee_report_builder.py", line 337, in build
+    flows = self._extract_flows(tasks_snapshot)
+  File "C:\Users\benab\PycharmProjects\PythonProject1\intelligent_layer\employee_report_builder.py", line 191, in _extract_flows
+    cfg = load_config()
+  File "C:\Users\benab\PycharmProjects\PythonProject1\config.py", line 121, in load_config
+    cfg_txt = _read_kv_file(Path(config_path))
+  File "C:\Users\benab\PycharmProjects\PythonProject1\config.py", line 28, in _read_kv_file
+    with path.open("r", encoding="utf-8") as f:
+  File "C:\Users\benab\AppData\Local\Programs\Python\Python310\lib\pathlib.py", line 1119, in open
+    return self._accessor.open(self, mode, buffering, encoding, errors,
+FileNotFoundError: [Errno 2] No such file or directory: 'config.txt'
+03:01:56 | [RUNTIME] Erreur critique durant l'exécution du pipeline
+Traceback (most recent call last):
+  File "C:\Users\benab\PycharmProjects\PythonProject1\platform_runtime\elt_run_manager.py", line 88, in _run_wrapper
+    main(user_mode=user_mode, external_store=store, external_bus=bus)
+  File "C:\Users\benab\PycharmProjects\PythonProject1\main_orchestrator.py", line 596, in main
+    return generate_platform_reports(
+  File "C:\Users\benab\PycharmProjects\PythonProject1\main_orchestrator.py", line 437, in generate_platform_reports
+    internal_json_path = export_run_json(summary)
+  File "C:\Users\benab\PycharmProjects\PythonProject1\orchestrator\reporting.py", line 331, in export_run_json
+    with open(file_path, "w", encoding="utf-8") as f:
+FileNotFoundError: [Errno 2] No such file or directory: 'reports\\run_-1778032905998_STOP_20260506_030156.json'
+03:01:56 | [RUNTIME] Impossible d'écrire current_run_status.json
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[RUNTIME] import platform_runtime.elt_run_manager
+INFO:     127.0.0.1:55265 - "GET /elt/run/status HTTP/1.1" 200 OK
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[RUNTIME] import platform_runtime.elt_run_manager
+[ELT WATCH] start route called
+[WATCH] start requested
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[ELT WATCH] response JSON={'success': True, 'status': 'STARTED', 'message': 'Surveillance locale lancee. Ajoute un fichier dans le dossier surveille.', 'pid': 28604}
+[ELT WATCH] start route response={"success": true, "status": "STARTED", "message": "Surveillance locale lancee. Ajoute un fichier dans le dossier surveille.", "pid": 28604}
+INFO:     127.0.0.1:55268 - "POST /elt/watch/start HTTP/1.1" 200 OK
+[ELT WATCH] status route called
+[ELT WATCH] status called
+[ELT WATCH] response JSON={'success': True, 'active': True, 'watching': True, 'oracle_ok': True, 'ftp_ok': False, 'oracle_label': 'Oracle connecté', 'ftp_label': 'FTP indisponible', 'state': 'STOPPED', 'state_label': 'Surveillance arrêtée', 'last_detected_file': None, 'message': 'Surveillance arrêtée', 'watch_dir': 'C:\\Users\\benab\\OneDrive\\Bureau\\PFE TT\\sos', 'timestamp': '2026-05-06 03:00:13', 'pid': 28604}
+[ELT WATCH] status route response={"success": true, "active": true, "watching": true, "oracle_ok": true, "ftp_ok": false, "oracle_label": "Oracle connecté", "ftp_label": "FTP indisponible", "state": "STOPPED", "state_label": "Surveillance arrêtée", "last_detected_file": null, "message": "Surveillance arrêtée", "watch_dir": "C:\\Users\\benab\\OneDrive\\Bureau\\PFE TT\\sos", "timestamp": "2026-05-06 03:00:13", "pid": 28604}
+INFO:     127.0.0.1:55266 - "GET /elt/watch/status HTTP/1.1" 200 OK

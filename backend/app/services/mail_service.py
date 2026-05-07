@@ -663,6 +663,132 @@ class MailService:
             details={"type": "RECOVERY_BLOCKED", "role": role_value or None},
         )
 
+    def send_recovery_supervisor_action_email(
+        self,
+        to_email: str,
+        target_email: str,
+        target_role: str,
+        department: str,
+        disable_link: str,
+        regenerate_link: str,
+        db: Session | None = None,
+        utilisateur_id=None,
+        adresse_ip: str | None = None,
+        user_agent: str | None = None,
+        details: dict | None = None,
+    ) -> bool:
+        role_value = str(target_role or "").upper()
+        is_admin_target = role_value == "ADMIN"
+        subject = (
+            "Action requise - codes de secours invalides administrateur"
+            if is_admin_target
+            else "Action requise - codes de secours invalides"
+        )
+        target_label = "L’administrateur" if is_admin_target else "L’utilisateur"
+        disable_label = (
+            "Désactiver ce compte administrateur"
+            if is_admin_target
+            else "Désactiver ce compte"
+        )
+        message = (
+            f"{target_label} suivant a saisi plusieurs codes de secours invalides :\n\n"
+            f"Compte : {target_email}\n"
+            f"Département : {department}\n\n"
+            "Veuillez choisir l’action à appliquer."
+        )
+        html_body = render_layout(
+            subject,
+            multiline_html(message)
+            + action_button(disable_label, disable_link, danger=True)
+            + action_button("Régénérer et envoyer les codes", regenerate_link, danger=False)
+            + multiline_html("Ces liens sont valables pendant 15 minutes et utilisables une seule fois."),
+            danger=True,
+            use_background=True,
+        )
+        text_body = (
+            plain_security_alert(message)
+            + f"\n{disable_label} : {disable_link}\n"
+            + f"Régénérer et envoyer les codes : {regenerate_link}\n"
+            + "\nCes liens sont valables pendant 15 minutes et utilisables une seule fois.\n"
+        )
+        return self._send_and_record(
+            to_email=to_email,
+            subject=subject,
+            html_body=html_body,
+            text_body=text_body,
+            db=db,
+            utilisateur_id=utilisateur_id,
+            type_notification="RECOVERY_CODE_SUPERVISOR_ACTION",
+            adresse_ip=adresse_ip,
+            user_agent=user_agent,
+            details=details or {},
+            debug_details={**(details or {}), "disable_link": disable_link, "regenerate_link": regenerate_link},
+            attach_background=True,
+        )
+
+    def send_account_reactivation_request_email(
+        self,
+        to_email: str,
+        target_email: str,
+        target_role: str,
+        department: str,
+        reactivate_link: str,
+        ignore_link: str,
+        db: Session | None = None,
+        utilisateur_id=None,
+        adresse_ip: str | None = None,
+        user_agent: str | None = None,
+        details: dict | None = None,
+    ) -> bool:
+        role_value = str(target_role or "").upper()
+        is_admin_target = role_value == "ADMIN"
+        subject = (
+            "Demande de réactivation de compte administrateur"
+            if is_admin_target
+            else "Demande de réactivation de compte utilisateur"
+        )
+        target_label = "L’administrateur" if is_admin_target else "L’utilisateur"
+        reactivate_label = (
+            "Réactiver le compte administrateur"
+            if is_admin_target
+            else "Réactiver le compte"
+        )
+        message = (
+            f"{target_label} suivant demande la réactivation de son compte :\n\n"
+            f"Compte : {target_email}\n"
+            f"Département : {department}\n\n"
+            "Veuillez choisir l’action à appliquer."
+        )
+        html_body = render_layout(
+            subject,
+            multiline_html(message)
+            + action_button(reactivate_label, reactivate_link, danger=False)
+            + action_button("Ignorer la demande", ignore_link, danger=True)
+            + multiline_html("Ces liens sont valables pendant 24 heures et utilisables une seule fois."),
+            danger=False,
+            use_background=True,
+        )
+        text_body = (
+            plain_security_alert(message)
+            + f"\n{reactivate_label} : {reactivate_link}\n"
+            + f"Ignorer la demande : {ignore_link}\n"
+            + "\nCes liens sont valables pendant 24 heures et utilisables une seule fois.\n"
+        )
+        return self._send_and_record(
+            to_email=to_email,
+            subject=subject,
+            html_body=html_body,
+            text_body=text_body,
+            db=db,
+            utilisateur_id=utilisateur_id,
+            type_notification="ACCOUNT_REACTIVATION_REQUEST",
+            adresse_ip=adresse_ip,
+            user_agent=user_agent,
+            details=details or {},
+            debug_details={**(details or {}), "reactivate_link": reactivate_link, "ignore_link": ignore_link},
+            attach_background=True,
+        )
+
     def send_secure_recovery_required_email(
         self,
         to_email: str,
@@ -727,16 +853,19 @@ class MailService:
             return sent
 
         except Exception as exc:
-            self._record_notification(
-                db=db,
-                utilisateur_id=utilisateur_id,
-                type_notification=type_notification,
-                email_destinataire=to_email,
-                sujet=subject,
-                statut="ECHEC",
-                erreur_envoi=str(exc),
-                adresse_ip=adresse_ip,
-                user_agent=user_agent,
-                details=details or {},
-            )
+            try:
+                self._record_notification(
+                    db=db,
+                    utilisateur_id=utilisateur_id,
+                    type_notification=type_notification,
+                    email_destinataire=to_email,
+                    sujet=subject,
+                    statut="ECHEC",
+                    erreur_envoi=str(exc),
+                    adresse_ip=adresse_ip,
+                    user_agent=user_agent,
+                    details=details or {},
+                )
+            except Exception:
+                pass
             return False

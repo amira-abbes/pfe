@@ -1,5 +1,7 @@
 fastapi
 uvicorn[standard]
+python-dotenv
+watchdog
 sqlalchemy
 alembic
 psycopg[binary]
@@ -13,4 +15,7 @@ email-validator
 pyotp
 qrcode[pil]
 cryptography
-webauthn
+oracledb
+pandas
+requests
+reportlab

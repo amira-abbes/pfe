@@ -60,7 +60,6 @@ class AdminRepository:
             nombre_echecs_totp=0,
             blocage_password_jusqu_a=None,
             blocage_totp_jusqu_a=None,
-            webauthn_admin_active=False,
             date_creation=now,
             date_modification=now,
             date_desactivation=None,

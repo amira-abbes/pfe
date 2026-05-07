@@ -33,6 +33,12 @@ function cleanupMfaSession() {
   MFA_SESSION_KEYS.forEach((key) => sessionStorage.removeItem(key));
 }
 
+function userHasRight(user, code) {
+  if (!code) return true;
+  if (String(user?.role || "").toUpperCase() === "SUPER_ADMIN") return true;
+  return Array.isArray(user?.permissions) && user.permissions.includes(code);
+}
+
 export function AuthProvider({ children }) {
   const [accessToken, setAccessToken] = useState(() =>
     localStorage.getItem("access_token")
@@ -45,6 +51,7 @@ export function AuthProvider({ children }) {
 
   const isAuthenticated = Boolean(accessToken);
   const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(user?.role);
+  const hasRight = (code) => userHasRight(user, code);
 
   function saveLogin(token) {
     if (!token) {
@@ -122,6 +129,7 @@ export function AuthProvider({ children }) {
       loading,
       isAuthenticated,
       isAdmin,
+      hasRight,
       saveLogin,
       refreshMe,
       completeLogin,

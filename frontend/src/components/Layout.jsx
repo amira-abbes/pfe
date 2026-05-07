@@ -1,18 +1,20 @@
 import {
+  BarChart3,
   Building2,
   KeyRound,
   LayoutDashboard,
   LogOut,
   PlayCircle,
   ShieldCheck,
-  UserCog,
+  TrendingDown,
   Users,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
+
 import { useAuth } from "../context/AuthContext";
 
 export default function Layout({ children, title, subtitle }) {
-  const { user, logout } = useAuth();
+  const { hasRight, user, logout } = useAuth();
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
   const isAdmin = user?.role === "ADMIN";
   const isAdminArea = isAdmin || isSuperAdmin;
@@ -39,26 +41,68 @@ export default function Layout({ children, title, subtitle }) {
                 <KeyRound size={18} />
                 Sécurité
               </NavLink>
-              <NavLink to="/admin/users">
-                <Users size={18} />
-                Utilisateurs
-              </NavLink>
-              {isSuperAdmin && (
+              {hasRight("gerer_utilisateurs") && (
+                <NavLink to="/admin/users">
+                  <Users size={18} />
+                  Utilisateurs
+                </NavLink>
+              )}
+              {(hasRight("gerer_departements") || hasRight("gerer_roles")) && (
                 <NavLink to="/admin/departements">
                   <Building2 size={18} />
                   Départements & permissions
                 </NavLink>
               )}
-              <NavLink to="/admin/elt">
-                <PlayCircle size={18} />
-                Traitement ELT
-              </NavLink>
+              {hasRight("dashboard_service_sos") && (
+                <NavLink to="/dashboard/service-sos">
+                  <BarChart3 size={18} />
+                  Dashboard Service SOS
+                </NavLink>
+              )}
+              {hasRight("lancer_elt") && (
+                <NavLink to="/admin/elt">
+                  <PlayCircle size={18} />
+                  Traitement ELT
+                </NavLink>
+              )}
+              {hasRight("dashboard_parc_service_sos") && (
+                <NavLink to="/dashboard/parc-service-sos">
+                  <BarChart3 size={18} />
+                  Dashboard Parc Service SOS
+                </NavLink>
+              )}
+              {hasRight("dashboard_bad_debts") && (
+                <NavLink to="/dashboard/bad-debts">
+                  <TrendingDown size={18} />
+                  Dashboard Bad Debts
+                </NavLink>
+              )}
             </>
           ) : (
-            <NavLink to="/dashboard">
-              <LayoutDashboard size={18} />
-              Dashboard
-            </NavLink>
+            <>
+              <NavLink to="/dashboard">
+                <LayoutDashboard size={18} />
+                Dashboard
+              </NavLink>
+              {hasRight("dashboard_service_sos") && (
+                <NavLink to="/dashboard/service-sos">
+                  <BarChart3 size={18} />
+                  Dashboard Service SOS
+                </NavLink>
+              )}
+              {hasRight("dashboard_parc_service_sos") && (
+                <NavLink to="/dashboard/parc-service-sos">
+                  <BarChart3 size={18} />
+                  Dashboard Parc Service SOS
+                </NavLink>
+              )}
+              {hasRight("dashboard_bad_debts") && (
+                <NavLink to="/dashboard/bad-debts">
+                  <TrendingDown size={18} />
+                  Dashboard Bad Debts
+                </NavLink>
+              )}
+            </>
           )}
         </nav>
 
@@ -84,13 +128,6 @@ export default function Layout({ children, title, subtitle }) {
             <h1>{title}</h1>
             {subtitle && <p>{subtitle}</p>}
           </div>
-
-          {isAdminArea && !user?.webauthn_admin_active && (
-            <div className="warning-pill">
-              <UserCog size={18} />
-              WebAuthn non configuré pour actions sensibles
-            </div>
-          )}
         </header>
 
         {children}

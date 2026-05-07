@@ -77,6 +77,18 @@ export default function LoginPage() {
           return;
         }
 
+        if (data.status === "account_disabled") {
+          navigate(data.redirect_to || "/account-disabled", {
+            state: {
+              email: data.email || form.email,
+              role: data.role || "USER",
+              message: data.message,
+              can_request_reactivation: data.can_request_reactivation,
+            },
+          });
+          return;
+        }
+
         if (data.status === "password_cooldown") {
           setCooldownSeconds(Number(data.remaining_seconds) || 30);
           setError(data.message || "Veuillez patienter avant de réessayer.");

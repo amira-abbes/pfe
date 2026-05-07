@@ -1,0 +1,502 @@
+[API] /elt/run/start user_mode=LOCAL_ONLY
+[SERVICE] start_runtime_run user_mode=LOCAL_ONLY
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[RUNTIME] import platform_runtime.elt_run_manager
+[ELT WATCH] status called
+[ELT WATCH] response JSON={'success': True, 'active': False, 'watching': False, 'oracle_ok': True, 'ftp_ok': False, 'oracle_label': 'Oracle connecté', 'ftp_label': 'FTP indisponible', 'state': 'STOPPED', 'state_label': 'Surveillance arrêtée', 'last_detected_file': None, 'message': 'Surveillance arrêtée', 'watch_dir': 'C:\\Users\\benab\\OneDrive\\Bureau\\PFE TT\\sos', 'timestamp': '2026-05-06 03:00:13'}
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[RUNTIME] import platform_runtime.elt_run_manager
+03:03:47 | [RUNTIME] Démarrage du pipeline via manager | mode=LOCAL_ONLY
+03:03:47 | ========================================================================================================================
+[RUNTIME] start_run result={"success": true, "message": "Traitement ELT démarré avec succès."}
+03:03:47 | SYSTÈME ELT ADAPTATIF MULTI-AGENTS
+INFO:     127.0.0.1:61080 - "POST /elt/run/start?user_mode=LOCAL_ONLY HTTP/1.1" 200 OK
+03:03:47 | ========================================================================================================================
+03:03:47 | Couche intelligente     : True
+03:03:47 | Workers parallèles      : 4
+03:03:47 | Mode utilisateur demandé: LOCAL_ONLY
+03:03:47 | [ConnectionAgent] Démarrage des tests de connexion...
+
+[TEST] Connexion Oracle...
+[OK] Connexion Oracle réussie (0.11s)
+
+[TEST] Connexion FTP...
+DEBUG FTP_HOST = '10.57.63.109'
+DEBUG FTP_PORT = 21
+DEBUG FTP_USER = 'RAFTP'
+DEBUG FTP_DIR  = '/home/sos/'
+[ECHEC] Connexion FTP impossible (10.01s)
+Cause : timed out
+03:03:57 | [ConnectionAgent] Connexion Oracle OK
+03:03:57 | [ConnectionAgent] Connexion FTP indisponible
+03:03:57 | EVENT PUBLISHED | ts=2026-05-06 03:03:57 | run_id=-1778033027335 | source=ConnectionAgent | name=ORACLE_OK | payload={'oracle_ok': True}
+03:03:57 | [CONNEXION] Oracle disponible
+03:03:57 | EVENT PUBLISHED | ts=2026-05-06 03:03:57 | run_id=-1778033027335 | source=ConnectionAgent | name=FTP_FAILED | payload={'ftp_ok': False}
+03:03:57 | [CONNEXION] FTP indisponible
+03:03:57 | [ConnectionAgent] Scénario choisi | scenario=LOCAL_FALLBACK | user_mode=LOCAL_ONLY | oracle_ok=True | ftp_ok=False
+03:03:57 | EVENT PUBLISHED | ts=2026-05-06 03:03:57 | run_id=-1778033027335 | source=ConnectionAgent | name=SCENARIO_CHOSEN | payload={'scenario': 'LOCAL_FALLBACK', 'user_mode': 'LOCAL_ONLY', 'oracle_ok': True, 'ftp_ok': False}
+03:03:57 | [SCÉNARIO] Choisi=LOCAL_FALLBACK | oracle_ok=True | ftp_ok=False | mode=LOCAL_ONLY
+03:03:57 | [IA] Couche intelligente activée
+03:03:57 | [IA] Conseil scénario ignoré : choix manuel conservé | user_mode=LOCAL_ONLY | scenario=LOCAL_FALLBACK
+03:03:57 | Connexion RunLogger à Oracle...
+03:03:57 | Connexion RunLogger Oracle établie
+03:03:57 | Pipeline run créé | run_id=142 | scenario=LOCAL_FALLBACK | user_mode=LOCAL_ONLY | oracle_ok=True | ftp_ok=False
+03:03:57 | [IA] Couche intelligente activée
+03:03:57 | ====================================================================================================
+03:03:57 | [ParallelScheduler] DÉMARRAGE DU SCHEDULER PARALLÈLE
+03:03:57 | [ParallelScheduler] max_workers=4
+03:03:57 | ====================================================================================================
+03:03:57 | [DependencyAgent] Évaluation des dépendances
+03:03:57 | EVENT PUBLISHED | ts=2026-05-06 03:03:57 | run_id=142 | source=DependencyAgent | name=TASK_READY | payload={'task_name': 'ADV_LOAD'}
+03:03:57 | [PLANIFICATION] READY | tâche=Chargement fichier avance | table=TT_AVANCE_TMP / TT_AVANCE
+03:03:57 | EVENT PUBLISHED | ts=2026-05-06 03:03:57 | run_id=142 | source=DependencyAgent | name=TASK_READY | payload={'task_name': 'REV_LOAD'}
+03:03:57 | [PLANIFICATION] READY | tâche=Chargement fichier remboursement | table=TT_REMBOURSEMENT_TMP / TT_REMBOURSEMENT
+03:03:57 | [DependencyAgent] Tâches prêtes détectées | count=2 | tasks=['ADV_LOAD', 'REV_LOAD']
+03:03:57 | [ExecutionAgent] Exécution demandée | task=ADV_LOAD
+03:03:57 | [ParallelScheduler] Tâche lancée | task=ADV_LOAD | running_now=1
+03:03:57 | [ExecutionAgent] Lancement tâche | task=ADV_LOAD | mode=NORMAL | retry_count=0
+03:03:57 | [ExecutionAgent] Exécution demandée | task=REV_LOAD
+03:03:57 | [ParallelScheduler] Tâche lancée | task=REV_LOAD | running_now=2
+03:03:57 | EVENT PUBLISHED | ts=2026-05-06 03:03:57 | run_id=142 | source=ExecutionAgent | name=TASK_STARTED | payload={'task_name': 'ADV_LOAD', 'script_name': 'load_local_adv.py', 'retry_count': 0}
+03:03:57 | [ExecutionAgent] Lancement tâche | task=REV_LOAD | mode=NORMAL | retry_count=0
+03:03:57 | [ParallelScheduler] Exécutions parallèles actives | nb=2 | tasks=['ADV_LOAD', 'REV_LOAD']
+03:03:57 | [EXÉCUTION] START | tâche=Chargement fichier avance | table=TT_AVANCE_TMP / TT_AVANCE
+03:03:57 | EVENT PUBLISHED | ts=2026-05-06 03:03:57 | run_id=142 | source=ExecutionAgent | name=TASK_STARTED | payload={'task_name': 'REV_LOAD', 'script_name': 'load_local_rev.py', 'retry_count': 0}
+03:03:57 | [EXÉCUTION] START | tâche=Chargement fichier remboursement | table=TT_REMBOURSEMENT_TMP / TT_REMBOURSEMENT
+03:03:57 | Exécution script : load_local_adv.py | resolved_path=C:\Users\benab\PycharmProjects\PythonProject1\load_local_adv.py | cwd=C:\Users\benab\PycharmProjects\PythonProject1 | timeout=3600s
+03:03:57 | Exécution script : load_local_rev.py | resolved_path=C:\Users\benab\PycharmProjects\PythonProject1\load_local_rev.py | cwd=C:\Users\benab\PycharmProjects\PythonProject1 | timeout=3600s
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[RUNTIME] import platform_runtime.elt_run_manager
+INFO:     127.0.0.1:49851 - "GET /elt/run/status HTTP/1.1" 200 OK
+03:04:17 | AI decision insérée | run_id=142 | task=ADV_LOAD | type=TASK_MONITOR | proposed=CONTINUE | final=CONTINUE | approved=Y
+03:04:17 | EVENT PUBLISHED | ts=2026-05-06 03:04:17 | run_id=142 | source=ExecutionAgent | name=TASK_MONITORED | payload={'task_name': 'ADV_LOAD', 'health': 'OK', 'decision': 'CONTINUE', 'reason': '', 'confidence': 0.95, 'policy_final_action': 'CONTINUE', 'policy_reason': 'Décision monitor approuvée'}
+03:04:17 | [IA] Monitor | tâche=Chargement fichier avance | health=OK | decision=CONTINUE | policy=CONTINUE
+03:04:17 | [ExecutionAgent] Décision IA appliquée | task=ADV_LOAD | decision=CONTINUE
+03:04:17 | [ExecutionAgent] Tâche terminée avec succès | task=ADV_LOAD | rc=0
+03:04:17 | [EXÉCUTION] SUCCÈS | tâche=Chargement fichier avance | table=TT_AVANCE_TMP / TT_AVANCE | lignes=207370 | rc=0
+03:04:17 | [ParallelScheduler] Tâche terminée détectée | task=ADV_LOAD | remaining_running=1
+03:04:17 | [DependencyAgent] Évaluation des dépendances
+03:04:17 | EVENT PUBLISHED | ts=2026-05-06 03:04:17 | run_id=142 | source=DependencyAgent | name=TASK_READY | payload={'task_name': 'ADV_DETAIL'}
+03:04:17 | [PLANIFICATION] READY | tâche=Construction détail avance | table=TT_AVANCE_DETAIL
+03:04:17 | [DependencyAgent] Tâches prêtes détectées | count=1 | tasks=['ADV_DETAIL']
+03:04:17 | [ParallelScheduler] Tâche lancée | task=ADV_DETAIL | running_now=2
+03:04:17 | [ExecutionAgent] Exécution demandée | task=ADV_DETAIL
+03:04:17 | [ParallelScheduler] Exécutions parallèles actives | nb=2 | tasks=['REV_LOAD', 'ADV_DETAIL']
+03:04:17 | [ExecutionAgent] Lancement tâche | task=ADV_DETAIL | mode=NORMAL | retry_count=0
+03:04:17 | EVENT PUBLISHED | ts=2026-05-06 03:04:17 | run_id=142 | source=ExecutionAgent | name=TASK_STARTED | payload={'task_name': 'ADV_DETAIL', 'script_name': 'ADV_DETAIL.py', 'retry_count': 0}
+03:04:17 | [EXÉCUTION] START | tâche=Construction détail avance | table=TT_AVANCE_DETAIL
+03:04:17 | Exécution script : ADV_DETAIL.py | resolved_path=C:\Users\benab\PycharmProjects\PythonProject1\ADV_DETAIL.py | cwd=C:\Users\benab\PycharmProjects\PythonProject1 | timeout=3600s
+03:04:18 | AI decision insérée | run_id=142 | task=REV_LOAD | type=TASK_MONITOR | proposed=CONTINUE | final=CONTINUE | approved=Y
+03:04:18 | EVENT PUBLISHED | ts=2026-05-06 03:04:18 | run_id=142 | source=ExecutionAgent | name=TASK_MONITORED | payload={'task_name': 'REV_LOAD', 'health': 'OK', 'decision': 'CONTINUE', 'reason': '', 'confidence': 0.95, 'policy_final_action': 'CONTINUE', 'policy_reason': 'Décision monitor approuvée'}
+03:04:18 | [IA] Monitor | tâche=Chargement fichier remboursement | health=OK | decision=CONTINUE | policy=CONTINUE
+03:04:18 | [ExecutionAgent] Décision IA appliquée | task=REV_LOAD | decision=CONTINUE
+03:04:18 | [ExecutionAgent] Tâche terminée avec succès | task=REV_LOAD | rc=0
+03:04:18 | [EXÉCUTION] SUCCÈS | tâche=Chargement fichier remboursement | table=TT_REMBOURSEMENT_TMP / TT_REMBOURSEMENT | lignes=338861 | rc=0
+03:04:18 | [ParallelScheduler] Tâche terminée détectée | task=REV_LOAD | remaining_running=1
+03:04:18 | [DependencyAgent] Évaluation des dépendances
+03:04:18 | EVENT PUBLISHED | ts=2026-05-06 03:04:18 | run_id=142 | source=DependencyAgent | name=TASK_READY | payload={'task_name': 'REV_DETAIL'}
+03:04:18 | [PLANIFICATION] READY | tâche=Construction détail remboursement | table=TT_REMBOURSEMENT_DETAIL
+03:04:18 | [DependencyAgent] Tâches prêtes détectées | count=1 | tasks=['REV_DETAIL']
+03:04:18 | [ParallelScheduler] Tâche lancée | task=REV_DETAIL | running_now=2
+03:04:18 | [ExecutionAgent] Exécution demandée | task=REV_DETAIL
+03:04:18 | [ParallelScheduler] Exécutions parallèles actives | nb=2 | tasks=['ADV_DETAIL', 'REV_DETAIL']
+03:04:18 | [ExecutionAgent] Lancement tâche | task=REV_DETAIL | mode=NORMAL | retry_count=0
+03:04:18 | EVENT PUBLISHED | ts=2026-05-06 03:04:18 | run_id=142 | source=ExecutionAgent | name=TASK_STARTED | payload={'task_name': 'REV_DETAIL', 'script_name': 'REV_DETAIL.py', 'retry_count': 0}
+03:04:18 | [EXÉCUTION] START | tâche=Construction détail remboursement | table=TT_REMBOURSEMENT_DETAIL
+03:04:18 | Exécution script : REV_DETAIL.py | resolved_path=C:\Users\benab\PycharmProjects\PythonProject1\REV_DETAIL.py | cwd=C:\Users\benab\PycharmProjects\PythonProject1 | timeout=3600s
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[RUNTIME] import platform_runtime.elt_run_manager
+INFO:     127.0.0.1:49992 - "POST /elt/watch/start HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49993 - "GET /elt/latest-report HTTP/1.1" 200 OK
+[PDF] build_pdf_report started
+[PDF] build_pdf_report success
+INFO:     127.0.0.1:49994 - "GET /elt/download/pdf HTTP/1.1" 200 OK
+03:04:50 | AI decision insérée | run_id=142 | task=ADV_DETAIL | type=TASK_MONITOR | proposed=CONTINUE | final=CONTINUE | approved=Y
+03:04:50 | EVENT PUBLISHED | ts=2026-05-06 03:04:50 | run_id=142 | source=ExecutionAgent | name=TASK_MONITORED | payload={'task_name': 'ADV_DETAIL', 'health': 'OK', 'decision': 'CONTINUE', 'reason': '', 'confidence': 0.95, 'policy_final_action': 'CONTINUE', 'policy_reason': 'Décision monitor approuvée'}
+03:04:50 | [IA] Monitor | tâche=Construction détail avance | health=OK | decision=CONTINUE | policy=CONTINUE
+03:04:50 | [ExecutionAgent] Décision IA appliquée | task=ADV_DETAIL | decision=CONTINUE
+03:04:50 | [ExecutionAgent] Tâche terminée avec succès | task=ADV_DETAIL | rc=0
+03:04:50 | [EXÉCUTION] SUCCÈS | tâche=Construction détail avance | table=TT_AVANCE_DETAIL | lignes=207370 | rc=0
+03:04:50 | [ParallelScheduler] Tâche terminée détectée | task=ADV_DETAIL | remaining_running=1
+03:04:50 | [DependencyAgent] Évaluation des dépendances
+03:04:50 | EVENT PUBLISHED | ts=2026-05-06 03:04:50 | run_id=142 | source=DependencyAgent | name=TASK_READY | payload={'task_name': 'ADV_AGG'}
+03:04:50 | [PLANIFICATION] READY | tâche=Agrégation avance | table=ADV_AGG
+03:04:50 | EVENT PUBLISHED | ts=2026-05-06 03:04:50 | run_id=142 | source=DependencyAgent | name=TASK_READY | payload={'task_name': 'PARC_SOS'}
+03:04:50 | [PLANIFICATION] READY | tâche=Mise à jour parc SOS | table=RA_PARC_SOS
+03:04:50 | [DependencyAgent] Tâches prêtes détectées | count=2 | tasks=['ADV_AGG', 'PARC_SOS']
+03:04:50 | [ParallelScheduler] Tâche lancée | task=ADV_AGG | running_now=2
+03:04:50 | [ExecutionAgent] Exécution demandée | task=ADV_AGG
+03:04:50 | [ExecutionAgent] Exécution demandée | task=PARC_SOS
+03:04:50 | [ParallelScheduler] Tâche lancée | task=PARC_SOS | running_now=3
+03:04:50 | [ExecutionAgent] Lancement tâche | task=ADV_AGG | mode=NORMAL | retry_count=0
+03:04:50 | [ExecutionAgent] Lancement tâche | task=PARC_SOS | mode=NORMAL | retry_count=0
+03:04:50 | [ParallelScheduler] Exécutions parallèles actives | nb=3 | tasks=['REV_DETAIL', 'ADV_AGG', 'PARC_SOS']
+03:04:50 | EVENT PUBLISHED | ts=2026-05-06 03:04:50 | run_id=142 | source=ExecutionAgent | name=TASK_STARTED | payload={'task_name': 'ADV_AGG', 'script_name': 'ADV_AGG.py', 'retry_count': 0}
+03:04:50 | EVENT PUBLISHED | ts=2026-05-06 03:04:50 | run_id=142 | source=ExecutionAgent | name=TASK_STARTED | payload={'task_name': 'PARC_SOS', 'script_name': 'PARC_SOS.py', 'retry_count': 0}
+03:04:50 | [EXÉCUTION] START | tâche=Agrégation avance | table=ADV_AGG
+03:04:50 | [EXÉCUTION] START | tâche=Mise à jour parc SOS | table=RA_PARC_SOS
+03:04:50 | Exécution script : PARC_SOS.py | resolved_path=C:\Users\benab\PycharmProjects\PythonProject1\PARC_SOS.py | cwd=C:\Users\benab\PycharmProjects\PythonProject1 | timeout=3600s
+03:04:50 | Exécution script : ADV_AGG.py | resolved_path=C:\Users\benab\PycharmProjects\PythonProject1\ADV_AGG.py | cwd=C:\Users\benab\PycharmProjects\PythonProject1 | timeout=3600s
+03:04:51 | [ExecutionAgent] Incident détecté | task=ADV_AGG | classified_status=FAILED_FATAL | rc=1
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[RUNTIME] import platform_runtime.elt_run_manager
+INFO:     127.0.0.1:62898 - "GET /elt/run/status HTTP/1.1" 200 OK
+03:04:57 | AI decision insérée | run_id=142 | task=ADV_AGG | type=TASK_MONITOR | proposed=STOP | final=STOP | approved=Y
+03:04:57 | EVENT PUBLISHED | ts=2026-05-06 03:04:57 | run_id=142 | source=ExecutionAgent | name=TASK_MONITORED | payload={'task_name': 'ADV_AGG', 'health': 'CRITICAL', 'decision': 'STOP', 'reason': "UnicodeEncodeError: 'charmap' codec can't encode characters in position 2-91: character maps to <undefined>", 'confidence': 0.95, 'policy_final_action': 'STOP', 'policy_reason': 'Décision monitor approuvée'}
+03:04:57 | [IA] Monitor | tâche=Agrégation avance | health=CRITICAL | decision=STOP | policy=STOP
+03:04:57 | [ExecutionAgent] Décision IA appliquée | task=ADV_AGG | decision=STOP
+03:04:57 | EVENT PUBLISHED | ts=2026-05-06 03:04:57 | run_id=142 | source=ExecutionAgent | name=TASK_FAILED_FINAL | payload={'task_name': 'ADV_AGG', 'return_code': 1, 'error_message': "STOP IA: UnicodeEncodeError: 'charmap' codec can't encode characters in position 2-91: character maps to <undefined>"}
+03:04:57 | [EXÉCUTION] ÉCHEC FINAL | tâche=Agrégation avance | rc=1
+03:04:57 | [ParallelScheduler] Tâche terminée détectée | task=ADV_AGG | remaining_running=2
+03:04:57 | [DependencyAgent] Évaluation des dépendances
+03:04:57 | EVENT PUBLISHED | ts=2026-05-06 03:04:57 | run_id=142 | source=DependencyAgent | name=TASK_BLOCKED | payload={'task_name': 'DWH_LOAD', 'reason': 'Bloquée car dépendance en FAILED/BLOCKED : ADV_AGG'}
+03:04:57 | [EXÉCUTION] BLOQUÉE | tâche=Chargement DWH | table=TT_DWH | cause=Bloquée car dépendance en FAILED/BLOCKED : ADV_AGG
+03:04:57 | EVENT PUBLISHED | ts=2026-05-06 03:04:57 | run_id=142 | source=DependencyAgent | name=TASK_BLOCKED | payload={'task_name': 'ADV_ARCHIVE', 'reason': 'Bloquée car dépendance en FAILED/BLOCKED : ADV_AGG'}
+03:04:57 | [EXÉCUTION] BLOQUÉE | tâche=Archivage avance | table=ARCHIVE ADV DETAIL | cause=Bloquée car dépendance en FAILED/BLOCKED : ADV_AGG
+03:04:57 | [DependencyAgent] Propagation terminale appliquée | count=2
+03:04:59 | AI decision insérée | run_id=142 | task=PARC_SOS | type=TASK_MONITOR | proposed=CONTINUE | final=CONTINUE | approved=Y
+03:04:59 | EVENT PUBLISHED | ts=2026-05-06 03:04:59 | run_id=142 | source=ExecutionAgent | name=TASK_MONITORED | payload={'task_name': 'PARC_SOS', 'health': 'OK', 'decision': 'CONTINUE', 'reason': '', 'confidence': 0.95, 'policy_final_action': 'CONTINUE', 'policy_reason': 'Décision monitor approuvée'}
+03:04:59 | [IA] Monitor | tâche=Mise à jour parc SOS | health=OK | decision=CONTINUE | policy=CONTINUE
+03:04:59 | [ExecutionAgent] Décision IA appliquée | task=PARC_SOS | decision=CONTINUE
+03:04:59 | [ExecutionAgent] Tâche terminée avec succès | task=PARC_SOS | rc=0
+03:04:59 | [EXÉCUTION] SUCCÈS | tâche=Mise à jour parc SOS | table=RA_PARC_SOS | lignes=- | rc=0
+03:04:59 | [ParallelScheduler] Tâche terminée détectée | task=PARC_SOS | remaining_running=1
+03:04:59 | [DependencyAgent] Évaluation des dépendances
+03:05:29 | AI decision insérée | run_id=142 | task=REV_DETAIL | type=TASK_MONITOR | proposed=CONTINUE | final=CONTINUE | approved=Y
+03:05:29 | EVENT PUBLISHED | ts=2026-05-06 03:05:29 | run_id=142 | source=ExecutionAgent | name=TASK_MONITORED | payload={'task_name': 'REV_DETAIL', 'health': 'OK', 'decision': 'CONTINUE', 'reason': '', 'confidence': 0.95, 'policy_final_action': 'CONTINUE', 'policy_reason': 'Décision monitor approuvée'}
+03:05:29 | [IA] Monitor | tâche=Construction détail remboursement | health=OK | decision=CONTINUE | policy=CONTINUE
+03:05:29 | [ExecutionAgent] Décision IA appliquée | task=REV_DETAIL | decision=CONTINUE
+03:05:29 | [ExecutionAgent] Tâche terminée avec succès | task=REV_DETAIL | rc=0
+03:05:29 | [EXÉCUTION] SUCCÈS | tâche=Construction détail remboursement | table=TT_REMBOURSEMENT_DETAIL | lignes=338861 | rc=0
+03:05:29 | [ParallelScheduler] Tâche terminée détectée | task=REV_DETAIL | remaining_running=0
+03:05:29 | [DependencyAgent] Évaluation des dépendances
+03:05:29 | EVENT PUBLISHED | ts=2026-05-06 03:05:29 | run_id=142 | source=DependencyAgent | name=TASK_READY | payload={'task_name': 'REV_AGG'}
+03:05:29 | [PLANIFICATION] READY | tâche=Agrégation remboursement | table=REV_AGG
+03:05:29 | EVENT PUBLISHED | ts=2026-05-06 03:05:29 | run_id=142 | source=DependencyAgent | name=TASK_READY | payload={'task_name': 'SERVICE_DAILY'}
+03:05:29 | [PLANIFICATION] READY | tâche=Mise à jour service journalier | table=TT_SERVICE_DAILY
+03:05:29 | [DependencyAgent] Tâches prêtes détectées | count=2 | tasks=['REV_AGG', 'SERVICE_DAILY']
+03:05:29 | [ParallelScheduler] Tâche lancée | task=REV_AGG | running_now=1
+03:05:29 | [ExecutionAgent] Exécution demandée | task=REV_AGG
+03:05:29 | [ParallelScheduler] Tâche lancée | task=SERVICE_DAILY | running_now=2
+03:05:29 | [ExecutionAgent] Exécution demandée | task=SERVICE_DAILY
+03:05:29 | [ExecutionAgent] Lancement tâche | task=REV_AGG | mode=NORMAL | retry_count=0
+03:05:29 | [ParallelScheduler] Exécutions parallèles actives | nb=2 | tasks=['REV_AGG', 'SERVICE_DAILY']
+03:05:29 | [ExecutionAgent] Lancement tâche | task=SERVICE_DAILY | mode=NORMAL | retry_count=0
+03:05:29 | EVENT PUBLISHED | ts=2026-05-06 03:05:29 | run_id=142 | source=ExecutionAgent | name=TASK_STARTED | payload={'task_name': 'REV_AGG', 'script_name': 'REV_AGG.py', 'retry_count': 0}
+03:05:29 | EVENT PUBLISHED | ts=2026-05-06 03:05:29 | run_id=142 | source=ExecutionAgent | name=TASK_STARTED | payload={'task_name': 'SERVICE_DAILY', 'script_name': 'SERVICE_DAILY.py', 'retry_count': 0}
+03:05:29 | [EXÉCUTION] START | tâche=Agrégation remboursement | table=REV_AGG
+03:05:29 | [EXÉCUTION] START | tâche=Mise à jour service journalier | table=TT_SERVICE_DAILY
+03:05:29 | Exécution script : REV_AGG.py | resolved_path=C:\Users\benab\PycharmProjects\PythonProject1\REV_AGG.py | cwd=C:\Users\benab\PycharmProjects\PythonProject1 | timeout=3600s
+03:05:29 | Exécution script : SERVICE_DAILY.py | resolved_path=C:\Users\benab\PycharmProjects\PythonProject1\SERVICE_DAILY.py | cwd=C:\Users\benab\PycharmProjects\PythonProject1 | timeout=3600s
+03:05:30 | [ExecutionAgent] Incident détecté | task=REV_AGG | classified_status=FAILED_FATAL | rc=1
+03:05:36 | AI decision insérée | run_id=142 | task=REV_AGG | type=TASK_MONITOR | proposed=STOP | final=STOP | approved=Y
+03:05:36 | EVENT PUBLISHED | ts=2026-05-06 03:05:36 | run_id=142 | source=ExecutionAgent | name=TASK_MONITORED | payload={'task_name': 'REV_AGG', 'health': 'CRITICAL', 'decision': 'STOP', 'reason': "UnicodeEncodeError: 'charmap' codec can't encode characters in position 2-91: character maps to <undefined>", 'confidence': 0.95, 'policy_final_action': 'STOP', 'policy_reason': 'Décision monitor approuvée'}
+03:05:36 | [IA] Monitor | tâche=Agrégation remboursement | health=CRITICAL | decision=STOP | policy=STOP
+03:05:36 | [ExecutionAgent] Décision IA appliquée | task=REV_AGG | decision=STOP
+03:05:36 | EVENT PUBLISHED | ts=2026-05-06 03:05:36 | run_id=142 | source=ExecutionAgent | name=TASK_FAILED_FINAL | payload={'task_name': 'REV_AGG', 'return_code': 1, 'error_message': "STOP IA: UnicodeEncodeError: 'charmap' codec can't encode characters in position 2-91: character maps to <undefined>"}
+03:05:36 | [EXÉCUTION] ÉCHEC FINAL | tâche=Agrégation remboursement | rc=1
+03:05:36 | [ParallelScheduler] Tâche terminée détectée | task=REV_AGG | remaining_running=1
+03:05:36 | [DependencyAgent] Évaluation des dépendances
+03:05:36 | EVENT PUBLISHED | ts=2026-05-06 03:05:36 | run_id=142 | source=DependencyAgent | name=TASK_BLOCKED | payload={'task_name': 'REV_ARCHIVE', 'reason': 'Bloquée car dépendance en FAILED/BLOCKED : REV_AGG'}
+03:05:36 | [EXÉCUTION] BLOQUÉE | tâche=Archivage remboursement | table=ARCHIVE REV DETAIL | cause=Bloquée car dépendance en FAILED/BLOCKED : REV_AGG
+03:05:36 | [DependencyAgent] Propagation terminale appliquée | count=1
+03:05:38 | AI decision insérée | run_id=142 | task=SERVICE_DAILY | type=TASK_MONITOR | proposed=CONTINUE | final=CONTINUE | approved=Y
+03:05:38 | EVENT PUBLISHED | ts=2026-05-06 03:05:38 | run_id=142 | source=ExecutionAgent | name=TASK_MONITORED | payload={'task_name': 'SERVICE_DAILY', 'health': 'OK', 'decision': 'CONTINUE', 'reason': '', 'confidence': 0.95, 'policy_final_action': 'CONTINUE', 'policy_reason': 'Décision monitor approuvée'}
+03:05:38 | [IA] Monitor | tâche=Mise à jour service journalier | health=OK | decision=CONTINUE | policy=CONTINUE
+03:05:38 | [ExecutionAgent] Décision IA appliquée | task=SERVICE_DAILY | decision=CONTINUE
+03:05:38 | [ExecutionAgent] Tâche terminée avec succès | task=SERVICE_DAILY | rc=0
+03:05:38 | EVENT PUBLISHED | ts=2026-05-06 03:05:38 | run_id=142 | source=ExecutionAgent | name=TASK_COMPLETED | payload={'task_name': 'SERVICE_DAILY', 'script_name': 'SERVICE_DAILY.py', 'return_code': 0, 'stdout': ''}
+03:05:38 | [EXÉCUTION] SUCCÈS | tâche=Mise à jour service journalier | table=TT_SERVICE_DAILY | lignes=- | rc=0
+03:05:38 | [ParallelScheduler] Tâche terminée détectée | task=SERVICE_DAILY | remaining_running=0
+03:05:38 | [DependencyAgent] Évaluation des dépendances
+03:05:38 | [ParallelScheduler] Plus aucune tâche en attente, prête ou active.
+03:05:38 | [ParallelScheduler] Statut global final = FAILED | failed_tasks=['ADV_AGG', 'REV_AGG']
+03:05:38 | EVENT PUBLISHED | ts=2026-05-06 03:05:38 | run_id=142 | source=ParallelScheduler | name=PIPELINE_FINISHED | payload={'global_status': 'FAILED'}
+03:05:38 | [PIPELINE] Terminé | statut_global=FAILED
+03:05:38 | ====================================================================================================
+03:05:38 | [ParallelScheduler] FIN DU SCHEDULER PARALLÈLE
+03:05:38 | ====================================================================================================
+03:05:43 | AI decision insérée | run_id=142 | task=GLOBAL | type=BUSINESS_VALIDATION | proposed=BUSINESS_INCONSISTENT | final=BUSINESS_INCONSISTENT | approved=Y
+03:05:43 | EVENT PUBLISHED | ts=2026-05-06 03:05:43 | run_id=142 | source=IntelligentOrchestratorBridge | name=BUSINESS_VALIDATED | payload={'business_status': 'BUSINESS_INCONSISTENT', 'final_business_status': 'BUSINESS_INCONSISTENT', 'reason': 'ADV_AGG et REV_AGG ont échoué avec UnicodeEncodeError.', 'confidence': 0.95, 'policy_reason': 'Validation métier IA approuvée'}
+03:05:43 | [IA] Validation métier | statut=BUSINESS_INCONSISTENT | final=BUSINESS_INCONSISTENT | raison=ADV_AGG et REV_AGG ont échoué avec UnicodeEncodeError.
+03:05:43 | Pipeline run mis à jour | run_id=142 | global_status=FAILED | total=11 | success=6 | failed=2 | blocked=3 | no_data=0
+03:05:43 | ==========================================================================================================================================================================
+03:05:43 | EXECUTION REPORT
+03:05:43 | ==========================================================================================================================================================================
+03:05:43 | Run ID                    : 142
+03:05:43 | Generated At              : 2026-05-06 03:05:43
+03:05:43 | Scenario                  : LOCAL_FALLBACK
+03:05:43 | User Mode                 : LOCAL_ONLY
+03:05:43 | Oracle OK                 : Oui
+03:05:43 | FTP OK                    : Non
+03:05:43 | Global Status             : FAILED
+03:05:43 | Global Status Description : Pipeline en échec : au moins une tâche critique a échoué définitivement.
+03:05:43 | Total Tasks               : 11
+03:05:43 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:05:43 | BLOCKED            : 3
+03:05:43 | FAILED             : 2
+03:05:43 | SUCCESS            : 6
+03:05:43 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:05:43 | TASK_NAME          TASK_LABEL                             TABLE                        STATUS             RC    RETRY   FALLBACK   DUR(s)   START_TIME           END_TIME            
+03:05:43 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:05:43 | ADV_AGG            Agrégation avance                      ADV_AGG                      FAILED             1     0       N          7        2026-05-06 03:04:50  2026-05-06 03:04:57 
+03:05:43 | ADV_ARCHIVE        Archivage historique avance            ARCHIVE ADV DETAIL           BLOCKED            None  0       N          None     None                 2026-05-06 03:04:57 
+03:05:43 | ADV_DETAIL         Construction détail avance             TT_AVANCE_DETAIL             SUCCESS            0     0       N          33       2026-05-06 03:04:17  2026-05-06 03:04:50 
+03:05:43 | ADV_LOAD           Chargement fichier avance              TT_AVANCE_TMP / TT_AVANCE    SUCCESS            0     0       N          20       2026-05-06 03:03:57  2026-05-06 03:04:17 
+03:05:43 | DWH_LOAD           Chargement entrepôt de données         TT_DWH                       BLOCKED            None  0       N          None     None                 2026-05-06 03:04:57 
+03:05:43 | PARC_SOS           Mise à jour parc SOS                   RA_PARC_SOS                  SUCCESS            0     0       N          9        2026-05-06 03:04:50  2026-05-06 03:04:59 
+03:05:43 | REV_AGG            Agrégation remboursement               REV_AGG                      FAILED             1     0       N          7        2026-05-06 03:05:29  2026-05-06 03:05:36 
+03:05:43 | REV_ARCHIVE        Archivage historique remboursement     ARCHIVE REV DETAIL           BLOCKED            None  0       N          None     None                 2026-05-06 03:05:36 
+03:05:43 | REV_DETAIL         Construction détail remboursement      TT_REMBOURSEMENT_DETAIL      SUCCESS            0     0       N          71       2026-05-06 03:04:18  2026-05-06 03:05:29 
+03:05:43 | REV_LOAD           Chargement fichier remboursement       TT_REMBOURSEMENT_TMP / TT_RE SUCCESS            0     0       N          21       2026-05-06 03:03:57  2026-05-06 03:04:18 
+03:05:43 | SERVICE_DAILY      Mise à jour service journalier         TT_SERVICE_DAILY             SUCCESS            0     0       N          9        2026-05-06 03:05:29  2026-05-06 03:05:38 
+03:05:43 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:05:43 | TASK STATUS LEGEND
+03:05:43 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:05:43 | BLOCKED            : Tâche non exécutable car une dépendance en échec bloque son lancement.
+03:05:43 | FAILED             : Tâche terminée en échec définitif.
+03:05:43 | SUCCESS            : Tâche terminée avec succès.
+03:05:43 | ==========================================================================================================================================================================
+03:05:43 | ========================================================================================================================
+03:05:43 | RAPPORT MÉTIER FINAL
+03:05:43 | ========================================================================================================================
+03:05:43 | Run ID                 : 142
+03:05:43 | Titre rapport          : Traitement des données du service SOS Solde
+03:05:43 | Scenario               : LOCAL_FALLBACK
+03:05:43 | Global Status          : FAILED
+03:05:43 | Conclusion             : Traitement échoué
+03:05:43 | Cause éventuelle       : Arrêt demandé par la supervision IA : UnicodeEncodeError: 'charmap' codec can't encode characters in position 2-91: character maps to <undefined>
+03:05:43 | Tables mises à jour    : TT_AVANCE, TT_REMBOURSEMENT, TT_AVANCE_DETAIL, TT_REMBOURSEMENT_DETAIL, TT_SERVICE_DAILY, RA_PARC_SOS
+03:05:43 | Fichiers               : Aucun fichier remonté
+03:05:43 | Résumé employé         : Traitement échoué. Scénario utilisé : LOCAL_FALLBACK. Statut des flux : Aucun fichier remonté. Tables mises à jour : TT_AVANCE, TT_REMBOURSEMENT, TT_AVANCE_DETAIL, TT_REMBOURSEMENT_DETAIL, TT_SERVICE_DAILY, RA_PARC_SOS. Cause : Arrêt demandé par la supervision IA : UnicodeEncodeError: 'charmap' codec can't encode characters in position 2-91: character maps to <undefined>.
+03:05:43 | ========================================================================================================================
+03:05:43 | Fermeture connexion RunLogger
+03:05:43 | [RUNTIME] Fin du pipeline via manager
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[RUNTIME] import platform_runtime.elt_run_manager
+INFO:     127.0.0.1:50725 - "GET /elt/run/status HTTP/1.1" 200 OK
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[ELT API] chdir to C:\Users\benab\PycharmProjects\PythonProject1
+
+[TEST] Connexion Oracle...
+[OK] Connexion Oracle réussie (0.06s)
+
+[TEST] Connexion FTP...
+DEBUG FTP_HOST = '10.57.63.109'
+DEBUG FTP_PORT = 21
+DEBUG FTP_USER = 'RAFTP'
+DEBUG FTP_DIR  = '/home/sos/'
+[ECHEC] Connexion FTP impossible (10.0s)
+Cause : timed out
+INFO:     127.0.0.1:54607 - "GET /elt/check-connections HTTP/1.1" 200 OK
+[API] /elt/run/start user_mode=LOCAL_ONLY
+[SERVICE] start_runtime_run user_mode=LOCAL_ONLY
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[RUNTIME] import platform_runtime.elt_run_manager
+[ELT WATCH] status called
+[ELT WATCH] response JSON={'success': True, 'active': False, 'watching': False, 'oracle_ok': True, 'ftp_ok': False, 'oracle_label': 'Oracle connecté', 'ftp_label': 'FTP indisponible', 'state': 'STOPPED', 'state_label': 'Surveillance arrêtée', 'last_detected_file': None, 'message': 'Surveillance arrêtée', 'watch_dir': 'C:\\Users\\benab\\OneDrive\\Bureau\\PFE TT\\sos', 'timestamp': '2026-05-06 03:00:13'}
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[RUNTIME] import platform_runtime.elt_run_manager
+03:08:37 | [RUNTIME] Démarrage du pipeline via manager | mode=LOCAL_ONLY
+03:08:37 | ========================================================================================================================
+[RUNTIME] start_run result={"success": true, "message": "Traitement ELT démarré avec succès."}
+03:08:37 | SYSTÈME ELT ADAPTATIF MULTI-AGENTS
+03:08:37 | ========================================================================================================================
+INFO:     127.0.0.1:52622 - "POST /elt/run/start?user_mode=LOCAL_ONLY HTTP/1.1" 200 OK
+03:08:37 | Couche intelligente     : True
+03:08:37 | Workers parallèles      : 4
+03:08:37 | Mode utilisateur demandé: LOCAL_ONLY
+03:08:37 | [ConnectionAgent] Démarrage des tests de connexion...
+
+[TEST] Connexion Oracle...
+[OK] Connexion Oracle réussie (0.07s)
+
+[TEST] Connexion FTP...
+DEBUG FTP_HOST = '10.57.63.109'
+DEBUG FTP_PORT = 21
+DEBUG FTP_USER = 'RAFTP'
+DEBUG FTP_DIR  = '/home/sos/'
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[RUNTIME] import platform_runtime.elt_run_manager
+INFO:     127.0.0.1:52627 - "GET /elt/run/status HTTP/1.1" 200 OK
+[ECHEC] Connexion FTP impossible (10.01s)
+Cause : timed out
+03:08:47 | [ConnectionAgent] Connexion Oracle OK
+03:08:47 | [ConnectionAgent] Connexion FTP indisponible
+03:08:47 | EVENT PUBLISHED | ts=2026-05-06 03:08:47 | run_id=-1778033317297 | source=ConnectionAgent | name=ORACLE_OK | payload={'oracle_ok': True}
+03:08:47 | [CONNEXION] Oracle disponible
+03:08:47 | EVENT PUBLISHED | ts=2026-05-06 03:08:47 | run_id=-1778033317297 | source=ConnectionAgent | name=FTP_FAILED | payload={'ftp_ok': False}
+03:08:47 | [CONNEXION] FTP indisponible
+03:08:47 | [ConnectionAgent] Scénario choisi | scenario=LOCAL_FALLBACK | user_mode=LOCAL_ONLY | oracle_ok=True | ftp_ok=False
+03:08:47 | EVENT PUBLISHED | ts=2026-05-06 03:08:47 | run_id=-1778033317297 | source=ConnectionAgent | name=SCENARIO_CHOSEN | payload={'scenario': 'LOCAL_FALLBACK', 'user_mode': 'LOCAL_ONLY', 'oracle_ok': True, 'ftp_ok': False}
+03:08:47 | [SCÉNARIO] Choisi=LOCAL_FALLBACK | oracle_ok=True | ftp_ok=False | mode=LOCAL_ONLY
+03:08:47 | [IA] Couche intelligente activée
+03:08:47 | [IA] Conseil scénario ignoré : choix manuel conservé | user_mode=LOCAL_ONLY | scenario=LOCAL_FALLBACK
+03:08:47 | Connexion RunLogger à Oracle...
+03:08:47 | Connexion RunLogger Oracle établie
+03:08:47 | Pipeline run créé | run_id=143 | scenario=LOCAL_FALLBACK | user_mode=LOCAL_ONLY | oracle_ok=True | ftp_ok=False
+03:08:47 | [IA] Couche intelligente activée
+03:08:47 | ====================================================================================================
+03:08:47 | [ParallelScheduler] DÉMARRAGE DU SCHEDULER PARALLÈLE
+03:08:47 | [ParallelScheduler] max_workers=4
+03:08:47 | ====================================================================================================
+03:08:47 | [DependencyAgent] Évaluation des dépendances
+03:08:47 | EVENT PUBLISHED | ts=2026-05-06 03:08:47 | run_id=143 | source=DependencyAgent | name=TASK_READY | payload={'task_name': 'ADV_LOAD'}
+03:08:47 | [PLANIFICATION] READY | tâche=Chargement fichier avance | table=TT_AVANCE_TMP / TT_AVANCE
+03:08:47 | EVENT PUBLISHED | ts=2026-05-06 03:08:47 | run_id=143 | source=DependencyAgent | name=TASK_READY | payload={'task_name': 'REV_LOAD'}
+03:08:47 | [PLANIFICATION] READY | tâche=Chargement fichier remboursement | table=TT_REMBOURSEMENT_TMP / TT_REMBOURSEMENT
+03:08:47 | [DependencyAgent] Tâches prêtes détectées | count=2 | tasks=['ADV_LOAD', 'REV_LOAD']
+03:08:47 | [ExecutionAgent] Exécution demandée | task=ADV_LOAD
+03:08:47 | [ParallelScheduler] Tâche lancée | task=ADV_LOAD | running_now=1
+03:08:47 | [ExecutionAgent] Lancement tâche | task=ADV_LOAD | mode=NORMAL | retry_count=0
+03:08:47 | [ExecutionAgent] Exécution demandée | task=REV_LOAD
+03:08:47 | [ParallelScheduler] Tâche lancée | task=REV_LOAD | running_now=2
+03:08:47 | EVENT PUBLISHED | ts=2026-05-06 03:08:47 | run_id=143 | source=ExecutionAgent | name=TASK_STARTED | payload={'task_name': 'ADV_LOAD', 'script_name': 'load_local_adv.py', 'retry_count': 0}
+03:08:47 | [ExecutionAgent] Lancement tâche | task=REV_LOAD | mode=NORMAL | retry_count=0
+03:08:47 | [ParallelScheduler] Exécutions parallèles actives | nb=2 | tasks=['ADV_LOAD', 'REV_LOAD']
+03:08:47 | [EXÉCUTION] START | tâche=Chargement fichier avance | table=TT_AVANCE_TMP / TT_AVANCE
+03:08:47 | Exécution script : load_local_adv.py | resolved_path=C:\Users\benab\PycharmProjects\PythonProject1\load_local_adv.py | cwd=C:\Users\benab\PycharmProjects\PythonProject1 | timeout=3600s
+03:08:47 | EVENT PUBLISHED | ts=2026-05-06 03:08:47 | run_id=143 | source=ExecutionAgent | name=TASK_STARTED | payload={'task_name': 'REV_LOAD', 'script_name': 'load_local_rev.py', 'retry_count': 0}
+03:08:47 | [EXÉCUTION] START | tâche=Chargement fichier remboursement | table=TT_REMBOURSEMENT_TMP / TT_REMBOURSEMENT
+03:08:47 | Exécution script : load_local_rev.py | resolved_path=C:\Users\benab\PycharmProjects\PythonProject1\load_local_rev.py | cwd=C:\Users\benab\PycharmProjects\PythonProject1 | timeout=3600s
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[RUNTIME] import platform_runtime.elt_run_manager
+INFO:     127.0.0.1:52641 - "POST /elt/watch/start HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53071 - "OPTIONS /elt/watch/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60149 - "OPTIONS /elt/latest-report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63209 - "OPTIONS /elt/archive-files?limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60474 - "OPTIONS /elt/run/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:63287 - "OPTIONS /elt/latest-report HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58060 - "OPTIONS /elt/archive-files?limit=50 HTTP/1.1" 200 OK
+03:08:53 | AI decision insérée | run_id=143 | task=REV_LOAD | type=TASK_MONITOR | proposed=CONTINUE | final=CONTINUE | approved=Y
+03:08:53 | EVENT PUBLISHED | ts=2026-05-06 03:08:53 | run_id=143 | source=ExecutionAgent | name=TASK_MONITORED | payload={'task_name': 'REV_LOAD', 'health': 'OK', 'decision': 'CONTINUE', 'reason': '', 'confidence': 0.85, 'policy_final_action': 'CONTINUE', 'policy_reason': 'Décision monitor approuvée'}
+03:08:53 | [IA] Monitor | tâche=Chargement fichier remboursement | health=OK | decision=CONTINUE | policy=CONTINUE
+03:08:53 | [ExecutionAgent] Décision IA appliquée | task=REV_LOAD | decision=CONTINUE
+03:08:53 | [ExecutionAgent] Tâche terminée sans donnée | task=REV_LOAD | rc=0
+03:08:53 | [EXÉCUTION] NO_DATA | tâche=Chargement fichier remboursement | table=TT_REMBOURSEMENT_TMP / TT_REMBOURSEMENT | lignes=- | rc=0
+03:08:53 | [ParallelScheduler] Tâche terminée détectée | task=REV_LOAD | remaining_running=1
+03:08:53 | [DependencyAgent] Évaluation des dépendances
+03:08:53 | [DependencyAgent] NO_DATA global détecté au démarrage | reason=NO_DATA dès le chargement local
+03:08:53 | EVENT PUBLISHED | ts=2026-05-06 03:08:53 | run_id=143 | source=DependencyAgent | name=TASK_NO_DATA | payload={'task_name': 'ADV_DETAIL', 'reason': 'NO_DATA dès le chargement local'}
+03:08:53 | [EXÉCUTION] NO_DATA | tâche=Construction détail avance | table=TT_AVANCE_DETAIL | lignes=- | rc=None
+03:08:53 | EVENT PUBLISHED | ts=2026-05-06 03:08:53 | run_id=143 | source=DependencyAgent | name=TASK_NO_DATA | payload={'task_name': 'REV_DETAIL', 'reason': 'NO_DATA dès le chargement local'}
+03:08:53 | [EXÉCUTION] NO_DATA | tâche=Construction détail remboursement | table=TT_REMBOURSEMENT_DETAIL | lignes=- | rc=None
+03:08:53 | EVENT PUBLISHED | ts=2026-05-06 03:08:53 | run_id=143 | source=DependencyAgent | name=TASK_NO_DATA | payload={'task_name': 'ADV_AGG', 'reason': 'NO_DATA dès le chargement local'}
+03:08:53 | [EXÉCUTION] NO_DATA | tâche=Agrégation avance | table=ADV_AGG | lignes=- | rc=None
+03:08:53 | EVENT PUBLISHED | ts=2026-05-06 03:08:53 | run_id=143 | source=DependencyAgent | name=TASK_NO_DATA | payload={'task_name': 'REV_AGG', 'reason': 'NO_DATA dès le chargement local'}
+03:08:53 | [EXÉCUTION] NO_DATA | tâche=Agrégation remboursement | table=REV_AGG | lignes=- | rc=None
+03:08:53 | EVENT PUBLISHED | ts=2026-05-06 03:08:53 | run_id=143 | source=DependencyAgent | name=TASK_NO_DATA | payload={'task_name': 'SERVICE_DAILY', 'reason': 'NO_DATA dès le chargement local'}
+03:08:53 | [EXÉCUTION] NO_DATA | tâche=Mise à jour service journalier | table=TT_SERVICE_DAILY | lignes=- | rc=None
+03:08:53 | EVENT PUBLISHED | ts=2026-05-06 03:08:53 | run_id=143 | source=DependencyAgent | name=TASK_NO_DATA | payload={'task_name': 'PARC_SOS', 'reason': 'NO_DATA dès le chargement local'}
+03:08:53 | [EXÉCUTION] NO_DATA | tâche=Mise à jour parc SOS | table=RA_PARC_SOS | lignes=- | rc=None
+03:08:53 | EVENT PUBLISHED | ts=2026-05-06 03:08:53 | run_id=143 | source=DependencyAgent | name=TASK_NO_DATA | payload={'task_name': 'DWH_LOAD', 'reason': 'NO_DATA dès le chargement local'}
+03:08:53 | [EXÉCUTION] NO_DATA | tâche=Chargement DWH | table=TT_DWH | lignes=- | rc=None
+03:08:53 | EVENT PUBLISHED | ts=2026-05-06 03:08:53 | run_id=143 | source=DependencyAgent | name=TASK_NO_DATA | payload={'task_name': 'ADV_ARCHIVE', 'reason': 'NO_DATA dès le chargement local'}
+03:08:53 | [EXÉCUTION] NO_DATA | tâche=Archivage avance | table=ARCHIVE ADV DETAIL | lignes=- | rc=None
+03:08:53 | EVENT PUBLISHED | ts=2026-05-06 03:08:53 | run_id=143 | source=DependencyAgent | name=TASK_NO_DATA | payload={'task_name': 'REV_ARCHIVE', 'reason': 'NO_DATA dès le chargement local'}
+03:08:53 | [EXÉCUTION] NO_DATA | tâche=Archivage remboursement | table=ARCHIVE REV DETAIL | lignes=- | rc=None
+03:08:53 | [DependencyAgent] Tâches forcées en NO_DATA | count=9 | tasks=['ADV_DETAIL', 'REV_DETAIL', 'ADV_AGG', 'REV_AGG', 'SERVICE_DAILY', 'PARC_SOS', 'DWH_LOAD', 'ADV_ARCHIVE', 'REV_ARCHIVE']
+INFO:     127.0.0.1:62590 - "OPTIONS /elt/watch/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59044 - "OPTIONS /elt/run/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62674 - "GET /elt/latest-report HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63209 - "GET /elt/watch/status HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:62767 - "GET /elt/latest-report HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:63209 - "GET /elt/watch/status HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52674 - "GET /elt/archive-files?limit=50 HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52674 - "GET /elt/archive-files?limit=50 HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:53295 - "GET /elt/run/status HTTP/1.1" 401 Unauthorized
+03:08:55 | AI decision insérée | run_id=143 | task=ADV_LOAD | type=TASK_MONITOR | proposed=CONTINUE | final=CONTINUE | approved=Y
+03:08:55 | EVENT PUBLISHED | ts=2026-05-06 03:08:55 | run_id=143 | source=ExecutionAgent | name=TASK_MONITORED | payload={'task_name': 'ADV_LOAD', 'health': 'OK', 'decision': 'CONTINUE', 'reason': '', 'confidence': 0.85, 'policy_final_action': 'CONTINUE', 'policy_reason': 'Décision monitor approuvée'}
+03:08:55 | [IA] Monitor | tâche=Chargement fichier avance | health=OK | decision=CONTINUE | policy=CONTINUE
+03:08:55 | [ExecutionAgent] Décision IA appliquée | task=ADV_LOAD | decision=CONTINUE
+03:08:55 | [ExecutionAgent] Tâche terminée sans donnée | task=ADV_LOAD | rc=0
+03:08:55 | [EXÉCUTION] NO_DATA | tâche=Chargement fichier avance | table=TT_AVANCE_TMP / TT_AVANCE | lignes=- | rc=0
+03:08:55 | [ParallelScheduler] Tâche terminée détectée | task=ADV_LOAD | remaining_running=0
+03:08:55 | [DependencyAgent] Évaluation des dépendances
+03:08:55 | [DependencyAgent] NO_DATA global détecté au démarrage | reason=NO_DATA dès le chargement local
+03:08:55 | [DependencyAgent] Tâches forcées en NO_DATA | count=0 | tasks=[]
+03:08:55 | [ParallelScheduler] Plus aucune tâche en attente, prête ou active.
+03:08:55 | [ParallelScheduler] Statut global final = NO_DATA | origine=chargement initial
+03:08:55 | EVENT PUBLISHED | ts=2026-05-06 03:08:55 | run_id=143 | source=ParallelScheduler | name=PIPELINE_FINISHED | payload={'global_status': 'NO_DATA'}
+03:08:55 | [PIPELINE] Terminé | statut_global=NO_DATA
+03:08:55 | ====================================================================================================
+03:08:55 | [ParallelScheduler] FIN DU SCHEDULER PARALLÈLE
+03:08:55 | ====================================================================================================
+03:08:59 | AI decision insérée | run_id=143 | task=GLOBAL | type=BUSINESS_VALIDATION | proposed=BUSINESS_WARNING | final=BUSINESS_WARNING | approved=Y
+03:08:59 | EVENT PUBLISHED | ts=2026-05-06 03:08:59 | run_id=143 | source=IntelligentOrchestratorBridge | name=BUSINESS_VALIDATED | payload={'business_status': 'BUSINESS_WARNING', 'final_business_status': 'BUSINESS_WARNING', 'reason': 'Tâches critiques en NO_DATA mais tâches secondaires en NO_DATA également', 'confidence': 0.85, 'policy_reason': 'Validation métier IA approuvée'}
+03:08:59 | [IA] Validation métier | statut=BUSINESS_WARNING | final=BUSINESS_WARNING | raison=Tâches critiques en NO_DATA mais tâches secondaires en NO_DATA également
+03:08:59 | Pipeline run mis à jour | run_id=143 | global_status=NO_DATA | total=11 | success=0 | failed=0 | blocked=0 | no_data=11
+03:08:59 | ==========================================================================================================================================================================
+03:08:59 | EXECUTION REPORT
+03:08:59 | ==========================================================================================================================================================================
+03:08:59 | Run ID                    : 143
+03:08:59 | Generated At              : 2026-05-06 03:08:59
+03:08:59 | Scenario                  : LOCAL_FALLBACK
+03:08:59 | User Mode                 : LOCAL_ONLY
+03:08:59 | Oracle OK                 : Oui
+03:08:59 | FTP OK                    : Non
+03:08:59 | Global Status             : NO_DATA
+03:08:59 | Global Status Description : Pipeline arrêté logiquement par absence de données dès l'extraction ou du chargement initial.
+03:08:59 | Total Tasks               : 11
+03:08:59 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:08:59 | NO_DATA            : 11
+03:08:59 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:08:59 | TASK_NAME          TASK_LABEL                             TABLE                        STATUS             RC    RETRY   FALLBACK   DUR(s)   START_TIME           END_TIME            
+03:08:59 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:08:59 | ADV_AGG            Agrégation avance                      ADV_AGG                      NO_DATA            None  0       N          None     None                 2026-05-06 03:08:53 
+03:08:59 | ADV_ARCHIVE        Archivage historique avance            ARCHIVE ADV DETAIL           NO_DATA            None  0       N          None     None                 2026-05-06 03:08:53 
+03:08:59 | ADV_DETAIL         Construction détail avance             TT_AVANCE_DETAIL             NO_DATA            None  0       N          None     None                 2026-05-06 03:08:53 
+03:08:59 | ADV_LOAD           Chargement fichier avance              TT_AVANCE_TMP / TT_AVANCE    NO_DATA            0     0       N          8        2026-05-06 03:08:47  2026-05-06 03:08:55 
+03:08:59 | DWH_LOAD           Chargement entrepôt de données         TT_DWH                       NO_DATA            None  0       N          None     None                 2026-05-06 03:08:53 
+03:08:59 | PARC_SOS           Mise à jour parc SOS                   RA_PARC_SOS                  NO_DATA            None  0       N          None     None                 2026-05-06 03:08:53 
+03:08:59 | REV_AGG            Agrégation remboursement               REV_AGG                      NO_DATA            None  0       N          None     None                 2026-05-06 03:08:53 
+03:08:59 | REV_ARCHIVE        Archivage historique remboursement     ARCHIVE REV DETAIL           NO_DATA            None  0       N          None     None                 2026-05-06 03:08:53 
+03:08:59 | REV_DETAIL         Construction détail remboursement      TT_REMBOURSEMENT_DETAIL      NO_DATA            None  0       N          None     None                 2026-05-06 03:08:53 
+03:08:59 | REV_LOAD           Chargement fichier remboursement       TT_REMBOURSEMENT_TMP / TT_RE NO_DATA            0     0       N          6        2026-05-06 03:08:47  2026-05-06 03:08:53 
+03:08:59 | SERVICE_DAILY      Mise à jour service journalier         TT_SERVICE_DAILY             NO_DATA            None  0       N          None     None                 2026-05-06 03:08:53 
+03:08:59 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:08:59 | TASK STATUS LEGEND
+03:08:59 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+03:08:59 | NO_DATA            : Tâche terminée sans données exploitables, ou non exécutée par propagation métier NO_DATA.
+03:08:59 | ==========================================================================================================================================================================
+03:09:00 | ========================================================================================================================
+03:09:00 | RAPPORT MÉTIER FINAL
+03:09:00 | ========================================================================================================================
+03:09:00 | Run ID                 : 143
+03:09:00 | Titre rapport          : Traitement des données du service SOS Solde
+03:09:00 | Scenario               : LOCAL_FALLBACK
+03:09:00 | Global Status          : NO_DATA
+03:09:00 | Conclusion             : Traitement non exécuté : absence de données source
+03:09:00 | Cause éventuelle       : Absence de données source
+03:09:00 | Tables mises à jour    : Aucune
+03:09:00 | Fichiers               : Aucun fichier remonté
+03:09:00 | Résumé employé         : Traitement non exécuté : absence de données source. Scénario utilisé : LOCAL_FALLBACK. Statut des flux : Aucun fichier remonté. Aucune table mise à jour. Cause : Absence de données source.
+03:09:00 | ========================================================================================================================
+03:09:00 | Fermeture connexion RunLogger
+03:09:00 | [RUNTIME] Fin du pipeline via manager
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[RUNTIME] import platform_runtime.elt_run_manager
+INFO:     127.0.0.1:63075 - "GET /elt/run/status HTTP/1.1" 200 OK
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[RUNTIME] import platform_runtime.elt_run_manager
+[ELT WATCH] start route called
+[WATCH] start requested
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[ELT WATCH] response JSON={'success': True, 'status': 'STARTED', 'message': 'Surveillance locale lancee. Ajoute un fichier dans le dossier surveille.', 'pid': 29648}
+[ELT WATCH] start route response={"success": true, "status": "STARTED", "message": "Surveillance locale lancee. Ajoute un fichier dans le dossier surveille.", "pid": 29648}
+INFO:     127.0.0.1:57552 - "POST /elt/watch/start HTTP/1.1" 200 OK
+[ELT WATCH] status route called
+[ELT WATCH] status called
+[ELT WATCH] response JSON={'success': True, 'active': True, 'watching': True, 'oracle_ok': True, 'ftp_ok': False, 'oracle_label': 'Oracle connecté', 'ftp_label': 'FTP indisponible', 'state': 'STOPPED', 'state_label': 'Surveillance arrêtée', 'last_detected_file': None, 'message': 'Surveillance arrêtée', 'watch_dir': 'C:\\Users\\benab\\OneDrive\\Bureau\\PFE TT\\sos', 'timestamp': '2026-05-06 03:00:13', 'pid': 29648}
+[ELT WATCH] status route response={"success": true, "active": true, "watching": true, "oracle_ok": true, "ftp_ok": false, "oracle_label": "Oracle connecté", "ftp_label": "FTP indisponible", "state": "STOPPED", "state_label": "Surveillance arrêtée", "last_detected_file": null, "message": "Surveillance arrêtée", "watch_dir": "C:\\Users\\benab\\OneDrive\\Bureau\\PFE TT\\sos", "timestamp": "2026-05-06 03:00:13", "pid": 29648}
+INFO:     127.0.0.1:57552 - "GET /elt/watch/status HTTP/1.1" 200 OK
+[ELT WATCH] stop route called
+[ELT WATCH] stop called
+[ELT WATCH] response JSON={'success': True, 'status': 'STOPPED', 'message': 'Surveillance locale arretee.'}
+[ELT WATCH] stop route response={"success": true, "status": "STOPPED", "message": "Surveillance locale arretee."}
+INFO:     127.0.0.1:57552 - "POST /elt/watch/stop HTTP/1.1" 200 OK
+[ELT WATCH] status route called
+[ELT WATCH] status called
+[ELT WATCH] response JSON={'success': True, 'active': False, 'watching': False, 'oracle_ok': None, 'ftp_ok': None, 'oracle_label': 'Oracle indisponible', 'ftp_label': 'FTP indisponible', 'state': 'STOPPED', 'state_label': 'Surveillance arrêtée', 'last_detected_file': None, 'message': 'Surveillance locale arrêtée.', 'watch_dir': None, 'timestamp': '2026-05-06 03:10:21'}
+[ELT WATCH] status route response={"success": true, "active": false, "watching": false, "oracle_ok": null, "ftp_ok": null, "oracle_label": "Oracle indisponible", "ftp_label": "FTP indisponible", "state": "STOPPED", "state_label": "Surveillance arrêtée", "last_detected_file": null, "message": "Surveillance locale arrêtée.", "watch_dir": null, "timestamp": "2026-05-06 03:10:21"}
+INFO:     127.0.0.1:57552 - "GET /elt/watch/status HTTP/1.1" 200 OK

@@ -172,7 +172,6 @@ class AdminService:
                 user.nombre_echecs_totp = 0
                 user.blocage_password_jusqu_a = None
                 user.blocage_totp_jusqu_a = None
-                user.webauthn_admin_active = False
                 user.date_derniere_connexion = None
                 user.date_dernier_changement_mot_de_passe = None
                 user.date_derniere_alerte_securite = None
@@ -201,7 +200,6 @@ class AdminService:
                     nombre_echecs_totp=0,
                     blocage_password_jusqu_a=None,
                     blocage_totp_jusqu_a=None,
-                    webauthn_admin_active=False,
                     date_derniere_connexion=None,
                     date_dernier_changement_mot_de_passe=None,
                     date_derniere_alerte_securite=None,
@@ -367,7 +365,6 @@ class AdminService:
                 if user.departement
                 else None
             ),
-            "webauthn_admin_active": user.webauthn_admin_active,
             "date_creation": user.date_creation,
             "date_modification": user.date_modification,
             "date_derniere_connexion": user.date_derniere_connexion,
@@ -421,6 +418,8 @@ class AdminService:
                 user.recovery_code_failed_attempts = 0
                 user.recovery_code_cooldown_until = None
                 user.recovery_code_last_failure_at = None
+                user.recovery_code_alert_sent_at = None
+                user.recovery_code_warning_sent_at = None
                 user.recovery_secure_link_required = False
                 user.recovery_secure_link_expires_at = None
                 self.mail_service.send_security_alert_email(

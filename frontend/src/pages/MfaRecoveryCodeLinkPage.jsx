@@ -10,27 +10,34 @@ const ROLE_COPY = {
     intro:
       "Saisissez un code de secours pour confirmer votre identité et accéder à votre compte super administrateur.",
     help:
-      "Vos codes de secours vous ont été fournis lors de l’activation de votre compte. Vérifiez votre boîte mail ou vos téléchargements. Si vous n’avez plus accès à ces codes, utilisez l’option de réinitialisation MFA ou le lien sécurisé reçu par email.",
+      "Vos codes de secours vous ont été fournis lors de l'activation de votre compte. Vérifiez votre boîte mail ou vos téléchargements. Si vous n'avez plus accès à ces codes, utilisez l'option de réinitialisation MFA ou le lien sécurisé reçu par email.",
   },
   ADMIN: {
     intro:
       "Saisissez un code de secours pour confirmer votre identité et accéder à votre compte administrateur.",
     help:
-      "Vos codes de secours vous ont été fournis lors de l’activation de votre compte. Vérifiez votre boîte mail ou vos téléchargements. Si vous n’avez plus accès à ces codes, contactez le super administrateur.",
+      "Vos codes de secours vous ont été fournis lors de l'activation de votre compte. Vérifiez votre boîte mail ou vos téléchargements. Si vous n'avez plus accès à ces codes, contactez le super administrateur.",
   },
   USER: {
     intro:
       "Saisissez un code de secours pour confirmer votre identité et accéder à votre compte.",
     help:
-      "Vos codes de secours vous ont été fournis lors de l’activation de votre compte. Vérifiez votre boîte mail ou vos téléchargements. Si vous n’avez plus accès à ces codes, contactez l’administrateur de votre département.",
+      "Vos codes de secours vous ont été fournis lors de l'activation de votre compte. Vérifiez votre boîte mail ou vos téléchargements. Si vous n'avez plus accès à ces codes, contactez l'administrateur de votre département.",
   },
   GENERIC: {
     intro:
       "Saisissez un code de secours pour confirmer votre identité et accéder à votre compte.",
     help:
-      "Vos codes de secours vous ont été fournis lors de l’activation de votre compte. Vérifiez votre boîte mail ou vos téléchargements.",
+      "Vos codes de secours vous ont été fournis lors de l'activation de votre compte. Vérifiez votre boîte mail ou vos téléchargements.",
   },
 };
+
+function formatSeconds(totalSeconds) {
+  const safe = Math.max(0, Number(totalSeconds) || 0);
+  return `${String(Math.floor(safe / 60)).padStart(2, "0")}:${String(
+    safe % 60
+  ).padStart(2, "0")}`;
+}
 
 export default function MfaRecoveryCodeLinkPage() {
   const navigate = useNavigate();
@@ -45,7 +52,6 @@ export default function MfaRecoveryCodeLinkPage() {
   const copy = ROLE_COPY[role];
 
   const [code, setCode] = useState("");
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -60,7 +66,6 @@ export default function MfaRecoveryCodeLinkPage() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    setMessage("");
     setError("");
 
     const cleanCode = code.trim().replace(/\s/g, "").toUpperCase();
@@ -82,7 +87,14 @@ export default function MfaRecoveryCodeLinkPage() {
         setError(data.message || "Code de secours invalide ou déjà utilisé.");
         setCooldownSeconds(Number(data.remaining_seconds) || 0);
         setCode("");
-        if (!data.remaining_seconds) window.setTimeout(() => codeInputRef.current?.focus(), 0);
+
+        if (data.redirect_to === "/login" || data.status === "account_disabled") {
+          window.setTimeout(() => navigate(data.redirect_to || "/login", { replace: true }), 1500);
+        } else if (data.redirect_to === "/secure-recovery") {
+          window.setTimeout(() => navigate("/secure-recovery", { replace: true }), 1500);
+        } else if (!data.remaining_seconds) {
+          window.setTimeout(() => codeInputRef.current?.focus(), 0);
+        }
         return;
       }
 
@@ -105,12 +117,10 @@ export default function MfaRecoveryCodeLinkPage() {
         <p>{copy.intro}</p>
         <p>{copy.help}</p>
 
-        {message && <div className="alert alert-info">{message}</div>}
         {error && <div className="alert alert-error">{error}</div>}
         {cooldownSeconds > 0 && (
           <div className="alert alert-info">
-            Temps restant : {String(Math.floor(cooldownSeconds / 60)).padStart(2, "0")}:
-            {String(cooldownSeconds % 60).padStart(2, "0")}
+            Temps restant : {formatSeconds(cooldownSeconds)}
           </div>
         )}
 

@@ -58,8 +58,6 @@ class Utilisateur(Base):
     recovery_secure_link_required = Column(Boolean, nullable=False, server_default=text("false"))
     recovery_secure_link_expires_at = Column(DateTime(timezone=True), nullable=True)
 
-    webauthn_admin_active = Column(Boolean, nullable=False, server_default=text("false"))
-
     date_derniere_connexion = Column(DateTime(timezone=True), nullable=True)
     date_dernier_changement_mot_de_passe = Column(DateTime(timezone=True), nullable=True)
     date_derniere_alerte_securite = Column(DateTime(timezone=True), nullable=True)
@@ -88,13 +86,6 @@ class Utilisateur(Base):
 
     codes_secours = relationship(
         "CodeSecours",
-        back_populates="utilisateur",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
-
-    identifiants_webauthn = relationship(
-        "IdentifiantWebAuthn",
         back_populates="utilisateur",
         cascade="all, delete-orphan",
         passive_deletes=True,

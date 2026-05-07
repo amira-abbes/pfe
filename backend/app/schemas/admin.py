@@ -56,7 +56,6 @@ class AdminUserDetailResponse(BaseModel):
     role: str
     statut_compte: str
     departement_nom: Optional[str] = None
-    webauthn_admin_active: bool
     date_creation: datetime
     date_modification: datetime
     date_derniere_connexion: Optional[datetime] = None

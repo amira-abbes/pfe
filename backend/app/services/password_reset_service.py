@@ -287,8 +287,9 @@ class PasswordResetService:
             return {
                 "success": False,
                 "code": "RECOVERY_CODE_COOLDOWN",
-                "status": "recovery_cooldown",
-                "message": "Récupération temporairement bloquée. Veuillez patienter.",
+                "status": "cooldown",
+                "reason": "recovery_code_cooldown",
+                "message": "Trop de codes de secours invalides. Veuillez patienter avant de réessayer.",
                 "reset_password_token": None,
                 "temps_restant": self._format_seconds(recovery_remaining),
                 "remaining_seconds": recovery_remaining,
@@ -382,7 +383,13 @@ class PasswordResetService:
             return self._invalid_mfa_response()
 
         user = reset_token.utilisateur
-        if not user or str(user.role or "").upper() != "ADMIN" or not user.est_actif:
+        role = str(user.role or "").upper() if user else ""
+        if (
+            not user
+            or role not in {"USER", "ADMIN", "SUPER_ADMIN"}
+            or not user.est_actif
+            or user.date_suppression is not None
+        ):
             return self._invalid_mfa_response()
 
         if self._remaining_seconds(reset_token.mfa_recovery_bloque_jusqu_a) > 0:
@@ -390,8 +397,9 @@ class PasswordResetService:
             return {
                 "success": False,
                 "code": "RECOVERY_CODE_COOLDOWN",
-                "status": "recovery_cooldown",
-                "message": "Récupération temporairement bloquée. Veuillez patienter.",
+                "status": "cooldown",
+                "reason": "recovery_code_cooldown",
+                "message": "Trop de codes de secours invalides. Veuillez patienter avant de réessayer.",
                 "reset_password_token": None,
                 "temps_restant": self._format_seconds(remaining),
                 "remaining_seconds": remaining,
@@ -631,7 +639,7 @@ class PasswordResetService:
             self.mail_service.send_security_alert_email(
                 to_email=user.email,
                 subject="Blocage temporaire MFA",
-                message="Plusieurs tentatives MFA échouées ont ?t? détectées pendant une réinitialisation de mot de passe.",
+                message="Plusieurs tentatives MFA échouées ont été détectées pendant une réinitialisation de mot de passe.",
                 db=self.db,
                 utilisateur_id=user.id,
                 adresse_ip=adresse_ip,
@@ -772,52 +780,29 @@ class PasswordResetService:
             niveau_risque="ELEVE",
             details={"attempt": new_count, "type": "PASSWORD_RESET_RECOVERY_CODE"},
         )
+        self.db.add(reset_token)
 
-        if new_count == 3:
-            reset_token.mfa_recovery_bloque_jusqu_a = now + timedelta(seconds=30)
-            self.db.add(reset_token)
-            self.db.commit()
-            return {
-                "success": False,
-                "code": "RECOVERY_CODE_COOLDOWN",
-                "status": "recovery_cooldown",
-                "message": "Plusieurs codes incorrects. Veuillez patienter 30 secondes.",
-                "reset_password_token": None,
-                "temps_restant": self._format_seconds(30),
-                "cooldown_seconds": 30,
-                "remaining_seconds": 30,
-            }
+        from app.services.auth_service import AuthService
 
-        if new_count >= 4:
-            self.db.add(reset_token)
-            from app.services.auth_service import AuthService
-
-            response = AuthService(self.db)._handle_recovery_code_failure(
-                user=user,
-                role=str(user.role or "").upper(),
-                after_mfa_blocked=True,
-                adresse_ip=adresse_ip,
-                user_agent=user_agent,
-            )
-            response["reset_password_token"] = None
-            response["temps_restant"] = (
-                self._format_seconds(response.get("remaining_seconds"))
-                if response.get("remaining_seconds")
-                else None
-            )
-            return response
-
+        user.recovery_code_failed_attempts = max(new_count - 1, 0)
+        response = AuthService(self.db)._handle_recovery_code_failure(
+            user=user,
+            role=str(user.role or "").upper(),
+            after_mfa_blocked=True,
+            adresse_ip=adresse_ip,
+            user_agent=user_agent,
+        )
+        remaining = response.get("remaining_seconds")
+        reset_token.mfa_recovery_bloque_jusqu_a = (
+            now + timedelta(seconds=int(remaining))
+            if remaining and response.get("status") in {"cooldown", "recovery_alert_sent"}
+            else None
+        )
         self.db.add(reset_token)
         self.db.commit()
-        return {
-            "success": False,
-            "code": "RECOVERY_CODE_INVALID",
-            "status": "invalid_recovery_code",
-            "message": "Code de récupération invalide ou déjà utilisé.",
-            "reset_password_token": None,
-            "temps_restant": None,
-            "attempts": new_count,
-        }
+        response["reset_password_token"] = None
+        response["temps_restant"] = self._format_seconds(remaining) if remaining else None
+        return response
 
     def _cooldown_response(self, remaining_seconds: int):
         return {

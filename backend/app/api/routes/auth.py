@@ -6,6 +6,8 @@ from app.db.database import get_db
 from app.models.utilisateur import Utilisateur
 from app.schemas.auth import (
     AuthTokenResponse,
+    AccountReactivationActionRequest,
+    AccountReactivationRequest,
     CurrentUserResponse,
     LoginRequest,
     LoginResponse,
@@ -14,6 +16,7 @@ from app.schemas.auth import (
     MfaResetRecoveryCodeVerifyRequest,
     MfaSetupConfirmRequest,
     MfaSetupStartRequest,
+    RecoverySupervisorActionRequest,
     LogoutResponse,
     RecoveryCodeVerifyRequest,
     SecureRecoveryCompleteRequest,
@@ -194,6 +197,53 @@ def regenerate_recovery_codes_from_link(
     )
 
 
+@router.post("/auth/recovery-codes/supervisor-action")
+def execute_recovery_supervisor_action(
+    payload: RecoverySupervisorActionRequest,
+    request: Request,
+    service: AuthService = Depends(get_auth_service),
+):
+    adresse_ip, user_agent = get_client_context(request)
+
+    return service.execute_recovery_supervisor_action(
+        token=payload.token,
+        action=payload.action,
+        adresse_ip=adresse_ip,
+        user_agent=user_agent,
+    )
+
+
+@router.post("/auth/account-reactivation/request")
+def request_account_reactivation(
+    payload: AccountReactivationRequest,
+    request: Request,
+    service: AuthService = Depends(get_auth_service),
+):
+    adresse_ip, user_agent = get_client_context(request)
+
+    return service.request_account_reactivation(
+        email=str(payload.email),
+        adresse_ip=adresse_ip,
+        user_agent=user_agent,
+    )
+
+
+@router.post("/auth/account-reactivation/action")
+def execute_account_reactivation_action(
+    payload: AccountReactivationActionRequest,
+    request: Request,
+    service: AuthService = Depends(get_auth_service),
+):
+    adresse_ip, user_agent = get_client_context(request)
+
+    return service.execute_account_reactivation_action(
+        token=payload.token,
+        action=payload.action,
+        adresse_ip=adresse_ip,
+        user_agent=user_agent,
+    )
+
+
 @router.get("/auth/me", response_model=CurrentUserResponse)
 def me(current_user: Utilisateur = Depends(get_current_user)):
     permissions = get_user_permissions(current_user)
@@ -211,7 +261,6 @@ def me(current_user: Utilisateur = Depends(get_current_user)):
             else None
         ),
         "permissions": permissions,
-        "webauthn_admin_active": current_user.webauthn_admin_active,
         "date_derniere_connexion": current_user.date_derniere_connexion,
     }
 

@@ -13,6 +13,7 @@ import SessionExpiredPage from "./pages/SessionExpiredPage";
 import PasswordErrorPage from "./pages/PasswordErrorPage";
 import MailVerificationRequiredPage from "./pages/MailVerificationRequiredPage";
 import AccessDeniedPage from "./pages/AccessDeniedPage";
+import AccountDisabledPage from "./pages/AccountDisabledPage";
 
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import PasswordResetVerifyPage from "./pages/PasswordResetVerifyPage";
@@ -28,12 +29,17 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminDepartmentsPage from "./pages/AdminDepartmentsPage";
 import AdminEltPage from "./pages/AdminEltPage";
+import DashboardServiceSosPage from "./pages/DashboardServiceSosPage";
+import DashboardParcServiceSosPage from "./pages/DashboardParcServiceSosPage";
+import DashboardBadDebtsPage from "./pages/DashboardBadDebtsPage";
 
 import AccountSecurityPage from "./pages/AccountSecurityPage";
 import SecurityIncidentReportPage from "./pages/SecurityIncidentReportPage";
 import SecurityReportPage from "./pages/SecurityReportPage";
 import SecureRecoveryPage from "./pages/SecureRecoveryPage";
 import RecoveryCodesRegenerateLinkPage from "./pages/RecoveryCodesRegenerateLinkPage";
+import RecoverySupervisorActionPage from "./pages/RecoverySupervisorActionPage";
+import ReactivationActionPage from "./pages/ReactivationActionPage";
 
 export default function App() {
   return (
@@ -54,6 +60,7 @@ export default function App() {
       <Route path="/password-lockout" element={<PasswordErrorPage />} />
       <Route path="/mail-verification-required" element={<MailVerificationRequiredPage />} />
       <Route path="/access-denied" element={<AccessDeniedPage />} />
+      <Route path="/account-disabled" element={<AccountDisabledPage />} />
 
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/password-reset" element={<PasswordResetVerifyPage />} />
@@ -83,6 +90,14 @@ export default function App() {
       <Route
         path="/recovery-codes/regenerate"
         element={<RecoveryCodesRegenerateLinkPage />}
+      />
+      <Route
+        path="/security/recovery-action"
+        element={<RecoverySupervisorActionPage />}
+      />
+      <Route
+        path="/security/reactivation-action"
+        element={<ReactivationActionPage />}
       />
 
       <Route
@@ -132,7 +147,7 @@ export default function App() {
       <Route
         path="/admin/users"
         element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute adminOnly requiredRight="gerer_utilisateurs">
             <AdminUsersPage />
           </ProtectedRoute>
         }
@@ -141,7 +156,7 @@ export default function App() {
       <Route
         path="/admin/departements"
         element={
-          <ProtectedRoute superAdminOnly>
+          <ProtectedRoute adminOnly requiredAnyRight={["gerer_departements", "gerer_roles"]}>
             <AdminDepartmentsPage />
           </ProtectedRoute>
         }
@@ -150,8 +165,35 @@ export default function App() {
       <Route
         path="/admin/elt"
         element={
-          <ProtectedRoute adminOnly>
+          <ProtectedRoute requiredRight="lancer_elt">
             <AdminEltPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/dashboard/service-sos"
+        element={
+          <ProtectedRoute requiredRight="dashboard_service_sos">
+            <DashboardServiceSosPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/dashboard/parc-service-sos"
+        element={
+          <ProtectedRoute requiredRight="dashboard_parc_service_sos">
+            <DashboardParcServiceSosPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/dashboard/bad-debts"
+        element={
+          <ProtectedRoute requiredRight="dashboard_bad_debts">
+            <DashboardBadDebtsPage />
           </ProtectedRoute>
         }
       />

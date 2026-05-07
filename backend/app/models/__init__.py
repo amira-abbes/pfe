@@ -4,7 +4,6 @@ from app.models.departement_droit import DepartementDroit
 from app.models.utilisateur import Utilisateur
 from app.models.identifiant_totp import IdentifiantTotp
 from app.models.code_secours import CodeSecours
-from app.models.identifiant_webauthn import IdentifiantWebAuthn
 from app.models.jeton_activation import JetonActivation
 from app.models.jeton_reinitialisation import JetonReinitialisationMotDePasse
 from app.models.session_utilisateur import SessionUtilisateur

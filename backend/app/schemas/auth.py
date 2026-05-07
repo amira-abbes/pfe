@@ -24,6 +24,7 @@ class LoginResponse(BaseModel):
     setup_token: Optional[str] = None
     email: Optional[EmailStr] = None
     role: Optional[str] = None
+    can_request_reactivation: Optional[bool] = None
     redirect_to: Optional[str] = None
     temps_restant: Optional[str] = None
 
@@ -67,6 +68,20 @@ class SecureRecoveryCompleteRequest(BaseModel):
     token: str = Field(min_length=10)
 
 
+class RecoverySupervisorActionRequest(BaseModel):
+    token: str = Field(min_length=10)
+    action: str = ""
+
+
+class AccountReactivationRequest(BaseModel):
+    email: EmailStr
+
+
+class AccountReactivationActionRequest(BaseModel):
+    token: str = Field(min_length=10)
+    action: str = ""
+
+
 class AuthTokenResponse(BaseModel):
     success: bool
     code: str
@@ -77,6 +92,7 @@ class AuthTokenResponse(BaseModel):
     remaining_seconds: Optional[int] = None
     mail_sent: Optional[bool] = None
     email_sent: Optional[bool] = None
+    supervisor_mail_sent: Optional[bool] = None
     can_use_backup_code: Optional[bool] = None
     can_reset_mfa: Optional[bool] = None
     expires_in_seconds: Optional[int] = None
@@ -102,7 +118,6 @@ class CurrentUserResponse(BaseModel):
     statut_compte: str
     departement_nom: Optional[str] = None
     permissions: list[str] = []
-    webauthn_admin_active: bool = False
     date_derniere_connexion: Optional[datetime] = None
 
 
