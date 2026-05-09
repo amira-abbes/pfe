@@ -23,6 +23,7 @@ function readStoredUser() {
 }
 
 function dashboardForRole(role) {
+  // Still available for explicit navigation to role-based dashboards
   const normalizedRole = String(role || "USER").toUpperCase();
   if (normalizedRole === "SUPER_ADMIN") return "/super-admin/dashboard";
   if (normalizedRole === "ADMIN") return "/admin/dashboard";
@@ -102,7 +103,8 @@ export function AuthProvider({ children }) {
 
     const currentUser = await refreshMe({ skipAuthRedirect: true });
 
-    return data.redirect_to || dashboardForRole(data.role || currentUser?.role);
+    // Always land on /accueil after login; ignore server-side redirect_to
+    return "/accueil";
   }
 
   async function logout() {

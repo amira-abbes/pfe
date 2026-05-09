@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import LoginPage from "./pages/LoginPage";
+import AccueilPage from "./pages/AccueilPage";
 import TotpPage from "./pages/TotpPage";
 import RecoveryCodePage from "./pages/RecoveryCodePage";
 import MfaRecoveryCodeLinkPage from "./pages/MfaRecoveryCodeLinkPage";
@@ -44,7 +45,15 @@ import ReactivationActionPage from "./pages/ReactivationActionPage";
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<Navigate to="/accueil" replace />} />
+      <Route
+        path="/accueil"
+        element={
+          <ProtectedRoute>
+            <AccueilPage />
+          </ProtectedRoute>
+        }
+      />
 
       <Route path="/login" element={<LoginPage />} />
       <Route path="/auth/totp" element={<TotpPage />} />
@@ -198,7 +207,7 @@ export default function App() {
         }
       />
 
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/accueil" replace />} />
     </Routes>
   );
 }

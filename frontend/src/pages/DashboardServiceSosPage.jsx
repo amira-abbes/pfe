@@ -1,6 +1,4 @@
-import { useState } from "react";
-
-import DashboardLayout from "../components/DashboardLayout";
+import Layout from "../components/Layout";
 
 const POWERBI_SERVICE_SOS_URL =
   import.meta.env.VITE_POWERBI_DASHBOARD_SERVICE_SOS_URL;
@@ -10,20 +8,15 @@ function isValidPowerBiUrl(url) {
 }
 
 export default function DashboardServiceSosPage() {
-  const [dashboardKey] = useState(0);
   const canDisplayDashboard = isValidPowerBiUrl(POWERBI_SERVICE_SOS_URL);
 
   return (
-    <DashboardLayout>
-      <section className="powerbi-page">
+    <Layout noPadding noScroll>
+      <div className="powerbi-fullscreen">
         {canDisplayDashboard ? (
           <iframe
-            key={dashboardKey}
             title="Dashboard Service SOS Power BI"
             src={POWERBI_SERVICE_SOS_URL}
-            width="100%"
-            height="100%"
-            frameBorder="0"
             allowFullScreen
           />
         ) : (
@@ -31,7 +24,7 @@ export default function DashboardServiceSosPage() {
             URL Power BI invalide ou non configurée.
           </div>
         )}
-      </section>
-    </DashboardLayout>
+      </div>
+    </Layout>
   );
 }
