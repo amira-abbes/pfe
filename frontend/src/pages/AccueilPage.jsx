@@ -6,12 +6,14 @@ import {
   Database,
   LayoutDashboard,
   PieChart,
+  Shield,
   ShieldCheck,
   Sparkles,
   TrendingDown,
+  User,
   Users,
 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
 import { useAuth } from "../context/AuthContext";
@@ -96,7 +98,57 @@ export default function AccueilPage() {
     },
   ];
 
-  const cards = allCards.filter(c => !c.hidden);
+  const cards = useMemo(() => {
+    if (isSuperAdmin) {
+      return allCards.filter((c) => !c.hidden);
+    }
+    if (isAdmin) {
+      return [
+        allCards.find((c) => c.to === "/dashboard/parc-service-sos"),
+        allCards.find((c) => c.to === "/dashboard/service-sos"),
+        allCards.find((c) => c.to === "/dashboard/bad-debts"),
+        {
+          to: "/admin/departement",
+          icon: <Building2 size={40} />,
+          label: "Mon Département",
+          desc: "Consulter les informations de mon département",
+          color: "#f97316", // orange
+        },
+      ].filter(Boolean);
+    }
+    // USER role
+    return [
+      {
+        to: "/security",
+        icon: <Shield size={40} />,
+        label: "Sécurité",
+        desc: "Gérez vos codes de secours et votre authentification MFA",
+        color: "#16a34a", // green
+      },
+      {
+        to: "/dashboard",
+        icon: <User size={40} />,
+        label: "Mon Compte",
+        desc: (
+          <div style={{ fontSize: "13px", marginTop: "4px" }}>
+            <div style={{ fontWeight: 600 }}>{user?.nom_complet}</div>
+            <div style={{ opacity: 0.8 }}>Dept: {user?.departement_nom || "N/A"}</div>
+            <div style={{ marginTop: "6px" }}>
+              <span
+                className={`au-badge ${
+                  user?.statut_compte === "ACTIF" ? "au-badge-green" : "au-badge-red"
+                }`}
+                style={{ fontSize: "10px", padding: "2px 8px" }}
+              >
+                {user?.statut_compte}
+              </span>
+            </div>
+          </div>
+        ),
+        color: "#3b82f6", // blue
+      },
+    ];
+  }, [isSuperAdmin, isAdmin, allCards, user, hasRight]);
 
   return (
     <Layout title="Accueil" subtitle="Plateforme interne Tunisie Telecom">
@@ -255,109 +307,115 @@ export default function AccueilPage() {
       </div>
 
       {/* ── Section 2: La Solution Complète ── */}
-      <div className="landing-section reveal-hidden">
-        <h2 className="landing-title-centered">La Solution Complète</h2>
-        <div className="landing-features-grid">
-          <div className="landing-feature-card">
-            <div className="landing-feature-icon" style={{background: '#eff6ff', color: '#3b82f6'}}>
-              <BarChart2 size={32} />
+      {isSuperAdmin && (
+        <div className="landing-section reveal-hidden">
+          <h2 className="landing-title-centered">La Solution Complète</h2>
+          <div className="landing-features-grid">
+            <div className="landing-feature-card">
+              <div className="landing-feature-icon" style={{background: '#eff6ff', color: '#3b82f6'}}>
+                <BarChart2 size={32} />
+              </div>
+              <h3>Tableaux de Bord</h3>
+              <p>Visualisez vos données en temps réel avec des dashboards interactifs et des rapports Power BI.</p>
             </div>
-            <h3>Tableaux de Bord</h3>
-            <p>Visualisez vos données en temps réel avec des dashboards interactifs et des rapports Power BI.</p>
-          </div>
-          <div className="landing-feature-card">
-            <div className="landing-feature-icon" style={{background: '#f3e8ff', color: '#9333ea'}}>
-              <Users size={32} />
+            <div className="landing-feature-card">
+              <div className="landing-feature-icon" style={{background: '#f3e8ff', color: '#9333ea'}}>
+                <Users size={32} />
+              </div>
+              <h3>Gestion des Accès</h3>
+              <p>Contrôlez les permissions et les accès par département depuis un seul espace centralisé.</p>
             </div>
-            <h3>Gestion des Accès</h3>
-            <p>Contrôlez les permissions et les accès par département depuis un seul espace centralisé.</p>
-          </div>
-          <div className="landing-feature-card">
-            <div className="landing-feature-icon" style={{background: '#dcfce7', color: '#16a34a'}}>
-              <ShieldCheck size={32} />
+            <div className="landing-feature-card">
+              <div className="landing-feature-icon" style={{background: '#dcfce7', color: '#16a34a'}}>
+                <ShieldCheck size={32} />
+              </div>
+              <h3>Sécurité Avancée</h3>
+              <p>Protégez votre compte avec MFA, WebAuthn et codes de secours pour une sécurité optimale.</p>
             </div>
-            <h3>Sécurité Avancée</h3>
-            <p>Protégez votre compte avec MFA, WebAuthn et codes de secours pour une sécurité optimale.</p>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── Section 3: Anticipez les Mauvaises Créances ── */}
-      <div className="landing-section gray reveal-hidden">
-        <div className="landing-inner landing-split">
-          <div className="landing-text">
-            <span className="landing-tag ml">Machine Learning</span>
-            <h2 className="landing-title">Anticipez les Mauvaises Créances</h2>
-            <p>Notre dashboard Bad Debts utilise des modèles de Machine Learning pour prédire et analyser les risques financiers en temps réel.</p>
-            {hasRight("dashboard_bad_debts") && (
-              <Link to="/dashboard/bad-debts" className="btn btn-primary" style={{borderRadius: '12px'}}>
-                Découvrir →
-              </Link>
-            )}
-          </div>
-          <div className="landing-visual">
-            <span className="accueil-card-badge badge-green" style={{top: '-12px', right: '-12px', zIndex: 20}}>ML</span>
-            <div className="browser-mockup">
-              <div className="browser-header">
-                <div className="mock-dot red" />
-                <div className="mock-dot yellow" />
-                <div className="mock-dot green" />
-              </div>
-              <div className="browser-body">
-                <div className="mock-grid">
-                  <div className="mock-card"><div className="mock-line" style={{width: '70%'}}/><div className="mock-line" style={{width: '30%'}}/></div>
-                  <div className="mock-card"><div className="mock-line" style={{width: '50%'}}/><div className="mock-line" style={{width: '40%'}}/></div>
-                  <div className="mock-card"><div className="mock-line" style={{width: '90%'}}/><div className="mock-line" style={{width: '20%'}}/></div>
+      {isAdminArea && (
+        <div className="landing-section gray reveal-hidden">
+          <div className="landing-inner landing-split">
+            <div className="landing-text">
+              <span className="landing-tag ml">Machine Learning</span>
+              <h2 className="landing-title">Anticipez les Mauvaises Créances</h2>
+              <p>Notre dashboard Bad Debts utilise des modèles de Machine Learning pour prédire et analyser les risques financiers en temps réel.</p>
+              {hasRight("dashboard_bad_debts") && (
+                <Link to="/dashboard/bad-debts" className="btn btn-primary" style={{borderRadius: '12px'}}>
+                  Découvrir →
+                </Link>
+              )}
+            </div>
+            <div className="landing-visual">
+              <span className="accueil-card-badge badge-green" style={{top: '-12px', right: '-12px', zIndex: 20}}>ML</span>
+              <div className="browser-mockup">
+                <div className="browser-header">
+                  <div className="mock-dot red" />
+                  <div className="mock-dot yellow" />
+                  <div className="mock-dot green" />
                 </div>
-                <div className="mock-chart">
-                  <div className="mock-bar" style={{height: '20%', background: '#ef4444'}} />
-                  <div className="mock-bar" style={{height: '40%', background: '#f59e0b'}} />
-                  <div className="mock-bar" style={{height: '60%', background: '#10b981'}} />
-                  <div className="mock-bar" style={{height: '80%', background: '#3b82f6'}} />
-                  <div className="mock-bar" style={{height: '50%', background: '#8b5cf6'}} />
-                  <div className="mock-bar" style={{height: '90%', background: '#6366f1'}} />
+                <div className="browser-body">
+                  <div className="mock-grid">
+                    <div className="mock-card"><div className="mock-line" style={{width: '70%'}}/><div className="mock-line" style={{width: '30%'}}/></div>
+                    <div className="mock-card"><div className="mock-line" style={{width: '50%'}}/><div className="mock-line" style={{width: '40%'}}/></div>
+                    <div className="mock-card"><div className="mock-line" style={{width: '90%'}}/><div className="mock-line" style={{width: '20%'}}/></div>
+                  </div>
+                  <div className="mock-chart">
+                    <div className="mock-bar" style={{height: '20%', background: '#ef4444'}} />
+                    <div className="mock-bar" style={{height: '40%', background: '#f59e0b'}} />
+                    <div className="mock-bar" style={{height: '60%', background: '#10b981'}} />
+                    <div className="mock-bar" style={{height: '80%', background: '#3b82f6'}} />
+                    <div className="mock-bar" style={{height: '50%', background: '#8b5cf6'}} />
+                    <div className="mock-bar" style={{height: '90%', background: '#6366f1'}} />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── Section 4: Power BI Integration ── */}
-      <div className="landing-section reveal-hidden">
-        <div className="landing-split reverse">
-          <div className="landing-text">
-            <span className="landing-tag powerbi">Power BI</span>
-            <h2 className="landing-title">Visualisation des Services SOS Solde & Data</h2>
-            <p>Accédez aux tableaux de bord Power BI directement intégrés à la plateforme pour suivre les services SOS Solde et Data de Tunisie Télécom.</p>
-            {(hasRight("dashboard_service_sos") || hasRight("dashboard_parc_service_sos")) && (
-              <Link to="/dashboard/service-sos" className="btn btn-primary" style={{borderRadius: '12px'}}>
-                Accéder →
-              </Link>
-            )}
-          </div>
-          <div className="landing-visual">
-            <span className="accueil-card-badge badge-orange" style={{top: '-12px', right: '-12px', zIndex: 20}}>PowerBI</span>
-            <div className="browser-mockup">
-              <div className="browser-header">
-                <div className="mock-dot red" />
-                <div className="mock-dot yellow" />
-                <div className="mock-dot green" />
-              </div>
-              <div className="browser-body" style={{flexDirection: 'row', gap: '24px'}}>
-                <div style={{flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                  <div style={{width: '120px', height: '120px', borderRadius: '50%', background: 'conic-gradient(#8b5cf6 0% 40%, #c084fc 40% 75%, #e9d5ff 75% 100%)'}} />
+      {isAdminArea && (
+        <div className="landing-section reveal-hidden">
+          <div className="landing-split reverse">
+            <div className="landing-text">
+              <span className="landing-tag powerbi">Power BI</span>
+              <h2 className="landing-title">Visualisation des Services SOS Solde & Data</h2>
+              <p>Accédez aux tableaux de bord Power BI directement intégrés à la plateforme pour suivre les services SOS Solde et Data de Tunisie Télécom.</p>
+              {(hasRight("dashboard_service_sos") || hasRight("dashboard_parc_service_sos")) && (
+                <Link to="/dashboard/service-sos" className="btn btn-primary" style={{borderRadius: '12px'}}>
+                  Accéder →
+                </Link>
+              )}
+            </div>
+            <div className="landing-visual">
+              <span className="accueil-card-badge badge-orange" style={{top: '-12px', right: '-12px', zIndex: 20}}>PowerBI</span>
+              <div className="browser-mockup">
+                <div className="browser-header">
+                  <div className="mock-dot red" />
+                  <div className="mock-dot yellow" />
+                  <div className="mock-dot green" />
                 </div>
-                <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center'}}>
-                  <div className="mock-card"><div className="mock-line" style={{width: '80%'}}/></div>
-                  <div className="mock-card"><div className="mock-line" style={{width: '60%'}}/></div>
-                  <div className="mock-card"><div className="mock-line" style={{width: '90%'}}/></div>
+                <div className="browser-body" style={{flexDirection: 'row', gap: '24px'}}>
+                  <div style={{flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                    <div style={{width: '120px', height: '120px', borderRadius: '50%', background: 'conic-gradient(#8b5cf6 0% 40%, #c084fc 40% 75%, #e9d5ff 75% 100%)'}} />
+                  </div>
+                  <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center'}}>
+                    <div className="mock-card"><div className="mock-line" style={{width: '80%'}}/></div>
+                    <div className="mock-card"><div className="mock-line" style={{width: '60%'}}/></div>
+                    <div className="mock-card"><div className="mock-line" style={{width: '90%'}}/></div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── Section 5: Accès Rapide ── */}
       <div className="landing-section reveal-hidden" style={{paddingTop: '24px'}}>

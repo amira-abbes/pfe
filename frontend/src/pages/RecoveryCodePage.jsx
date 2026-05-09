@@ -1,9 +1,10 @@
-import { KeyRound, ShieldCheck } from "lucide-react";
+import { ArrowRight, KeyRound, Lock } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
 import { useAuth } from "../context/AuthContext";
+import "../styles/auth_redesign.css";
 
 export default function RecoveryCodePage() {
   const navigate = useNavigate();
@@ -84,43 +85,54 @@ export default function RecoveryCodePage() {
     <div className="auth-page">
       <div className="auth-card">
         <img src="/tt-logo.png" alt="Tunisie Telecom" className="auth-logo" />
+        <div className="auth-tagline">La vie est émotions</div>
 
-        <h1>Code de secours</h1>
-        <p>Utilisez un code de secours non encore utilisé pour vous connecter.</p>
+        <h1>Code secours</h1>
+        <div className="rainbow-underline"></div>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        <p style={{ marginBottom: '24px', textAlign: 'left', color: '#64748b', fontSize: '14px' }}>
+          Utilisez un code de secours non encore utilisé pour vous connecter.
+        </p>
+
+        {error && <div className="alert-error">{error}</div>}
 
         <form className="form" onSubmit={handleSubmit}>
           <div className="input-group">
-            <label>Code de secours</label>
-            <input
-              ref={codeInputRef}
-              className="input"
-              value={codeSecours}
-              onChange={(event) => setCodeSecours(event.target.value)}
-              placeholder="Ex : 8K2M7P4Q9A"
-              required
-              disabled={cooldownSeconds > 0}
-            />
+            <div className="input-icon-wrap">
+              <span className="input-icon-left"><Lock size={18} /></span>
+              <input
+                ref={codeInputRef}
+                className="input"
+                value={codeSecours}
+                onChange={(event) => setCodeSecours(event.target.value)}
+                placeholder="Ex : 8K2M7P4Q9A"
+                required
+                disabled={cooldownSeconds > 0}
+              />
+            </div>
           </div>
 
           <button
-            className="btn btn-primary"
+            className="btn-primary"
             type="submit"
             disabled={loading || cooldownSeconds > 0}
           >
-            <ShieldCheck size={18} />
             {loading
               ? "Vérification..."
               : cooldownSeconds > 0
-                ? `Réessayer dans ${cooldownSeconds}s`
+                ? `Attente ${cooldownSeconds}s`
                 : "Valider le code"}
+            {!loading && cooldownSeconds <= 0 && (
+              <div className="btn-arrow-circle">
+                <ArrowRight size={18} />
+              </div>
+            )}
           </button>
         </form>
 
-        <div className="auth-links">
-          <Link to="/auth/totp">
-            <KeyRound size={15} /> Retour Authenticator
+        <div className="auth-links" style={{ marginTop: '24px' }}>
+          <Link to="/auth/totp" style={{ textDecoration: 'none', color: '#2563eb', fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <KeyRound size={16} /> Retour Authenticator
           </Link>
         </div>
       </div>

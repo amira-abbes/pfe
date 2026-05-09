@@ -211,7 +211,8 @@ export default function AdminDepartmentsPage() {
       {message && <div className="alert alert-success" style={{ marginBottom: 16 }}>{message}</div>}
 
       {/* ── Stats cards ────────────────────────────────────────────────── */}
-      <div className="au-stats-row" style={{ gridTemplateColumns: "repeat(2, 1fr)" }}>
+      {/* ── Stats cards ────────────────────────────────────────────────── */}
+      <div className="au-stats-row">
         <div className="au-stat-card">
           <div className="au-stat-icon" style={{ background: "#eff6ff", color: "#2563eb" }}>
             <Building2 size={26} />
@@ -281,6 +282,30 @@ export default function AdminDepartmentsPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* ── Mobile card list ── */}
+        <div className="au-card-list">
+          {paginatedDepts.map((item) => (
+            <div key={item.id} className="au-list-card">
+              <div className="au-list-card-header">
+                <div className="au-td-name" style={{ fontWeight: 600, color: "#0f172a" }}>
+                  {item.nom_departement}
+                </div>
+              </div>
+              <div className="au-list-card-actions">
+                <button className="au-btn-delete" onClick={() => deleteDepartement(item.nom_departement)}>
+                  <Trash2 size={14} />
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          ))}
+          {paginatedDepts.length === 0 && (
+            <div className="au-empty-row">
+              {searchDept ? "Aucun département ne correspond à votre recherche." : "Aucun département."}
+            </div>
+          )}
         </div>
 
         {/* Pagination */}

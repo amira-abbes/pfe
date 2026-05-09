@@ -10,6 +10,7 @@ from app.schemas.account_security import (
     RecoveryCodesRegenerateRequest,
     RecoveryCodesRegenerateResponse,
     RecoveryCodesStatusResponse,
+    UserActivityResponse,
 )
 from app.services.account_security_service import AccountSecurityService
 
@@ -75,3 +76,11 @@ def email_recovery_codes(
         adresse_ip=adresse_ip,
         user_agent=user_agent,
     )
+
+
+@router.get("/activity", response_model=UserActivityResponse)
+def get_user_activity(
+    current_user: Utilisateur = Depends(get_current_user),
+    service: AccountSecurityService = Depends(get_account_security_service),
+):
+    return service.get_user_activity(current_user)

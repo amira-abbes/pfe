@@ -1,8 +1,9 @@
-import { KeyRound, LogIn, Mail, Save } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
+import "../styles/auth_redesign.css";
 
 export default function ActivationPage() {
   const [params] = useSearchParams();
@@ -26,6 +27,8 @@ export default function ActivationPage() {
 
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const accountNotPending =
     resendCode === "ACCOUNT_ALREADY_ACTIVE" ||
@@ -133,106 +136,144 @@ export default function ActivationPage() {
     <div className="auth-page">
       <div className="auth-card">
         <img src="/tt-logo.png" alt="Tunisie Telecom" className="auth-logo" />
+        <div className="auth-tagline">La vie est émotions</div>
 
-        <h1>Activation du compte</h1>
+        <h1>Activation</h1>
+        <div className="rainbow-underline"></div>
 
-        {status === "loading" && <p>{message}</p>}
-
-        {email && <div className="alert alert-info">Compte : {email}</div>}
+        {status === "loading" && <p style={{ marginTop: '20px', textAlign: 'center', color: '#64748b' }}>{message}</p>}
 
         {showInvalidLinkMessage && (
-          <div className="alert alert-error">{message}</div>
+          <div className="alert-error" style={{ marginTop: '20px' }}>{message}</div>
         )}
 
         {status === "error" && !accountNotPending && (
-          <form className="form" onSubmit={handleResend}>
+          <form className="form" onSubmit={handleResend} style={{ marginTop: '20px' }}>
             <div className="input-group">
-              <label>Email du compte</label>
-              <input
-                className="input"
-                type="email"
-                value={resendEmail}
-                onChange={(event) => setResendEmail(event.target.value)}
-                placeholder="votre.email@gmail.com"
-                required
-              />
+              <div className="input-icon-wrap">
+                <span className="input-icon-left"><Mail size={18} /></span>
+                <input
+                  className="input"
+                  type="email"
+                  value={resendEmail}
+                  onChange={(event) => setResendEmail(event.target.value)}
+                  placeholder="votre.email@gmail.com"
+                  required
+                />
+              </div>
             </div>
 
-            <button className="btn btn-primary" disabled={resendLoading}>
-              <Mail size={18} />
-              {resendLoading ? "Envoi en cours" : "Demander un nouveau lien"}
+            <button className="btn-primary" disabled={resendLoading}>
+              {resendLoading ? "Envoi..." : "Nouveau lien"}
+              {!resendLoading && (
+                <div className="btn-arrow-circle">
+                  <ArrowRight size={18} />
+                </div>
+              )}
             </button>
           </form>
         )}
 
         {resendMessage && (
           <div
-            className={
-              accountNotPending ? "alert alert-info" : "alert alert-success"
-            }
+            className="alert-error"
+            style={{ 
+              marginTop: '20px',
+              background: accountNotPending ? '#eff8ff' : '#ecfdf3', 
+              color: accountNotPending ? '#175cd3' : '#027a48' 
+            }}
           >
             {resendMessage}
           </div>
         )}
 
         {accountNotPending && (
-          <div className="form">
-            <Link className="btn btn-primary" to="/forgot-password">
-              <KeyRound size={18} />
+          <div className="form" style={{ marginTop: '20px' }}>
+            <Link className="btn-primary" to="/forgot-password">
               Réinitialiser mot de passe
+              <div className="btn-arrow-circle">
+                <ArrowRight size={18} />
+              </div>
             </Link>
 
-            <Link className="btn btn-secondary" to="/login">
-              <LogIn size={18} />
+            <Link className="btn-primary" to="/login" style={{ background: 'transparent', color: '#1e3a8a', border: '2px solid #3b82f6', boxShadow: 'none' }}>
               Se connecter
             </Link>
           </div>
         )}
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && <div className="alert-error" style={{ marginTop: '20px' }}>{error}</div>}
 
         {status === "success" && (
-          <>
-            <p>{message}</p>
+          <div style={{ marginTop: '20px' }}>
+            <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '24px' }}>{message}</p>
 
             <form className="form" onSubmit={handleSubmit}>
               <div className="input-group">
-                <label>Nouveau mot de passe</label>
-                <input
-                  className="input"
-                  type="password"
-                  value={form.nouveau_mot_de_passe}
-                  onChange={(event) =>
-                    updateField("nouveau_mot_de_passe", event.target.value)
-                  }
-                  required
-                />
+                <div className="input-icon-wrap">
+                  <span className="input-icon-left"><Lock size={18} /></span>
+                  <input
+                    className="input has-right-icon"
+                    type={showPassword ? "text" : "password"}
+                    value={form.nouveau_mot_de_passe}
+                    onChange={(event) =>
+                      updateField("nouveau_mot_de_passe", event.target.value)
+                    }
+                    placeholder="Nouveau mot de passe"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="input-icon-right"
+                    onClick={() => setShowPassword((v) => !v)}
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
 
               <div className="input-group">
-                <label>Confirmation</label>
-                <input
-                  className="input"
-                  type="password"
-                  value={form.confirmation_mot_de_passe}
-                  onChange={(event) =>
-                    updateField("confirmation_mot_de_passe", event.target.value)
-                  }
-                  required
-                />
+                <div className="input-icon-wrap">
+                  <span className="input-icon-left"><Lock size={18} /></span>
+                  <input
+                    className="input has-right-icon"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={form.confirmation_mot_de_passe}
+                    onChange={(event) =>
+                      updateField("confirmation_mot_de_passe", event.target.value)
+                    }
+                    placeholder="Confirmer"
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="input-icon-right"
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
 
-              <button className="btn btn-primary" disabled={loading}>
-                <Save size={18} />
-                {loading ? "Activation en cours" : "Créer le mot de passe"}
+              <button className="btn-primary" disabled={loading}>
+                {loading ? "Activation..." : "Créer le mot de passe"}
+                {!loading && (
+                  <div className="btn-arrow-circle">
+                    <ArrowRight size={18} />
+                  </div>
+                )}
               </button>
             </form>
-          </>
+          </div>
         )}
 
         {!accountNotPending && (
-          <div className="auth-links">
-            <Link to="/login">Retour connexion</Link>
+          <div className="auth-links" style={{ marginTop: '24px' }}>
+            <Link to="/login" style={{ textDecoration: 'none', color: '#2563eb', fontWeight: 600, fontSize: '14px' }}>
+              Retour connexion
+            </Link>
           </div>
         )}
       </div>

@@ -7,6 +7,7 @@ import {
   LogOut,
   PlayCircle,
   TrendingDown,
+  User,
   Users,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
@@ -24,8 +25,8 @@ export default function Layout({ children, title, subtitle, noPadding = false, n
   const navItems = [
     {
       to: isSuperAdmin ? "/super-admin/dashboard" : isAdmin ? "/admin/dashboard" : "/dashboard",
-      icon: <LayoutDashboard size={22} />,
-      label: "Dashboard",
+      icon: (isAdmin || isSuperAdmin) ? <LayoutDashboard size={22} /> : <User size={22} />,
+      label: (isAdmin || isSuperAdmin) ? "Dashboard" : "Mon Compte",
       id: "dashboard"
     },
     {

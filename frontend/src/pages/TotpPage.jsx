@@ -1,9 +1,10 @@
-import { KeyRound, ShieldCheck } from "lucide-react";
+import { ArrowRight, KeyRound } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
 import { useAuth } from "../context/AuthContext";
+import "../styles/auth_redesign.css";
 
 export default function TotpPage() {
   const navigate = useNavigate();
@@ -93,19 +94,10 @@ export default function TotpPage() {
         return;
       }
 
-      if (data.status === "secure_link_required") {
-        setError(
-          data.message ||
-            "Connexion restreinte. Vous pouvez seulement vous connecter à partir du lien sécurisé envoyé dans votre boîte mail."
-        );
-        setCode("");
-        return;
-      }
-
       if (data.status === "cooldown") {
         const seconds = Number(data.remaining_seconds) || 60;
         setCooldownSeconds(seconds);
-        setInfo(
+        setError(
           data.message ||
             `Plusieurs codes incorrects. Veuillez patienter ${seconds} secondes.`
         );
@@ -165,23 +157,25 @@ export default function TotpPage() {
     <div className="auth-page">
       <div className="auth-card">
         <img src="/tt-logo.png" alt="Tunisie Telecom" className="auth-logo" />
+        <div className="auth-tagline">La vie est émotions</div>
 
-        <h1>Authenticator</h1>
-        <p>Entrez le code à 6 chiffres généré par votre application Authenticator.</p>
+        <h1>Vérification</h1>
+        <div className="rainbow-underline"></div>
 
-        {email && <div className="alert alert-info">Compte : {email}</div>}
-        {info && <div className="alert alert-info">{info}</div>}
-        {error && <div className="alert alert-error">{error}</div>}
+        <p style={{ marginBottom: '24px', textAlign: 'left', color: '#64748b', fontSize: '14px' }}>
+          Entrez le code à 6 chiffres généré par votre application Authenticator.
+        </p>
+
+        {error && <div className="alert-error">{error}</div>}
 
         <form className="form" onSubmit={handleSubmit}>
           <div className="input-group">
-            <label>Code Authenticator</label>
             <input
               ref={codeInputRef}
-              className="input"
+              className="mfa-code-input"
               value={code}
               onChange={(event) => handleCodeChange(event.target.value)}
-              placeholder="123456"
+              placeholder="000000"
               inputMode="numeric"
               maxLength={6}
               autoFocus
@@ -191,22 +185,26 @@ export default function TotpPage() {
           </div>
 
           <button
-            className="btn btn-primary"
+            className="btn-primary"
             type="submit"
             disabled={loading || cooldownSeconds > 0}
           >
-            <ShieldCheck size={18} />
             {loading
-              ? "Vérification en cours"
+              ? "Vérification..."
               : cooldownSeconds > 0
-                ? `Réessayer dans ${cooldownSeconds}s`
+                ? `Attente ${cooldownSeconds}s`
                 : "Vérifier"}
+            {!loading && cooldownSeconds <= 0 && (
+              <div className="btn-arrow-circle">
+                <ArrowRight size={18} />
+              </div>
+            )}
           </button>
         </form>
 
-        <div className="auth-links">
-          <Link to="/auth/recovery-code">
-            <KeyRound size={15} /> Utiliser un code de secours
+        <div className="auth-links" style={{ marginTop: '24px' }}>
+          <Link to="/auth/recovery-code" style={{ textDecoration: 'none', color: '#2563eb', fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <KeyRound size={16} /> Utiliser un code de secours
           </Link>
         </div>
       </div>

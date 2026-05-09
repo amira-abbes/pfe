@@ -1,4 +1,11 @@
-import { KeyRound, ShieldCheck, UserRound } from "lucide-react";
+import {
+  Building2,
+  Edit2,
+  KeyRound,
+  Mail,
+  Shield,
+  User,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/api";
@@ -11,67 +18,124 @@ export default function UserDashboard() {
   const [securityUnavailable, setSecurityUnavailable] = useState(false);
 
   useEffect(() => {
-    async function loadSecurityStatus() {
+    async function loadData() {
       try {
-        const response = await api.get("/auth/security/recovery-codes/status", {
-          skipAuthRedirect: true,
-        });
+        const response = await api.get("/auth/security/recovery-codes/status", { skipAuthRedirect: true });
         setSecurityStatus(response.data);
-      } catch {
+      } catch (err) {
+        console.error("Error loading dashboard data:", err);
         setSecurityUnavailable(true);
       }
     }
 
-    loadSecurityStatus();
+    loadData();
   }, []);
 
   return (
-    <Layout
-      title="Dashboard utilisateur"
-      subtitle="Espace personnel sécurisé par mot de passe et Authenticator."
-    >
-      <div className="grid grid-2">
-        <div className="card">
-          <h2>Bienvenue</h2>
-          <p>
-            Bonjour <strong>{user?.nom_complet}</strong>, votre session est active.
-          </p>
+    <Layout>
+      <div style={{ textAlign: 'center', marginBottom: '32px', marginTop: '16px' }}>
+        <h1 style={{ margin: 0, fontSize: "28px", color: "#0f172a", fontWeight: 800 }}>Mon Compte</h1>
+        <p style={{ margin: "8px 0 0", color: "#64748b", fontSize: "15px" }}>
+          Espace personnel sécurisé par mot de passe et Authenticator.
+        </p>
+      </div>
 
-          <div className="info-row">
-            <UserRound size={18} />
-            <span>{user?.email}</span>
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'stretch', 
+        gap: '24px', 
+        maxWidth: '1000px', 
+        margin: '0 auto', 
+        padding: '0 24px',
+        flexWrap: 'wrap'
+      }}>
+        {/* Left Card: Profile */}
+        <div className="au-table-card au-card-with-header" style={{ flex: 1, minWidth: '320px', maxWidth: '480px', margin: 0 }}>
+          <div className="au-card-header-bg purple">
+            <div className="au-dot-pattern" />
           </div>
+          
+          <div className="au-card-content-relative" style={{ padding: "0 24px 24px" }}>
+            <div className="au-avatar-circle-bordered">
+              <User size={40} />
+            </div>
+            
+            <h2 className="au-profile-name-lg" style={{ textTransform: 'capitalize' }}>
+              {user?.nom_complet?.toLowerCase()}
+            </h2>
+            
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '24px' }}>
+              <span className="au-badge au-badge-blue" style={{ padding: '4px 16px', borderRadius: '50px' }}>
+                UTILISATEUR
+              </span>
+            </div>
 
-          <div className="info-row">
-            <ShieldCheck size={18} />
-            <span>Compte : {user?.statut_compte}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', color: '#475569', fontSize: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Mail size={18} style={{ color: '#94a3b8' }} />
+                <span>{user?.email}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Building2 size={18} style={{ color: '#94a3b8' }} />
+                <span>{user?.departement_nom || "Commercial"}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <Shield size={18} style={{ color: '#94a3b8' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>Statut :</span>
+                  <span className="au-badge au-badge-green">ACTIVE</span>
+                </div>
+              </div>
+            </div>
+
+            <button className="au-btn-outline-blue">
+              <Edit2 size={16} />
+              Modifier mes informations
+            </button>
           </div>
         </div>
 
-        <div className="card">
-          <h2>Sécurité du compte</h2>
-          <p>
-            Votre compte utilise une authentification forte avec mot de passe et
-            code TOTP.
-          </p>
-
-          <div className="mini-stat">
-            <strong>
-              {securityStatus ? securityStatus.codes_restants : "-"}
-            </strong>
-            <span>Codes de secours restants</span>
+        {/* Right Card: Security */}
+        <div className="au-table-card au-card-with-header" style={{ flex: 1, minWidth: '320px', maxWidth: '480px', margin: 0 }}>
+          <div className="au-card-header-bg green">
+            <div className="au-dot-pattern" />
           </div>
 
-          {securityUnavailable && (
-            <div className="alert alert-info">
-              Consultez votre espace sécurité pour gérer vos codes de secours.
+          <div className="au-card-content-relative" style={{ padding: "0 24px 24px", textAlign: 'center' }}>
+            <div className="au-shield-circle">
+              <Shield size={40} />
             </div>
-          )}
 
-          <Link to="/security" className="btn btn-primary">
-            <KeyRound size={18} />
-            Gérer mes codes de secours
-          </Link>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b', margin: '16px 0 4px' }}>
+              Sécurité du compte
+            </h3>
+            <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+              Authentification forte active
+            </p>
+
+            <div style={{ padding: '32px 0' }}>
+              <div style={{ fontSize: '48px', fontWeight: 800, color: '#2563eb', lineHeight: 1 }}>
+                {securityStatus ? securityStatus.codes_restants : "--"}
+              </div>
+              <div style={{ fontSize: '14px', color: '#64748b', fontWeight: 600, marginTop: '8px' }}>
+                Codes de secours restants
+              </div>
+            </div>
+
+            <Link
+              to="/security"
+              className="au-btn-create"
+              style={{ width: "100%", justifyContent: "center", padding: "14px", borderRadius: '50px' }}
+            >
+              <KeyRound size={18} />
+              Gérer mes codes de secours
+            </Link>
+
+            <Link to="/security" style={{ display: 'block', marginTop: '16px', fontSize: '13px', color: '#2563eb', textDecoration: 'none', fontWeight: 600 }}>
+              En savoir plus sur la sécurité →
+            </Link>
+          </div>
         </div>
       </div>
     </Layout>

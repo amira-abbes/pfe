@@ -1,4 +1,4 @@
-import { Plus, RefreshCw, Search, UserX, X } from "lucide-react";
+import { Plus, RefreshCw, Search, UserCheck, Users, UserX, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api, getApiError } from "../api/api";
 import Layout from "../components/Layout";
@@ -194,23 +194,29 @@ export default function AdminUsersPage() {
       {/* ── Stats cards ─────────────────────────────────────────────────────── */}
       <div className="au-stats-row">
         <div className="au-stat-card">
-          <div className="au-stat-icon" style={{ background: "#eff6ff", color: "#2563eb" }}>👥</div>
+          <div className="au-stat-icon" style={{ background: "#e0e7ff", color: "#4f46e5", width: "48px", height: "48px", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <Users size={24} />
+          </div>
           <div>
             <div className="au-stat-value">{totalUsers}</div>
             <div className="au-stat-label">Total Utilisateurs</div>
           </div>
         </div>
         <div className="au-stat-card">
-          <div className="au-stat-icon" style={{ background: "#f0fdf4", color: "#10b981" }}>✅</div>
+          <div className="au-stat-icon" style={{ background: "#dcfce7", color: "#16a34a", width: "48px", height: "48px", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <UserCheck size={24} />
+          </div>
           <div>
-            <div className="au-stat-value" style={{ color: "#10b981" }}>{activeUsers}</div>
+            <div className="au-stat-value" style={{ color: "#16a34a" }}>{activeUsers}</div>
             <div className="au-stat-label">Comptes Actifs</div>
           </div>
         </div>
         <div className="au-stat-card">
-          <div className="au-stat-icon" style={{ background: "#fef2f2", color: "#ef4444" }}>🚫</div>
+          <div className="au-stat-icon" style={{ background: "#fee2e2", color: "#dc2626", width: "48px", height: "48px", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <UserX size={24} />
+          </div>
           <div>
-            <div className="au-stat-value" style={{ color: "#ef4444" }}>{inactiveUsers}</div>
+            <div className="au-stat-value" style={{ color: "#dc2626" }}>{inactiveUsers}</div>
             <div className="au-stat-label">Comptes Inactifs</div>
           </div>
         </div>
@@ -353,6 +359,48 @@ export default function AdminUsersPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* ── Mobile card list ── */}
+        <div className="au-card-list">
+          {paginated.map((item) => (
+            <div key={item.id} className="au-list-card">
+              <div className="au-list-card-header">
+                <div className="au-td-email">{item.email}</div>
+                <span className={item.est_actif && item.statut_compte === "ACTIVE" ? "au-badge au-badge-green" : "au-badge au-badge-red"}>
+                  {item.est_actif ? item.statut_compte : "Désactivé"}
+                </span>
+              </div>
+              <div className="au-list-card-body">
+                <div className="au-list-card-row">
+                  <span className="au-list-card-label">Nom</span>
+                  <span className="au-list-card-value">{item.nom_complet}</span>
+                </div>
+                <div className="au-list-card-row">
+                  <span className="au-list-card-label">Département</span>
+                  <span className="au-list-card-value">{item.departement_nom || "—"}</span>
+                </div>
+                <div className="au-list-card-row">
+                  <span className="au-list-card-label">Rôle</span>
+                  <span className="au-role-badge">{item.role}</span>
+                </div>
+              </div>
+              <div className="au-list-card-actions">
+                <button className="au-btn-toggle" onClick={() => toggleStatus(item)}>
+                  {item.est_actif ? "Désactiver" : "Réactiver"}
+                </button>
+                <button className="au-btn-delete" onClick={() => deleteUser(item)}>
+                  <UserX size={14} />
+                  Supprimer
+                </button>
+              </div>
+            </div>
+          ))}
+          {paginated.length === 0 && (
+            <div className="au-empty-row">
+              {search ? "Aucun résultat pour cette recherche." : "Aucun utilisateur."}
+            </div>
+          )}
         </div>
 
         {totalPages > 1 && (

@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
 import { useAuth } from "../context/AuthContext";
-import AuthTriangles from "../components/AuthTriangles";
+import "../styles/auth_redesign.css";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -34,15 +34,15 @@ export default function LoginPage() {
     return () => window.clearInterval(timer);
   }, [cooldownSeconds]);
 
-  async function handleSubmit(event, overrideEmail = null, overridePassword = null) {
+  async function handleSubmit(event) {
     if (event) event.preventDefault();
     setError("");
     setLoading(true);
 
     try {
       const response = await api.post("/auth/login", {
-        email: overrideEmail || form.email,
-        password: overridePassword || form.password,
+        email: form.email,
+        password: form.password,
       });
 
       const data = response.data;
@@ -103,14 +103,6 @@ export default function LoginPage() {
           return;
         }
 
-        if (data.status === "secure_link_required") {
-          setError(
-            data.message ||
-            "Connexion impossible. Veuillez vérifier votre boîte mail."
-          );
-          return;
-        }
-
         setError(data.message || "Connexion refusée.");
         return;
       }
@@ -137,22 +129,20 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
-
-      <AuthTriangles />
-
-      {/* ── Card ── */}
       <div className="auth-card">
         <img src="/tt-logo.png" alt="Tunisie Telecom" className="auth-logo" />
+        <div className="auth-tagline">La vie est émotions</div>
 
         <h1>Se connecter</h1>
+        <div className="rainbow-underline"></div>
 
-        {error && <div className="alert alert-error">{error}</div>}
+        {error && <div className="alert-error">{error}</div>}
 
         <form className="form" onSubmit={handleSubmit}>
           {/* Email */}
           <div className="input-group">
             <div className="input-icon-wrap">
-              <span className="input-icon-left"><Mail size={17} /></span>
+              <span className="input-icon-left"><Mail size={18} /></span>
               <input
                 className="input"
                 type="email"
@@ -168,7 +158,7 @@ export default function LoginPage() {
           {/* Password */}
           <div className="input-group">
             <div className="input-icon-wrap">
-              <span className="input-icon-left"><Lock size={17} /></span>
+              <span className="input-icon-left"><Lock size={18} /></span>
               <input
                 ref={passwordInputRef}
                 className="input has-right-icon"
@@ -185,40 +175,34 @@ export default function LoginPage() {
                 onClick={() => setShowPassword((v) => !v)}
                 tabIndex={-1}
               >
-                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
 
           {/* Forgot password */}
           <div className="auth-forgot">
-            <Link to="/forgot-password">Mot de passe oublié ?</Link>
+            <Link to="/forgot-password" className="forgot-link">
+              Mot de passe oublié ?
+            </Link>
           </div>
 
           {/* Submit */}
           <button
-            className="btn btn-primary"
+            className="btn-primary"
             type="submit"
             disabled={loading || cooldownSeconds > 0}
-            style={{ width: "100%", marginTop: "4px" }}
           >
             {loading
               ? "Connexion en cours…"
               : cooldownSeconds > 0
                 ? `Réessayer dans ${cooldownSeconds}s`
                 : "Se connecter"}
-            {!loading && cooldownSeconds <= 0 && <ArrowRight size={18} />}
-          </button>
-
-          {/* Direct login (dev) */}
-          <button
-            className="btn btn-secondary"
-            type="button"
-            disabled={loading || cooldownSeconds > 0}
-            onClick={() => handleSubmit(null, "plateforme.tt.systemeadmin@gmail.com", "SuperAdmin@2026!")}
-            style={{ width: "100%" }}
-          >
-            🚀 Connexion Directe
+            {!loading && cooldownSeconds <= 0 && (
+              <div className="btn-arrow-circle">
+                <ArrowRight size={18} />
+              </div>
+            )}
           </button>
         </form>
       </div>

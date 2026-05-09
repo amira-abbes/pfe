@@ -12,6 +12,7 @@ from app.core.security import (
 from app.models.code_secours import CodeSecours
 from app.models.identifiant_totp import IdentifiantTotp
 from app.models.journal_audit import JournalAudit
+from app.models.tentative_connexion import TentativeConnexion
 from app.models.utilisateur import Utilisateur
 from app.services.mail_service import MailService
 
@@ -218,3 +219,101 @@ class AccountSecurityService:
             )
         )
         self.db.flush()
+
+    def get_user_activity(self, user: Utilisateur, limit: int = 10):
+        # 1. Fetch audits (excluding noisy session updates)
+        audits = (
+            self.db.query(JournalAudit)
+            .filter(JournalAudit.cible_utilisateur_id == user.id)
+            .filter(JournalAudit.action_effectuee != "SESSION_ACTIVITY_UPDATED")
+            .order_by(JournalAudit.date_action.desc())
+            .limit(limit)
+            .all()
+        )
+
+        # 2. Fetch login attempts
+        attempts = (
+            self.db.query(TentativeConnexion)
+            .filter(TentativeConnexion.utilisateur_id == user.id)
+            .order_by(TentativeConnexion.date_tentative.desc())
+            .limit(limit)
+            .all()
+        )
+
+        merged_activity = []
+
+        # Process audits
+        for a in audits:
+            action = a.action_effectuee
+            description = action.replace("_", " ").capitalize()
+            status = "info"
+
+            # Detailed mapping
+            if action in ["LOGIN_SUCCESS", "ADMIN_LOGIN_SUCCESS"]:
+                description = "Connexion réussie"
+                status = "success"
+            elif action in ["USER_LOGOUT", "ADMIN_LOGOUT"]:
+                description = "Déconnexion"
+                status = "info"
+            elif action == "LOGIN_RECOVERY_CODE_SUCCESS":
+                description = "Code de secours utilisé"
+                status = "info"
+            elif action == "SECURITY_RECOVERY_CODES_REGENERATED":
+                description = "Codes de secours régénérés"
+                status = "info"
+            elif action == "SESSION_CREATED":
+                description = "Nouvelle session créée"
+                status = "info"
+            elif "FAILURE" in action or "FAILED" in action or "BLOCKED" in action:
+                status = "error"
+                if "TOTP" in action:
+                    description = "Échec vérification Authenticator"
+                elif "RECOVERY" in action:
+                    description = "Échec code de secours"
+                elif "PASSWORD" in action:
+                    description = "Échec mot de passe"
+                elif "LOCKOUT" in action:
+                    description = "Compte temporairement bloqué"
+
+            merged_activity.append({
+                "id": f"audit_{a.id}",
+                "type": action,
+                "description": description,
+                "date": a.date_action,
+                "adresse_ip": a.adresse_ip,
+                "user_agent": a.user_agent,
+                "status": status,
+                "details": a.details
+            })
+
+        # Process attempts (only failures, successes are already in audits)
+        for t in attempts:
+            if not t.succes:
+                # Check if we already have a similar error audit at the same time
+                exists = any(
+                    abs((m["date"] - t.date_tentative).total_seconds()) < 2
+                    for m in merged_activity if m["status"] == "error"
+                )
+                if not exists:
+                    description = "Tentative de connexion échouée"
+                    if t.raison_echec == "INVALID_CREDENTIALS":
+                        description += " (Identifiants invalides)"
+                    
+                    merged_activity.append({
+                        "id": f"attempt_{t.id}",
+                        "type": "LOGIN_FAILED",
+                        "description": description,
+                        "date": t.date_tentative,
+                        "adresse_ip": t.adresse_ip,
+                        "user_agent": t.user_agent,
+                        "status": "error",
+                        "details": t.details
+                    })
+
+        # Sort merged list by date and limit
+        merged_activity.sort(key=lambda x: x["date"], reverse=True)
+        
+        return {
+            "success": True,
+            "activities": merged_activity[:limit]
+        }

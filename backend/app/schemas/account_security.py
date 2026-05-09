@@ -1,3 +1,6 @@
+from datetime import datetime
+from typing import List, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -28,3 +31,19 @@ class RecoveryCodesEmailRequest(BaseModel):
 class RecoveryCodesEmailResponse(BaseModel):
     success: bool
     message: str
+
+
+class UserActivityItem(BaseModel):
+    id: str
+    type: str
+    description: str
+    date: datetime
+    adresse_ip: Optional[str]
+    user_agent: Optional[str]
+    status: str
+    details: Optional[dict] = {}
+
+
+class UserActivityResponse(BaseModel):
+    success: bool
+    activities: List[UserActivityItem]
