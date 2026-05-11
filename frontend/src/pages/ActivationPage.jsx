@@ -1,9 +1,9 @@
-import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, KeyRound, LogIn, Mail, Lock, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
-import "../styles/auth_redesign.css";
+import AuthTriangles from "../components/AuthTriangles";
 
 export default function ActivationPage() {
   const [params] = useSearchParams();
@@ -134,24 +134,32 @@ export default function ActivationPage() {
 
   return (
     <div className="auth-page">
+      <AuthTriangles />
+
       <div className="auth-card">
         <img src="/tt-logo.png" alt="Tunisie Telecom" className="auth-logo" />
-        <div className="auth-tagline">La vie est émotions</div>
 
         <h1>Activation</h1>
-        <div className="rainbow-underline"></div>
+        <div className="rainbow-line" />
 
-        {status === "loading" && <p style={{ marginTop: '20px', textAlign: 'center', color: '#64748b' }}>{message}</p>}
+        {status === "loading" && <p className="subtitle" style={{ textAlign: 'center' }}>{message}</p>}
+
+        {email && !error && (
+          <div style={{ textAlign: 'center', marginBottom: '20px', fontSize: '13px', color: '#64748b' }}>
+            Compte : <strong>{email}</strong>
+          </div>
+        )}
 
         {showInvalidLinkMessage && (
-          <div className="alert-error" style={{ marginTop: '20px' }}>{message}</div>
+          <div className="auth-error-banner">{message}</div>
         )}
 
         {status === "error" && !accountNotPending && (
-          <form className="form" onSubmit={handleResend} style={{ marginTop: '20px' }}>
+          <form className="form" onSubmit={handleResend}>
+            <p className="subtitle" style={{ textAlign: 'center' }}>Lien expiré ou invalide. Demandez-en un nouveau :</p>
             <div className="input-group">
               <div className="input-icon-wrap">
-                <span className="input-icon-left"><Mail size={18} /></span>
+                <span className="input-icon-left"><Mail size={17} /></span>
                 <input
                   className="input"
                   type="email"
@@ -164,54 +172,44 @@ export default function ActivationPage() {
             </div>
 
             <button className="btn-primary" disabled={resendLoading}>
-              {resendLoading ? "Envoi..." : "Nouveau lien"}
-              {!resendLoading && (
-                <div className="btn-arrow-circle">
-                  <ArrowRight size={18} />
-                </div>
-              )}
+              {resendLoading ? "Envoi..." : "Demander un nouveau lien"}
+              {!resendLoading && <ArrowRight size={18} />}
             </button>
           </form>
         )}
 
         {resendMessage && (
-          <div
-            className="alert-error"
-            style={{ 
-              marginTop: '20px',
-              background: accountNotPending ? '#eff8ff' : '#ecfdf3', 
-              color: accountNotPending ? '#175cd3' : '#027a48' 
-            }}
-          >
+          <div className="auth-error-banner" style={{ background: accountNotPending ? '#f0f9ff' : '#ecfdf5', borderColor: accountNotPending ? '#e0f2fe' : '#d1fae5', color: accountNotPending ? '#0369a1' : '#065f46' }}>
             {resendMessage}
           </div>
         )}
 
         {accountNotPending && (
-          <div className="form" style={{ marginTop: '20px' }}>
-            <Link className="btn-primary" to="/forgot-password">
-              Réinitialiser mot de passe
-              <div className="btn-arrow-circle">
-                <ArrowRight size={18} />
-              </div>
+          <div className="form" style={{ marginTop: '16px' }}>
+            <Link className="btn-primary" to="/forgot-password" style={{ textDecoration: 'none' }}>
+              Réinitialiser le mot de passe
+              <KeyRound size={18} />
             </Link>
 
-            <Link className="btn-primary" to="/login" style={{ background: 'transparent', color: '#1e3a8a', border: '2px solid #3b82f6', boxShadow: 'none' }}>
+            <Link className="btn-ghost" to="/login" style={{ textDecoration: 'none' }}>
               Se connecter
+              <LogIn size={18} />
             </Link>
           </div>
         )}
 
-        {error && <div className="alert-error" style={{ marginTop: '20px' }}>{error}</div>}
+        {error && <div className="auth-error-banner">{error}</div>}
 
         {status === "success" && (
-          <div style={{ marginTop: '20px' }}>
-            <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '24px' }}>{message}</p>
+          <>
+            <p className="subtitle" style={{ textAlign: 'center', marginBottom: '24px' }}>
+              Configurez votre mot de passe pour activer votre compte.
+            </p>
 
             <form className="form" onSubmit={handleSubmit}>
               <div className="input-group">
                 <div className="input-icon-wrap">
-                  <span className="input-icon-left"><Lock size={18} /></span>
+                  <span className="input-icon-left"><Lock size={17} /></span>
                   <input
                     className="input has-right-icon"
                     type={showPassword ? "text" : "password"}
@@ -228,14 +226,14 @@ export default function ActivationPage() {
                     onClick={() => setShowPassword((v) => !v)}
                     tabIndex={-1}
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                   </button>
                 </div>
               </div>
 
               <div className="input-group">
                 <div className="input-icon-wrap">
-                  <span className="input-icon-left"><Lock size={18} /></span>
+                  <span className="input-icon-left"><Lock size={17} /></span>
                   <input
                     className="input has-right-icon"
                     type={showConfirmPassword ? "text" : "password"}
@@ -243,7 +241,7 @@ export default function ActivationPage() {
                     onChange={(event) =>
                       updateField("confirmation_mot_de_passe", event.target.value)
                     }
-                    placeholder="Confirmer"
+                    placeholder="Confirmer le mot de passe"
                     required
                   />
                   <button
@@ -252,28 +250,22 @@ export default function ActivationPage() {
                     onClick={() => setShowConfirmPassword((v) => !v)}
                     tabIndex={-1}
                   >
-                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                   </button>
                 </div>
               </div>
 
               <button className="btn-primary" disabled={loading}>
-                {loading ? "Activation..." : "Créer le mot de passe"}
-                {!loading && (
-                  <div className="btn-arrow-circle">
-                    <ArrowRight size={18} />
-                  </div>
-                )}
+                {loading ? "Activation..." : "Activer mon compte"}
+                {!loading && <ArrowRight size={18} />}
               </button>
             </form>
-          </div>
+          </>
         )}
 
         {!accountNotPending && (
-          <div className="auth-links" style={{ marginTop: '24px' }}>
-            <Link to="/login" style={{ textDecoration: 'none', color: '#2563eb', fontWeight: 600, fontSize: '14px' }}>
-              Retour connexion
-            </Link>
+          <div className="auth-forgot" style={{ textAlign: 'center', marginTop: '24px' }}>
+            <Link to="/login">Retour à la connexion</Link>
           </div>
         )}
       </div>

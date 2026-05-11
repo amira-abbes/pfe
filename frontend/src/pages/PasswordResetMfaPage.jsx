@@ -1,8 +1,9 @@
-import { KeyRound, ShieldCheck } from "lucide-react";
+import { KeyRound, ShieldCheck, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
+import AuthTriangles from "../components/AuthTriangles";
 
 function formatCountdown(seconds) {
   const safeSeconds = Math.max(0, Number(seconds || 0));
@@ -69,7 +70,7 @@ export default function PasswordResetMfaPage() {
       setError("");
       setInfo(
         data.message ||
-          "Vérification MFA bloquée temporairement. Un email de sécurité vous a été envoyé."
+        "Vérification MFA bloquée temporairement. Un email de sécurité vous a été envoyé."
       );
       return;
     }
@@ -116,23 +117,31 @@ export default function PasswordResetMfaPage() {
 
   return (
     <div className="auth-page">
+      <AuthTriangles />
+
       <div className="auth-card">
         <img src="/tt-logo.png" alt="Tunisie Telecom" className="auth-logo" />
 
         <h1>Vérification sécurité</h1>
+        <div className="rainbow-line" />
 
         {!isBlocked && (
-          <p>
+          <p className="subtitle" style={{ textAlign: 'center', marginBottom: '24px' }}>
             {isRecovery
-              ? "Entrez un code de secours."
-              : "Entrez le code Authenticator."}
+              ? "Entrez l'un de vos codes de secours à 10 chiffres."
+              : "Entrez le code à 6 chiffres de votre application Authenticator."}
           </p>
         )}
 
-        {email && <div className="alert alert-info">Compte : {email}</div>}
-        {info && <div className="alert alert-info">{info}</div>}
+        {email && !error && !info && (
+          <div style={{ textAlign: 'center', marginBottom: '20px', fontSize: '13px', color: '#64748b' }}>
+            Compte : <strong>{email}</strong>
+          </div>
+        )}
+
+        {info && <div className="auth-error-banner" style={{ background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0' }}>{info}</div>}
         {error && (
-          <div className={isCooldown ? "alert alert-info" : "alert alert-error"}>
+          <div className="auth-error-banner">
             {error}
             {isCooldown && (
               <>
@@ -144,12 +153,10 @@ export default function PasswordResetMfaPage() {
         )}
 
         {isBlocked && (
-          <div className="blocked-box">
-            <h2>Vérification MFA bloquée temporairement</h2>
-            <p>Un email de sécurité vous a été envoyé.</p>
-            <button className="btn btn-primary" onClick={switchToRecovery}>
+          <div className="blocked-box" style={{ textAlign: 'center' }}>
+            <button className="btn-primary" onClick={switchToRecovery} style={{ width: '100%' }}>
               <KeyRound size={18} />
-              Réinitialiser avec un code de secours
+              Utiliser un code de secours
             </button>
           </div>
         )}
@@ -157,33 +164,41 @@ export default function PasswordResetMfaPage() {
         {!isBlocked && (
           <form className="form" onSubmit={handleSubmit}>
             <div className="input-group">
-              <label>{isRecovery ? "Code de secours" : "Code TOTP"}</label>
-              <input
-                className="input"
-                value={code}
-                onChange={(event) => setCode(event.target.value)}
-                disabled={loading || isCooldown}
-                required
-              />
+              <div className="input-icon-wrap">
+                <span className="input-icon-left">{isRecovery ? <KeyRound size={17} /> : <ShieldCheck size={17} />}</span>
+                <input
+                  className="input"
+                  value={code}
+                  onChange={(event) => setCode(event.target.value)}
+                  placeholder={isRecovery ? "Code à 10 chiffres" : "000 000"}
+                  disabled={loading || isCooldown}
+                  required
+                />
+              </div>
             </div>
 
-            <button className="btn btn-primary" disabled={loading || isCooldown}>
-              <ShieldCheck size={18} />
+            <button className="btn-primary" disabled={loading || isCooldown}>
               {loading ? "Vérification..." : "Valider"}
+              {!loading && <ArrowRight size={18} />}
             </button>
 
             {!isRecovery && (recoveryRequired || !isCooldown) && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={switchToRecovery}
-              >
-                <KeyRound size={18} />
-                Réinitialiser avec un code de secours
-              </button>
+              <div className="auth-forgot" style={{ textAlign: 'center', marginTop: '16px', justifyContent: 'center' }}>
+                <button
+                  type="button"
+                  onClick={switchToRecovery}
+                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <KeyRound size={15} /> Utiliser un code de secours
+                </button>
+              </div>
             )}
           </form>
         )}
+
+        <div className="auth-forgot" style={{ textAlign: 'center', marginTop: '24px', justifyContent: 'center' }}>
+          <Link to="/login">Retour à la connexion</Link>
+        </div>
       </div>
     </div>
   );

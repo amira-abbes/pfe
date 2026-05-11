@@ -1,10 +1,10 @@
-import { ArrowRight, KeyRound, Lock } from "lucide-react";
+import { KeyRound, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
 import { useAuth } from "../context/AuthContext";
-import "../styles/auth_redesign.css";
+import AuthTriangles from "../components/AuthTriangles";
 
 export default function RecoveryCodePage() {
   const navigate = useNavigate();
@@ -83,29 +83,30 @@ export default function RecoveryCodePage() {
 
   return (
     <div className="auth-page">
+      <AuthTriangles />
+
       <div className="auth-card">
         <img src="/tt-logo.png" alt="Tunisie Telecom" className="auth-logo" />
-        <div className="auth-tagline">La vie est émotions</div>
 
-        <h1>Code secours</h1>
-        <div className="rainbow-underline"></div>
+        <h1>Code de secours</h1>
+        <div className="rainbow-line" />
 
-        <p style={{ marginBottom: '24px', textAlign: 'left', color: '#64748b', fontSize: '14px' }}>
-          Utilisez un code de secours non encore utilisé pour vous connecter.
+        <p className="subtitle" style={{ textAlign: 'center', marginBottom: '24px' }}>
+          Utilisez l'un de vos codes de secours à 10 chiffres pour accéder à votre compte.
         </p>
 
-        {error && <div className="alert-error">{error}</div>}
+        {error && <div className="auth-error-banner">{error}</div>}
 
         <form className="form" onSubmit={handleSubmit}>
           <div className="input-group">
             <div className="input-icon-wrap">
-              <span className="input-icon-left"><Lock size={18} /></span>
+              <span className="input-icon-left"><KeyRound size={17} /></span>
               <input
                 ref={codeInputRef}
                 className="input"
                 value={codeSecours}
                 onChange={(event) => setCodeSecours(event.target.value)}
-                placeholder="Ex : 8K2M7P4Q9A"
+                placeholder="Code à 10 chiffres"
                 required
                 disabled={cooldownSeconds > 0}
               />
@@ -120,19 +121,14 @@ export default function RecoveryCodePage() {
             {loading
               ? "Vérification..."
               : cooldownSeconds > 0
-                ? `Attente ${cooldownSeconds}s`
+                ? `Réessayer (${cooldownSeconds}s)`
                 : "Valider le code"}
-            {!loading && cooldownSeconds <= 0 && (
-              <div className="btn-arrow-circle">
-                <ArrowRight size={18} />
-              </div>
-            )}
           </button>
         </form>
 
-        <div className="auth-links" style={{ marginTop: '24px' }}>
-          <Link to="/auth/totp" style={{ textDecoration: 'none', color: '#2563eb', fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <KeyRound size={16} /> Retour Authenticator
+        <div className="auth-forgot" style={{ textAlign: 'center', marginTop: '24px' }}>
+          <Link to="/auth/totp" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <ShieldCheck size={15} /> Retour à l'Authenticator
           </Link>
         </div>
       </div>

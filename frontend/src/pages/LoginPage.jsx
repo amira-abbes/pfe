@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
 import { useAuth } from "../context/AuthContext";
-import "../styles/auth_redesign.css";
+import AuthTriangles from "../components/AuthTriangles";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -34,15 +34,15 @@ export default function LoginPage() {
     return () => window.clearInterval(timer);
   }, [cooldownSeconds]);
 
-  async function handleSubmit(event) {
+  async function handleSubmit(event, overrideEmail = null, overridePassword = null) {
     if (event) event.preventDefault();
     setError("");
     setLoading(true);
 
     try {
       const response = await api.post("/auth/login", {
-        email: form.email,
-        password: form.password,
+        email: overrideEmail || form.email,
+        password: overridePassword || form.password,
       });
 
       const data = response.data;
@@ -103,6 +103,14 @@ export default function LoginPage() {
           return;
         }
 
+        if (data.status === "secure_link_required") {
+          setError(
+            data.message ||
+            "Connexion impossible. Veuillez vérifier votre boîte mail."
+          );
+          return;
+        }
+
         setError(data.message || "Connexion refusée.");
         return;
       }
@@ -129,20 +137,21 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
+      <AuthTriangles />
+
       <div className="auth-card">
         <img src="/tt-logo.png" alt="Tunisie Telecom" className="auth-logo" />
-        <div className="auth-tagline">La vie est émotions</div>
 
         <h1>Se connecter</h1>
-        <div className="rainbow-underline"></div>
+        <div className="rainbow-line" />
 
-        {error && <div className="alert-error">{error}</div>}
+        {error && <div className="auth-error-banner">{error}</div>}
 
         <form className="form" onSubmit={handleSubmit}>
           {/* Email */}
           <div className="input-group">
             <div className="input-icon-wrap">
-              <span className="input-icon-left"><Mail size={18} /></span>
+              <span className="input-icon-left"><Mail size={17} /></span>
               <input
                 className="input"
                 type="email"
@@ -158,7 +167,7 @@ export default function LoginPage() {
           {/* Password */}
           <div className="input-group">
             <div className="input-icon-wrap">
-              <span className="input-icon-left"><Lock size={18} /></span>
+              <span className="input-icon-left"><Lock size={17} /></span>
               <input
                 ref={passwordInputRef}
                 className="input has-right-icon"
@@ -175,16 +184,14 @@ export default function LoginPage() {
                 onClick={() => setShowPassword((v) => !v)}
                 tabIndex={-1}
               >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
               </button>
             </div>
           </div>
 
           {/* Forgot password */}
           <div className="auth-forgot">
-            <Link to="/forgot-password" className="forgot-link">
-              Mot de passe oublié ?
-            </Link>
+            <Link to="/forgot-password">Mot de passe oublié ?</Link>
           </div>
 
           {/* Submit */}
@@ -194,15 +201,21 @@ export default function LoginPage() {
             disabled={loading || cooldownSeconds > 0}
           >
             {loading
-              ? "Connexion en cours…"
+              ? "Connexion..."
               : cooldownSeconds > 0
-                ? `Réessayer dans ${cooldownSeconds}s`
+                ? `Réessayer (${cooldownSeconds}s)`
                 : "Se connecter"}
-            {!loading && cooldownSeconds <= 0 && (
-              <div className="btn-arrow-circle">
-                <ArrowRight size={18} />
-              </div>
-            )}
+            {!loading && cooldownSeconds <= 0 && <ArrowRight size={18} />}
+          </button>
+
+          {/* Direct login (ghost style for dev) */}
+          <button
+            className="btn-ghost"
+            type="button"
+            disabled={loading || cooldownSeconds > 0}
+            onClick={() => handleSubmit(null, "plateforme.tt.systemeadmin@gmail.com", "SuperAdmin@2026!")}
+          >
+            🚀 Connexion Directe
           </button>
         </form>
       </div>

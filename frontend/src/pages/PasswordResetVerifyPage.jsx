@@ -1,8 +1,9 @@
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, KeyRound, ArrowRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
+import AuthTriangles from "../components/AuthTriangles";
 
 export default function PasswordResetVerifyPage() {
   const [params] = useSearchParams();
@@ -55,49 +56,57 @@ export default function PasswordResetVerifyPage() {
 
   return (
     <div className="auth-page">
+      <AuthTriangles />
+
       <div className="auth-card">
         <img src="/tt-logo.png" alt="Tunisie Telecom" className="auth-logo" />
 
         <h1>
-          {status === "expired" ? "Lien de réinitialisation expiré" : title}
+          {status === "expired" ? "Lien expiré" : title}
         </h1>
+        <div className="rainbow-line" />
 
-        {status === "loading" && <p>{message}</p>}
-        {status === "success" && <p>{message}</p>}
+        {(status === "loading" || status === "success") && (
+          <p className="subtitle" style={{ textAlign: 'center', marginBottom: '24px' }}>
+            {message}
+          </p>
+        )}
 
-        {email && <div className="alert alert-info">Compte : {email}</div>}
+        {email && !status.includes('error') && (
+          <div style={{ textAlign: 'center', marginBottom: '20px', fontSize: '13px', color: '#64748b' }}>
+            Compte : <strong>{email}</strong>
+          </div>
+        )}
 
-        {status === "error" && <div className="alert alert-error">{message}</div>}
+        {status === "error" && <div className="auth-error-banner">{message}</div>}
+        
         {status === "expired" && (
-          <div className="blocked-box">
-            <h2>Lien de réinitialisation expiré</h2>
-            <p>
-              Ce lien n’est plus valide. Vous pouvez demander un nouveau lien
-              de réinitialisation.
-            </p>
+          <div className="auth-error-banner" style={{ background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', boxShadow: 'none' }}>
+            Ce lien n’est plus valide. Vous pouvez demander un nouveau lien de réinitialisation.
           </div>
         )}
 
         {status === "success" && (
           <div className="form">
             <button
-              className="btn btn-primary"
+              className="btn-primary"
               onClick={() => {
                 sessionStorage.setItem("reset_mfa_mode", "totp");
                 navigate("/password-reset/mfa");
               }}
             >
-              <ShieldCheck size={18} />
               Vérifier avec Authenticator
+              <ShieldCheck size={18} />
             </button>
 
             <button
-              className="btn btn-secondary"
+              className="btn-ghost"
               onClick={() => {
                 sessionStorage.setItem("reset_mfa_mode", "recovery");
                 navigate("/password-reset/mfa");
               }}
             >
+              <KeyRound size={18} />
               Utiliser un code de secours
             </button>
           </div>
@@ -105,13 +114,14 @@ export default function PasswordResetVerifyPage() {
 
         {status === "expired" && (
           <div className="form">
-            <Link to="/forgot-password" className="btn btn-primary">
+            <Link to="/forgot-password" className="btn-primary" style={{ textDecoration: 'none' }}>
               Demander un nouveau lien
+              <ArrowRight size={18} />
             </Link>
           </div>
         )}
 
-        <div className="auth-links">
+        <div className="auth-forgot" style={{ textAlign: 'center', marginTop: '24px', justifyContent: 'center' }}>
           <Link to="/login">Retour à la connexion</Link>
         </div>
       </div>

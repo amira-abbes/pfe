@@ -1,9 +1,9 @@
-import { ArrowRight, Eye, EyeOff, Lock } from "lucide-react";
+import { Eye, EyeOff, Lock, ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
-import "../styles/auth_redesign.css";
+import AuthTriangles from "../components/AuthTriangles";
 
 export default function PasswordResetCompletePage() {
   const navigate = useNavigate();
@@ -60,24 +60,25 @@ export default function PasswordResetCompletePage() {
 
   return (
     <div className="auth-page">
+      <AuthTriangles />
+
       <div className="auth-card">
         <img src="/tt-logo.png" alt="Tunisie Telecom" className="auth-logo" />
-        <div className="auth-tagline">La vie est émotions</div>
 
-        <h1>Mot de passe</h1>
-        <div className="rainbow-underline"></div>
+        <h1>Nouveau mot de passe</h1>
+        <div className="rainbow-line" />
 
-        <p style={{ marginBottom: '24px', textAlign: 'left', color: '#64748b', fontSize: '14px' }}>
-          Choisissez un mot de passe fort et différent de l’ancien.
+        <p className="subtitle" style={{ textAlign: 'center', marginBottom: '24px' }}>
+          Choisissez un mot de passe fort et différent de l’ancien pour sécuriser votre accès.
         </p>
 
-        {error && <div className="alert-error">{error}</div>}
-        {success && <div className="alert-error" style={{ background: '#ecfdf3', color: '#027a48' }}>{success}</div>}
+        {error && <div className="auth-error-banner">{error}</div>}
+        {success && <div className="auth-error-banner" style={{ background: '#ecfdf5', borderColor: '#d1fae5', color: '#065f46' }}>{success}</div>}
 
         <form className="form" onSubmit={handleSubmit}>
           <div className="input-group">
             <div className="input-icon-wrap">
-              <span className="input-icon-left"><Lock size={18} /></span>
+              <span className="input-icon-left"><Lock size={17} /></span>
               <input
                 className="input has-right-icon"
                 type={showPassword ? "text" : "password"}
@@ -94,14 +95,14 @@ export default function PasswordResetCompletePage() {
                 onClick={() => setShowPassword((v) => !v)}
                 tabIndex={-1}
               >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
               </button>
             </div>
           </div>
 
           <div className="input-group">
             <div className="input-icon-wrap">
-              <span className="input-icon-left"><Lock size={18} /></span>
+              <span className="input-icon-left"><Lock size={17} /></span>
               <input
                 className="input has-right-icon"
                 type={showConfirmPassword ? "text" : "password"}
@@ -109,7 +110,7 @@ export default function PasswordResetCompletePage() {
                 onChange={(event) =>
                   updateField("confirmation_mot_de_passe", event.target.value)
                 }
-                placeholder="Confirmer mot de passe"
+                placeholder="Confirmer le mot de passe"
                 required
               />
               <button
@@ -118,25 +119,19 @@ export default function PasswordResetCompletePage() {
                 onClick={() => setShowConfirmPassword((v) => !v)}
                 tabIndex={-1}
               >
-                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
               </button>
             </div>
           </div>
 
-          <button className="btn-primary" type="submit" disabled={loading}>
+          <button className="btn-primary" disabled={loading}>
             {loading ? "Enregistrement..." : "Changer le mot de passe"}
-            {!loading && (
-              <div className="btn-arrow-circle">
-                <ArrowRight size={18} />
-              </div>
-            )}
+            {!loading && <ArrowRight size={18} />}
           </button>
         </form>
 
-        <div className="auth-links" style={{ marginTop: '24px' }}>
-          <Link to="/login" style={{ textDecoration: 'none', color: '#2563eb', fontWeight: 600, fontSize: '14px' }}>
-            Retour connexion
-          </Link>
+        <div className="auth-forgot" style={{ textAlign: 'center', marginTop: '24px' }}>
+          <Link to="/login">Retour à la connexion</Link>
         </div>
       </div>
     </div>

@@ -1,10 +1,10 @@
-import { ArrowRight, KeyRound } from "lucide-react";
+import { KeyRound, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
 import { useAuth } from "../context/AuthContext";
-import "../styles/auth_redesign.css";
+import AuthTriangles from "../components/AuthTriangles";
 
 export default function TotpPage() {
   const navigate = useNavigate();
@@ -94,12 +94,21 @@ export default function TotpPage() {
         return;
       }
 
+      if (data.status === "secure_link_required") {
+        setError(
+          data.message ||
+          "Connexion restreinte. Vous pouvez seulement vous connecter à partir du lien sécurisé envoyé dans votre boîte mail."
+        );
+        setCode("");
+        return;
+      }
+
       if (data.status === "cooldown") {
         const seconds = Number(data.remaining_seconds) || 60;
         setCooldownSeconds(seconds);
-        setError(
+        setInfo(
           data.message ||
-            `Plusieurs codes incorrects. Veuillez patienter ${seconds} secondes.`
+          `Plusieurs codes incorrects. Veuillez patienter ${seconds} secondes.`
         );
         clearCodeAfterError(false);
         return;
@@ -155,33 +164,44 @@ export default function TotpPage() {
 
   return (
     <div className="auth-page">
+      <AuthTriangles />
+      
       <div className="auth-card">
         <img src="/tt-logo.png" alt="Tunisie Telecom" className="auth-logo" />
-        <div className="auth-tagline">La vie est émotions</div>
 
-        <h1>Vérification</h1>
-        <div className="rainbow-underline"></div>
+        <h1>Authenticator</h1>
+        <div className="rainbow-line" />
 
-        <p style={{ marginBottom: '24px', textAlign: 'left', color: '#64748b', fontSize: '14px' }}>
+        <p className="subtitle" style={{ textAlign: 'center', marginBottom: '24px' }}>
           Entrez le code à 6 chiffres généré par votre application Authenticator.
         </p>
 
-        {error && <div className="alert-error">{error}</div>}
+        {email && !error && !info && (
+          <div style={{ textAlign: 'center', marginBottom: '20px', fontSize: '13px', color: '#64748b' }}>
+            Compte : <strong>{email}</strong>
+          </div>
+        )}
+        
+        {info && <div className="auth-error-banner" style={{ background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0' }}>{info}</div>}
+        {error && <div className="auth-error-banner">{error}</div>}
 
         <form className="form" onSubmit={handleSubmit}>
           <div className="input-group">
-            <input
-              ref={codeInputRef}
-              className="mfa-code-input"
-              value={code}
-              onChange={(event) => handleCodeChange(event.target.value)}
-              placeholder="000000"
-              inputMode="numeric"
-              maxLength={6}
-              autoFocus
-              required
-              disabled={cooldownSeconds > 0 || loading}
-            />
+            <div className="input-icon-wrap">
+              <span className="input-icon-left"><ShieldCheck size={17} /></span>
+              <input
+                ref={codeInputRef}
+                className="input"
+                value={code}
+                onChange={(event) => handleCodeChange(event.target.value)}
+                placeholder="000 000"
+                inputMode="numeric"
+                maxLength={6}
+                autoFocus
+                required
+                disabled={cooldownSeconds > 0 || loading}
+              />
+            </div>
           </div>
 
           <button
@@ -192,19 +212,14 @@ export default function TotpPage() {
             {loading
               ? "Vérification..."
               : cooldownSeconds > 0
-                ? `Attente ${cooldownSeconds}s`
+                ? `Réessayer (${cooldownSeconds}s)`
                 : "Vérifier"}
-            {!loading && cooldownSeconds <= 0 && (
-              <div className="btn-arrow-circle">
-                <ArrowRight size={18} />
-              </div>
-            )}
           </button>
         </form>
 
-        <div className="auth-links" style={{ marginTop: '24px' }}>
-          <Link to="/auth/recovery-code" style={{ textDecoration: 'none', color: '#2563eb', fontWeight: 600, fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <KeyRound size={16} /> Utiliser un code de secours
+        <div className="auth-forgot" style={{ textAlign: 'center', marginTop: '24px' }}>
+          <Link to="/auth/recovery-code" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+            <KeyRound size={15} /> Utiliser un code de secours
           </Link>
         </div>
       </div>
