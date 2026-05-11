@@ -31,11 +31,35 @@ api.interceptors.response.use(
     const status = error?.response?.status;
     const skipAuthRedirect = error?.config?.skipAuthRedirect === true;
 
+    const detail = error?.response?.data?.detail;
+    const detailStatus =
+      detail && typeof detail === "object" ? String(detail.status || "") : "";
+    const accountStatuses = new Set([
+      "account_disabled",
+      "account_blocked",
+      "account_pending_first_login",
+      "account_deleted",
+      "account_unavailable",
+    ]);
+
+    if (status === 403 && accountStatuses.has(detailStatus) && !skipAuthRedirect) {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("current_user");
+      localStorage.removeItem("lastActivityAt");
+      delete api.defaults.headers.common.Authorization;
+      const message = encodeURIComponent(detail.message || "Compte indisponible.");
+      const accountStatus = encodeURIComponent(detailStatus);
+      window.location.href = `/account-disabled?reason=${accountStatus}&message=${message}`;
+    }
+
     if (status === 401 && !skipAuthRedirect) {
       localStorage.removeItem("access_token");
       localStorage.removeItem("current_user");
+      localStorage.removeItem("lastActivityAt");
       delete api.defaults.headers.common.Authorization;
-      window.location.href = "/session-expired";
+      if (!window.location.pathname.startsWith("/login")) {
+        window.location.href = "/login?reason=auth_required";
+      }
     }
 
     return Promise.reject(error);

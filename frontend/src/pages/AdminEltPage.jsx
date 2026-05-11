@@ -1,12 +1,15 @@
-import {
+﻿import {
   Activity,
   BarChart3,
   Clock3,
+  CloudUpload,
   Database,
   Download,
   Eye,
   FileText,
+  LayoutDashboard,
   Loader2,
+  LogOut,
   PlayCircle,
   Power,
   Printer,
@@ -14,18 +17,28 @@ import {
   Search,
   ShieldAlert,
   Square,
-  Wifi,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
 import Layout from "../components/Layout";
 import { useAuth } from "../context/AuthContext";
+import "../styles/admin-elt.css";
 
-const POWER_BI_URL = import.meta.env.VITE_POWER_BI_ELT_URL || "";
+const BI_REFRESH_SLOTS = ["08:00", "09:00", "10:00", "11:00", "14:00", "15:00", "16:00", "17:00"];
+const REPORT_DISPLAY_NAME = "Service SOS Solde & Data";
 
 const FINAL_STATUSES = new Set(["COMPLETED", "NO_DATA", "FAILED", "PARTIAL_FAILURE", "STOPPED"]);
 const ACTIVE_RUN_STATUSES = new Set(["RUNNING", "INITIALIZING", "PROCESSING"]);
+
+const FINAL_TOASTS = {
+  COMPLETED: ["success", "Traitement ELT terminé avec succès."],
+  NO_DATA: ["info", "Aucune donnée à traiter."],
+  FAILED: ["error", "Traitement ELT échoué."],
+  PARTIAL_FAILURE: ["warning", "Traitement partiellement réussi."],
+  STOPPED: ["warning", "Traitement ELT arrêté."],
+};
 
 const SCENARIO_LABELS = {
   FTP_DIRECT: "Traitement direct depuis FTP",
@@ -102,6 +115,59 @@ function statusLabel(value) {
   return STATUS_LABELS[key] || value || "Non renseigné";
 }
 
+function eltSyncLabel(value) {
+  const key = String(value || "").toUpperCase();
+  if (key === "COMPLETED") return "Terminé avec succès";
+  if (key === "NO_DATA") return "Aucune donnée à traiter";
+  if (key === "FAILED") return "Échec";
+  if (key === "PARTIAL_FAILURE") return "Partiellement réussi";
+  if (key === "STOPPED") return "Traitement arrêté";
+  return "Aucun traitement récent";
+}
+
+function oracleSyncState(value) {
+  const key = String(value || "").toUpperCase();
+  if (key === "COMPLETED") return { label: "Données Oracle mises à jour", className: "elt-badge success" };
+  if (key === "NO_DATA") return { label: "Aucune nouvelle donnée", className: "elt-badge neutral" };
+  if (["FAILED", "PARTIAL_FAILURE", "STOPPED"].includes(key)) {
+    return {
+      label: "Oracle non validé pour Power BI",
+      className: key === "PARTIAL_FAILURE" ? "elt-badge warning" : "elt-badge danger",
+    };
+  }
+  return { label: "Oracle en attente de validation", className: "elt-badge neutral" };
+}
+
+function getNextPowerBiRefresh(now = new Date()) {
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const slotDetails = BI_REFRESH_SLOTS.map((slot) => {
+    const [hours, minutes] = slot.split(":").map(Number);
+    return { slot, minutesOfDay: hours * 60 + minutes };
+  });
+  const next = slotDetails.find((item) => item.minutesOfDay > currentMinutes);
+  const target = next || slotDetails[0];
+  const isTomorrow = !next;
+  const minutesRemaining = isTomorrow
+    ? 24 * 60 - currentMinutes + target.minutesOfDay
+    : target.minutesOfDay - currentMinutes;
+
+  let countdownLabel = `dans ${minutesRemaining} min`;
+  if (isTomorrow) {
+    countdownLabel = `demain à ${target.slot}`;
+  } else if (minutesRemaining >= 60) {
+    const hours = Math.floor(minutesRemaining / 60);
+    const minutes = minutesRemaining % 60;
+    countdownLabel = `dans ${hours}h${minutes ? ` ${minutes}min` : ""}`;
+  }
+
+  return {
+    label: target.slot,
+    isTomorrow,
+    minutesRemaining,
+    countdownLabel,
+  };
+}
+
 function badgeClass(value) {
   const key = String(value || "").toUpperCase();
   if (["COMPLETED", "SUCCESS", "SUCCÈS", "OK"].includes(key)) return "elt-badge success";
@@ -110,12 +176,6 @@ function badgeClass(value) {
   if (["RUNNING", "INITIALIZING", "READY"].includes(key)) return "elt-badge info";
   if (["STOPPED", "NON CONCERNÉ", "NON CONCERNE"].includes(key)) return "elt-badge dark";
   return "elt-badge neutral";
-}
-
-function yesNoBadge(value) {
-  if (value === true) return <span className="elt-badge success">Connecté</span>;
-  if (value === false) return <span className="elt-badge danger">Indisponible</span>;
-  return <span className="elt-badge neutral">Non vérifié</span>;
 }
 
 function isWatcherActive(watchStatus) {
@@ -146,21 +206,16 @@ function saveBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-function formatSeconds(value) {
-  const seconds = Number(value);
-  if (!Number.isFinite(seconds) || seconds <= 0) return "-";
-  const minutes = Math.floor(seconds / 60);
-  const rest = seconds % 60;
-  return minutes ? `${minutes} min ${rest}s` : `${rest}s`;
-}
-
 export default function AdminEltPage() {
-  const { hasRight } = useAuth();
+  const { hasRight, logout, user } = useAuth();
+  const navigate = useNavigate();
   const canRunElt = hasRight("lancer_elt");
+  const dashboardPath = user?.role === "SUPER_ADMIN" ? "/super-admin/dashboard" : "/admin/dashboard";
 
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [isStartingRun, setIsStartingRun] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const [toast, setToast] = useState(null);
   const [connections, setConnections] = useState(null);
   const [connectionChecking, setConnectionChecking] = useState(false);
   const [runStatus, setRunStatus] = useState(null);
@@ -169,39 +224,52 @@ export default function AdminEltPage() {
   const [txtReport, setTxtReport] = useState("");
   const [archiveFilesAdv, setArchiveFilesAdv] = useState([]);
   const [archiveFilesRev, setArchiveFilesRev] = useState([]);
-  const [archiveMessage, setArchiveMessage] = useState("");
   const [archiveSearch, setArchiveSearch] = useState("");
   const [showModeChoice, setShowModeChoice] = useState(false);
   const [showWatcherConflict, setShowWatcherConflict] = useState(false);
+  const [hasStartedEltFlow, setHasStartedEltFlow] = useState(false);
+  const [showBiSyncPanel, setShowBiSyncPanel] = useState(false);
+  const [showReportsPanel, setShowReportsPanel] = useState(false);
   const [technicalData, setTechnicalData] = useState({ columns: [], rows: [] });
   const [showTechnical, setShowTechnical] = useState(false);
 
   const runPollRef = useRef(null);
   const watchPollRef = useRef(null);
+  const toastTimerRef = useRef(null);
+  const lastFinalToastRef = useRef("");
   const pendingLaunchAfterWatcherStop = useRef(false);
+  const manualRunStartedRef = useRef(false);
+  const runPollStartedAtRef = useRef(0);
+  const hasSeenActiveRunRef = useRef(false);
+  const runStartLockRef = useRef(false);
 
-  const activeRun = ACTIVE_RUN_STATUSES.has(String(runStatus?.status || "").toUpperCase()) || runStatus?.active === true;
+  const activeRun = isRunning || ACTIVE_RUN_STATUSES.has(String(runStatus?.status || "").toUpperCase()) || runStatus?.active === true;
+  const runButtonDisabled = !canRunElt || loading || isStartingRun || activeRun;
   const watcherActive = isWatcherActive(watchStatus);
 
+  function showToast(typeOrConfig, text) {
+    window.clearTimeout(toastTimerRef.current);
+    const nextToast =
+      typeof typeOrConfig === "object"
+        ? typeOrConfig
+        : { type: typeOrConfig, text, message: text };
+    setToast(nextToast);
+    toastTimerRef.current = window.setTimeout(() => setToast(null), nextToast.actionLabel ? 7200 : 4200);
+  }
+
+  function releaseRunStartLock() {
+    runStartLockRef.current = false;
+    setIsStartingRun(false);
+  }
+
   useEffect(() => {
-    refreshPage(false);
+    initialLoad();
     return () => {
       window.clearInterval(runPollRef.current);
       window.clearInterval(watchPollRef.current);
+      window.clearTimeout(toastTimerRef.current);
     };
   }, []);
-
-  useEffect(() => {
-    window.clearInterval(runPollRef.current);
-    if (activeRun) {
-      console.log("[ELT UI] polling started");
-      runPollRef.current = window.setInterval(loadRunStatus, 2000);
-    }
-    return () => {
-      if (runPollRef.current) console.log("[ELT UI] polling stopped cleanup");
-      window.clearInterval(runPollRef.current);
-    };
-  }, [activeRun]);
 
   useEffect(() => {
     window.clearInterval(watchPollRef.current);
@@ -237,37 +305,120 @@ export default function AdminEltPage() {
     );
   }, [archiveFilesRev, archiveSearch]);
 
-  async function refreshPage(checkConnections = true) {
-    console.log("[ELT UI] refresh all");
+  async function initialLoad() {
+    console.log("[ELT UI] initial load");
     setLoading(true);
-    setError("");
-    setShowModeChoice(false);
     try {
-      await Promise.all([
-        checkConnections ? loadConnections() : Promise.resolve(null),
-        loadWatchStatus(),
-        loadRunStatus(),
-        loadLatestReport(),
-        loadArchiveFiles(),
-      ]);
+      await Promise.all([loadArchiveFiles(), loadWatchStatus({ silent: true }), loadRunStatus({ silent: true })]);
     } finally {
       setLoading(false);
     }
   }
 
-  async function loadConnections() {
+  async function refreshPage() {
+    console.log("[ELT UI] refresh visible data");
+    setLoading(true);
+    showToast("info", "Actualisation en cours...");
+    setShowModeChoice(false);
+    try {
+      const [watcher, status] = await Promise.all([
+        loadWatchStatus(),
+        loadRunStatus(),
+        loadArchiveFiles(),
+      ]);
+      if (ACTIVE_RUN_STATUSES.has(String(status?.status || "").toUpperCase()) || status?.active) {
+        setIsRunning(true);
+        setShowReportsPanel(false);
+        setShowBiSyncPanel(false);
+        setReport(null);
+        setTxtReport("");
+        showToast("info", "Traitement en cours. Le rapport sera disponible à la fin.");
+        startRunPolling();
+        return;
+      }
+      setIsRunning(false);
+      const latest = await loadLatestReport();
+      if (latest?.run_id || latest?.status) {
+        setShowReportsPanel(true);
+        setShowBiSyncPanel(true);
+      }
+      showToast("success", "Données actualisées.");
+    } catch {
+      showToast("error", "Actualisation impossible.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function loadLatestReportWithRetry(maxAttempts = 6) {
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      const latest = await loadLatestReport();
+      if (latest?.run_id || latest?.status) return latest;
+      await new Promise((resolve) => window.setTimeout(resolve, 800));
+    }
+    return null;
+  }
+
+  async function handleFinalRunStatus(data, { silent = false } = {}) {
+    const status = String(data?.status || "").toUpperCase();
+    window.clearInterval(runPollRef.current);
+    console.log("[ELT UI] polling stopped final status=", status);
+    setIsRunning(false);
+    releaseRunStartLock();
+
+    if (manualRunStartedRef.current) {
+      const latest = await loadLatestReportWithRetry();
+      await Promise.all([loadArchiveFiles(), loadWatchStatus({ silent: true })]);
+      if (latest?.run_id || latest?.status) {
+        setShowReportsPanel(true);
+        setShowBiSyncPanel(true);
+      }
+      const finalToastKey = `${data?.run_id || latest?.run_id || ""}-${status}`;
+      if (!silent && lastFinalToastRef.current !== finalToastKey) {
+        const [type, text] = FINAL_TOASTS[status] || ["info", "Traitement ELT terminé."];
+        showToast({
+          type,
+          title: text,
+          message: latest?.run_id || latest?.status ? "Le rapport métier est disponible." : "Le traitement est terminé.",
+          actionLabel: technicalCsvPath(latest) ? "Voir tableau technique" : "",
+          onAction: technicalCsvPath(latest) ? () => openTechnicalTasks(latest) : null,
+          secondaryActionLabel: technicalCsvPath(latest) ? "Télécharger CSV" : "",
+          onSecondaryAction: technicalCsvPath(latest)
+            ? () => download(technicalCsvPath(latest), "/elt/download/csv", "suivi-technique.csv")
+            : null,
+        });
+        lastFinalToastRef.current = finalToastKey;
+      }
+      manualRunStartedRef.current = false;
+    } else {
+      await Promise.all([loadArchiveFiles(), loadWatchStatus({ silent: true })]);
+    }
+  }
+
+  function startRunPolling() {
+    window.clearInterval(runPollRef.current);
+    runPollStartedAtRef.current = Date.now();
+    hasSeenActiveRunRef.current = false;
+    console.log("[ELT UI] polling started");
+    runPollRef.current = window.setInterval(() => {
+      loadRunStatus().catch(() => {});
+    }, 2000);
+    window.setTimeout(() => loadRunStatus().catch(() => {}), 900);
+  }
+
+  async function loadConnections({ silent = false } = {}) {
     try {
       const response = await api.get("/elt/check-connections");
       console.log("[ELT UI] check connections", response.data);
       setConnections(response.data);
       return response.data;
     } catch (err) {
-      setError(getApiError(err, "Impossible de vérifier Oracle et FTP."));
+      if (!silent) showToast("error", getApiError(err, "Impossible de vérifier Oracle et FTP."));
       return null;
     }
   }
 
-  async function loadWatchStatus() {
+  async function loadWatchStatus({ silent = false } = {}) {
     try {
       const response = await api.get("/elt/watch/status");
       console.log("[ELT UI] watch status", response.data);
@@ -275,26 +426,34 @@ export default function AdminEltPage() {
       setWatchStatus(response.data);
       return response.data;
     } catch (err) {
-      setError(getApiError(err, "Impossible de charger la surveillance locale."));
+      if (!silent) showToast("error", getApiError(err, "Impossible de charger la surveillance locale."));
       return null;
     }
   }
 
-  async function loadRunStatus() {
+  async function loadRunStatus({ silent = false } = {}) {
     try {
       const response = await api.get("/elt/run/status");
       const data = response.data;
       console.log("[ELT UI] run status", data);
       setRunStatus(data);
       const status = String(data?.status || "").toUpperCase();
+      if (ACTIVE_RUN_STATUSES.has(status) || data?.active) {
+        hasSeenActiveRunRef.current = true;
+        setIsRunning(true);
+        setShowReportsPanel(false);
+        setShowBiSyncPanel(false);
+      }
       if (FINAL_STATUSES.has(status)) {
-        window.clearInterval(runPollRef.current);
-        console.log("[ELT UI] polling stopped final status=", status);
-        await Promise.all([loadLatestReport(), loadArchiveFiles(), loadWatchStatus()]);
+        const elapsedSinceStart = Date.now() - runPollStartedAtRef.current;
+        if (manualRunStartedRef.current && !hasSeenActiveRunRef.current && elapsedSinceStart < 5000) {
+          return data;
+        }
+        await handleFinalRunStatus(data, { silent });
       }
       return data;
     } catch (err) {
-      setError(getApiError(err, "Impossible de suivre le traitement ELT."));
+      if (!silent) showToast("error", getApiError(err, "Impossible de suivre le traitement ELT."));
       return null;
     }
   }
@@ -305,9 +464,11 @@ export default function AdminEltPage() {
       if (response.data?.success === false && !response.data?.run_id) return;
       setReport(response.data);
       await loadTxtReport(response.data);
+      return response.data;
     } catch {
       setReport(null);
       setTxtReport("");
+      return null;
     }
   }
 
@@ -333,24 +494,46 @@ export default function AdminEltPage() {
       const filesRev = response.data?.files_rev || files.filter((item) => String(item.flux || "").toLowerCase().includes("remboursement"));
       setArchiveFilesAdv(filesAdv);
       setArchiveFilesRev(filesRev);
-      const nextMessage = response.data?.success === false ? response.data?.message : "";
-      setArchiveMessage(nextMessage || "");
     } catch (err) {
       setArchiveFilesAdv([]);
       setArchiveFilesRev([]);
-      setArchiveMessage(getApiError(err, "Impossible de charger le suivi des fichiers traités."));
+      showToast("error", getApiError(err, "Impossible de charger le suivi des fichiers traités."));
     }
   }
 
   async function handleLaunchClick() {
     console.log("[ELT UI] lancer clicked");
-    setError("");
-    setMessage("");
+    if (runStartLockRef.current || isStartingRun || activeRun) {
+      showToast("warning", "Un traitement ELT est déjà en cours.");
+      return;
+    }
+    runStartLockRef.current = true;
+    setIsStartingRun(true);
+    setHasStartedEltFlow(true);
     setShowModeChoice(false);
+    setShowReportsPanel(false);
+    setShowBiSyncPanel(false);
+
+    const connectionState = await loadConnections();
+    if (!connectionState) {
+      releaseRunStartLock();
+      return;
+    }
+    if (!connectionState.oracle_ok) {
+      showToast({
+        type: "error",
+        title: "Oracle indisponible",
+        message: "Oracle indisponible. Vous ne pouvez pas lancer le traitement.",
+      });
+      releaseRunStartLock();
+      return;
+    }
 
     const status = await loadRunStatus();
-    if (["RUNNING", "INITIALIZING"].includes(String(status?.status || "").toUpperCase())) {
-      setMessage("Un traitement ELT est déjà en cours. Veuillez attendre la fin.");
+    if (ACTIVE_RUN_STATUSES.has(String(status?.status || "").toUpperCase()) || status?.active) {
+      setIsRunning(true);
+      showToast("warning", "Un traitement ELT est déjà en cours.");
+      releaseRunStartLock();
       return;
     }
 
@@ -361,48 +544,66 @@ export default function AdminEltPage() {
     if (watcherIsActive) {
       setShowWatcherConflict(true);
       pendingLaunchAfterWatcherStop.current = true;
+      showToast("warning", "Surveillance locale activée. Désactivez-la avant de lancer un ELT manuel.");
+      releaseRunStartLock();
       return;
     }
 
-    await checkConnectionsAndLaunch();
+    await checkConnectionsAndLaunch(connectionState, { keepStartingLock: true });
   }
 
-  async function checkConnectionsAndLaunch() {
+  async function checkConnectionsAndLaunch(precheckedConnections = null, { keepStartingLock = false } = {}) {
     setLoading(true);
     setConnectionChecking(true);
-    setError("");
     try {
-      const data = await loadConnections();
-      if (!data) return;
+      const data = precheckedConnections || await loadConnections();
+      if (!data) {
+        releaseRunStartLock();
+        return;
+      }
 
       if (!data.oracle_ok) {
-        setMessage("Oracle indisponible. Impossible de lancer le traitement.");
+        showToast({
+          type: "error",
+          title: "Oracle indisponible",
+          message: "Oracle indisponible. Vous ne pouvez pas lancer le traitement.",
+        });
+        releaseRunStartLock();
         return;
       }
 
       if (data.ftp_ok) {
         setShowModeChoice(true);
-        setMessage("Oracle et FTP sont disponibles. Choisissez le mode de traitement.");
+        showToast("info", "FTP disponible. Choisissez le mode de traitement.");
+        releaseRunStartLock();
         return;
       }
 
       console.log("[ELT UI] chosen mode", "LOCAL_ONLY");
-      setMessage("Traitement local disponible. Le serveur FTP est indisponible. Le système utilise les fichiers présents dans le dossier local.");
-      await startRun("LOCAL_ONLY");
+      showToast("warning", "FTP indisponible. Lancement du traitement local.");
+      await startRun("LOCAL_ONLY", { allowLockedStart: keepStartingLock });
     } catch (err) {
-      setError(getApiError(err, "Impossible de vérifier Oracle et FTP."));
+      showToast("error", getApiError(err, "Impossible de vérifier Oracle et FTP."));
+      releaseRunStartLock();
     } finally {
       setConnectionChecking(false);
       setLoading(false);
     }
   }
 
-  async function startRun(userMode) {
+  async function startRun(userMode, { allowLockedStart = false } = {}) {
     console.log("[ELT START] userMode=", userMode);
     console.log("[ELT UI] chosen mode", userMode);
+    if ((runStartLockRef.current && !allowLockedStart) || isStartingRun || activeRun) {
+      showToast("warning", "Un traitement ELT est déjà en cours.");
+      return;
+    }
+    runStartLockRef.current = true;
+    setIsStartingRun(true);
     setLoading(true);
-    setError("");
     setShowModeChoice(false);
+    setShowReportsPanel(false);
+    setShowBiSyncPanel(false);
     try {
       const response = await api.post("/elt/run/start", null, { params: { user_mode: userMode } });
       const data = response.data;
@@ -410,19 +611,28 @@ export default function AdminEltPage() {
       console.log("[ELT UI] start run response", data);
       if (data.watch_active) {
         setShowWatcherConflict(true);
-        setMessage(data.message);
+        showToast("warning", "Surveillance locale activée. Désactivez-la avant de lancer un ELT manuel.");
+        releaseRunStartLock();
         return;
       }
       if (!data.success) {
-        setError(data.message || data.error || "Lancement ELT impossible.");
+        showToast("error", data.message || data.error || "Lancement ELT impossible.");
+        releaseRunStartLock();
         return;
       }
-      setMessage("Traitement ELT lancé avec succès.");
+      showToast("success", "Traitement ELT lancé.");
+      manualRunStartedRef.current = true;
+      setIsRunning(true);
+      setShowReportsPanel(false);
+      setShowBiSyncPanel(false);
+      setReport(null);
+      setTxtReport("");
       setRunStatus({ status: "RUNNING", active: true, user_mode: userMode, scenario_label: data.scenario_label });
-      console.log("[ELT UI] polling started");
-      await loadRunStatus();
+      setIsStartingRun(false);
+      startRunPolling();
     } catch (err) {
-      setError(getApiError(err, "Erreur lors du lancement ELT."));
+      showToast("error", getApiError(err, "Erreur lors du lancement ELT."));
+      releaseRunStartLock();
     } finally {
       setLoading(false);
     }
@@ -430,33 +640,47 @@ export default function AdminEltPage() {
 
   async function stopWatcherAndContinue() {
     setLoading(true);
-    setError("");
     try {
       await api.post("/elt/watch/stop");
       setShowWatcherConflict(false);
       const watcher = await loadWatchStatus();
       if (isWatcherActive(watcher)) {
-        setError("La surveillance locale est encore active. Veuillez réessayer.");
+        showToast("error", "La surveillance locale est encore active. Veuillez réessayer.");
         return;
       }
+      showToast("success", "Surveillance locale désactivée.");
       if (pendingLaunchAfterWatcherStop.current) {
         pendingLaunchAfterWatcherStop.current = false;
         await checkConnectionsAndLaunch();
       }
     } catch (err) {
-      setError(getApiError(err, "Impossible de désactiver la surveillance locale."));
+      showToast("error", getApiError(err, "Impossible de désactiver la surveillance locale."));
     } finally {
       setLoading(false);
     }
   }
 
   async function startWatch() {
+    if (activeRun) {
+      showToast("warning", "Impossible d’activer la surveillance pendant un traitement ELT.");
+      return;
+    }
+    setHasStartedEltFlow(true);
     setLoading(true);
-    setError("");
     try {
+      const connectionState = await loadConnections();
+      if (!connectionState) return;
+      if (!connectionState.oracle_ok) {
+        showToast({
+          type: "error",
+          title: "Oracle indisponible",
+          message: "Oracle indisponible. Vous ne pouvez pas activer la surveillance locale.",
+        });
+        return;
+      }
       const response = await api.post("/elt/watch/start");
-      setMessage(response.data?.message || "Surveillance locale activée.");
       if (response.data?.success) {
+        showToast("success", "Surveillance locale activée.");
         setWatchStatus({
           success: true,
           active: true,
@@ -467,10 +691,12 @@ export default function AdminEltPage() {
           message: response.data?.message || "En attente de fichier.",
           pid: response.data?.pid,
         });
+      } else {
+        showToast("warning", response.data?.message || "Surveillance locale non activée.");
       }
       await loadWatchStatus();
     } catch (err) {
-      setError(getApiError(err, "Impossible d'activer la surveillance locale."));
+      showToast("error", getApiError(err, "Impossible d'activer la surveillance locale."));
     } finally {
       setLoading(false);
     }
@@ -478,22 +704,24 @@ export default function AdminEltPage() {
 
   async function stopWatch() {
     setLoading(true);
-    setError("");
     try {
-      const response = await api.post("/elt/watch/stop");
-      setMessage(response.data?.message || "Surveillance locale désactivée.");
-      await loadWatchStatus();
+      await api.post("/elt/watch/stop");
+      showToast("success", "Surveillance locale désactivée.");
+      const nextStatus = await loadWatchStatus();
+      if (!nextStatus) {
+        setWatchStatus({ success: true, active: false, watching: false, state: "STOPPED" });
+      }
     } catch (err) {
-      setError(getApiError(err, "Impossible de désactiver la surveillance locale."));
+      showToast("error", getApiError(err, "Impossible de désactiver la surveillance locale."));
     } finally {
       setLoading(false);
     }
   }
 
-  async function openTechnicalTasks() {
-    const path = technicalCsvPath(report);
+  async function openTechnicalTasks(sourceReport = report) {
+    const path = technicalCsvPath(sourceReport);
     if (!path) {
-      setError("Aucun suivi technique des tâches n'est disponible.");
+      showToast("info", "Aucun suivi technique des tâches n'est disponible.");
       return;
     }
     try {
@@ -501,7 +729,7 @@ export default function AdminEltPage() {
       setTechnicalData(response.data || { columns: [], rows: [] });
       setShowTechnical(true);
     } catch (err) {
-      setError(getApiError(err, "Impossible de charger le suivi technique des tâches."));
+      showToast("error", getApiError(err, "Impossible de charger le suivi technique des tâches."));
     }
   }
 
@@ -522,59 +750,62 @@ export default function AdminEltPage() {
   }
 
   return (
-    <Layout title="Pilotage ELT SOS Solde" subtitle="Supervision des flux Avance et Remboursement">
-      <section className="elt-hero">
-        <div className="elt-hero-brand">
-          <img src="/tt-logo.png" alt="Tunisie Telecom" />
-          <div>
-            <span>Plateforme interne</span>
-            <h2>Pilotage ELT SOS Solde</h2>
-            <p>Supervision des flux Avance et Remboursement</p>
-          </div>
+    <Layout
+      title="Pilotage ELT Service SOS Solde & Data"
+      hideSidebar
+      className="app-shell--elt"
+    >
+      <div className="elt-premium-page">
+        <div className="elt-animated-bg" aria-hidden="true">
+          <span className="elt-bg-blob elt-bg-blob--blue" />
+          <span className="elt-bg-blob elt-bg-blob--pink" />
+          <span className="elt-bg-blob elt-bg-blob--orange" />
+          <span className="elt-bg-wave elt-bg-wave--one" />
+          <span className="elt-bg-wave elt-bg-wave--two" />
+          <span className="elt-bg-mesh" />
         </div>
-        <div className="elt-hero-actions">
-          <button className="btn btn-primary" onClick={handleLaunchClick} disabled={!canRunElt || loading || activeRun}>
-            {loading || activeRun ? <Loader2 className="spin" size={18} /> : <PlayCircle size={18} />}
-            Lancer ELT
+        <div className="elt-bg-waves" aria-hidden="true" />
+
+      <section className="elt-hero-header elt-reveal">
+        <div className="elt-hero-brand">
+          <img className="elt-hero-logo" src="/tt-logo.png" alt="Tunisie Telecom" />
+          <span className="elt-hero-badge">Plateforme interne</span>
+        </div>
+        <div className="elt-hero-copy">
+          <h1 className="elt-hero-title">Pilotage ELT Service SOS Solde & Data</h1>
+        </div>
+        <div className="actions elt-primary-actions elt-hero-actions">
+          <button className="btn btn-primary elt-btn elt-btn--primary" onClick={handleLaunchClick} disabled={runButtonDisabled}>
+            {isStartingRun || activeRun ? <Loader2 className="spin" size={18} /> : <PlayCircle size={18} />}
+            {isStartingRun || activeRun ? "Traitement en cours…" : "Lancer ELT"}
           </button>
           {watcherActive ? (
-            <button className="btn btn-secondary" onClick={stopWatch} disabled={loading || activeRun}><Square size={18} />Désactiver surveillance locale</button>
+            <button className="btn btn-secondary" onClick={stopWatch} disabled={loading || isStartingRun || activeRun}><Square size={18} />Désactiver surveillance locale</button>
           ) : (
-            <button className="btn btn-secondary" onClick={startWatch} disabled={loading || activeRun}><Power size={18} />Activer surveillance locale</button>
+            <button className="btn btn-secondary" onClick={startWatch} disabled={loading || isStartingRun || activeRun}><Power size={18} />Activer surveillance locale</button>
           )}
-          <button className="btn btn-secondary" onClick={() => refreshPage(true)} disabled={loading}><RefreshCw size={18} />Actualiser</button>
+          <button className="btn btn-secondary" onClick={refreshPage} disabled={loading}><RefreshCw size={18} />Actualiser</button>
+        </div>
+        <div className="elt-hero-orbit" aria-hidden="true">
+          <span />
+          <span />
+          <span />
         </div>
       </section>
 
-      <ConnectionCards connections={connections} watchStatus={watchStatus} runStatus={runStatus} report={report} />
-
-      <section className="elt-panel elt-launch-panel">
-        <div className="elt-section-title">
-          <div>
-            <h2>Actions de traitement</h2>
-          </div>
-        </div>
-
+      {(connectionChecking || showModeChoice) && (
+      <section className="elt-panel elt-launch-panel elt-reveal elt-reveal--delay-1">
         {connectionChecking && <div className="elt-checking"><Loader2 className="spin" size={18} />Vérification des connexions...</div>}
-        {message && <div className="alert alert-info">{message}</div>}
-        {error && <div className="alert alert-error">{error}</div>}
-
-        {connections && !connections.oracle_ok && (
-          <div className="elt-blocker">
-            <ShieldAlert size={22} />
-            <strong>Oracle indisponible. Impossible de lancer le traitement.</strong>
-          </div>
-        )}
 
         {showModeChoice && (
           <>
             <h3 className="elt-choice-title">Choix du mode de traitement</h3>
             <div className="elt-mode-grid">
-              <button className="elt-mode-card" onClick={() => startRun("FTP_DIRECT")} disabled={loading}>
+              <button className="elt-mode-card" onClick={() => startRun("FTP_DIRECT")} disabled={loading || isStartingRun || activeRun}>
                 <span>Traitement direct depuis FTP</span>
                 <small>Traite directement les fichiers présents sur le serveur FTP sans copie locale.</small>
               </button>
-              <button className="elt-mode-card" onClick={() => startRun("FTP_TO_LOCAL")} disabled={loading}>
+              <button className="elt-mode-card" onClick={() => startRun("FTP_TO_LOCAL")} disabled={loading || isStartingRun || activeRun}>
                 <span>Récupération FTP puis traitement local</span>
                 <small>Récupère les fichiers depuis FTP vers le dossier local puis lance le traitement.</small>
               </button>
@@ -582,50 +813,43 @@ export default function AdminEltPage() {
           </>
         )}
       </section>
-
-      <RealtimeStatus status={runStatus} />
-
-      {watcherActive && (
-        <WatcherPanel
-          status={watchStatus}
-          loading={loading}
-          runActive={activeRun}
-          onStart={startWatch}
-          onStop={stopWatch}
-          onRefresh={loadWatchStatus}
-        />
       )}
 
-      <ReportsPanel
-        report={report}
-        txtReport={txtReport}
-        onDownloadTxt={() => download(txtPath(report), "/elt/download/txt", "rapport-metier.txt")}
-        onOpenTechnical={openTechnicalTasks}
-        onDownloadPdf={downloadPdf}
-        onPrint={printReport}
-      />
+      {hasStartedEltFlow && connections && (
+        <ConnectionCards connections={connections} watchStatus={watchStatus} runStatus={runStatus} report={report} />
+      )}
+
+      {showReportsPanel && !activeRun && report && (
+        <ReportsPanel
+          report={report}
+          txtReport={txtReport}
+          onOpenTechnical={openTechnicalTasks}
+          onDownloadPdf={downloadPdf}
+          onPrint={printReport}
+        />
+      )}
 
       <ArchiveFilesPanel
         filesAdv={filteredAdvFiles}
         filesRev={filteredRevFiles}
         search={archiveSearch}
         onSearch={setArchiveSearch}
-        message={archiveMessage}
-        onRefresh={loadArchiveFiles}
       />
 
-      <PowerBiPanel />
+      {showBiSyncPanel && !activeRun && report && <BiSyncPanel report={report} navigate={navigate} />}
+
+      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
 
       {showWatcherConflict && (
         <div className="elt-modal-backdrop" role="presentation">
           <div className="elt-confirm-modal" role="dialog" aria-modal="true">
             <ShieldAlert size={30} />
             <h2>Surveillance locale active</h2>
-            <p>La surveillance locale est active. Pour lancer un traitement manuel, désactivez d’abord la surveillance.</p>
+            <p>La surveillance locale est active. Vous ne pouvez pas lancer un traitement manuel tant qu’elle est activée.</p>
             <div className="actions">
               <button className="btn btn-danger" onClick={stopWatcherAndContinue} disabled={loading}>
                 <Square size={18} />
-                Désactiver la surveillance et lancer
+                Désactiver la surveillance
               </button>
               <button className="btn btn-secondary" onClick={() => setShowWatcherConflict(false)} disabled={loading}>
                 Annuler
@@ -642,6 +866,33 @@ export default function AdminEltPage() {
           onDownload={() => download(technicalCsvPath(report), "/elt/download/csv", "suivi-technique.csv")}
         />
       )}
+      <nav className="elt-bottom-nav" aria-label="Navigation ELT">
+        <button type="button" onClick={() => navigate(dashboardPath)}>
+          <LayoutDashboard size={18} />
+          <span>Dashboard</span>
+        </button>
+        <button type="button" className="active" onClick={() => navigate("/admin/elt")}>
+          <PlayCircle size={18} />
+          <span>Traitement ELT</span>
+        </button>
+        {hasRight("dashboard_service_sos") && (
+          <button type="button" onClick={() => navigate("/dashboard/service-sos")}>
+            <BarChart3 size={18} />
+            <span>Service SOS</span>
+          </button>
+        )}
+        {hasRight("dashboard_parc_service_sos") && (
+          <button type="button" onClick={() => navigate("/dashboard/parc-service-sos")}>
+            <BarChart3 size={18} />
+            <span>Parc SOS</span>
+          </button>
+        )}
+        <button type="button" className="logout" onClick={logout}>
+          <LogOut size={18} />
+          <span>Déconnexion</span>
+        </button>
+      </nav>
+      </div>
     </Layout>
   );
 }
@@ -651,152 +902,61 @@ function ConnectionCards({ connections, watchStatus, runStatus, report }) {
   const ftpOk = connections?.ftp_ok ?? runStatus?.ftp_ok ?? report?.ftp_ok;
   const latestStatus = runStatus?.status || report?.status || "-";
   const lastKnown = !connections && !runStatus?.active && report;
+  const oracleBlocked = connections && oracleOk === false;
+  const modeValue = oracleBlocked ? "Non disponible" : scenarioLabel(report?.scenario || runStatus?.scenario || runStatus?.user_mode);
+  const statusValue = oracleBlocked ? "Traitement bloqué" : runStatus?.active ? "Traitement en cours" : statusLabel(latestStatus);
 
   return (
-    <section className="elt-status-grid">
-      <MiniCard title="Oracle" value={oracleOk === true ? "Connecté" : oracleOk === false ? "Indisponible" : "Non vérifié"} detail={lastKnown ? "Dernier état connu" : connections ? "Vérifié maintenant" : "En attente de vérification"} icon={Database} tone={oracleOk ? "green" : "orange"} />
-      <MiniCard title="FTP" value={ftpOk === true ? "Connecté" : ftpOk === false ? "Indisponible" : "Non vérifié"} detail={lastKnown ? "Dernier état connu" : connections ? "Vérifié maintenant" : "En attente de vérification"} icon={Wifi} tone={ftpOk ? "green" : "orange"} />
-      <MiniCard title="Surveillance" value={isWatcherActive(watchStatus) ? "Active" : "Arrêtée"} icon={Activity} tone={isWatcherActive(watchStatus) ? "cyan" : "yellow"} />
-      <MiniCard title="Dernier run" value={statusLabel(latestStatus)} detail={runStatus?.active ? "Traitement en cours" : "Dernier état connu"} icon={Clock3} tone="violet" />
-      <MiniCard title="Scénario" value={scenarioLabel(report?.scenario || runStatus?.scenario || runStatus?.user_mode)} detail={runStatus?.active ? "Scénario actif" : report ? "Dernier scénario" : "-"} icon={PlayCircle} tone="magenta" />
+    <section className="elt-status-grid elt-reveal elt-reveal--delay-2">
+      <MiniCard title="Oracle" value={oracleOk === true ? "Connecté" : oracleOk === false ? "Indisponible" : "Non vérifié"} detail={lastKnown ? "Dernier état connu" : connections ? "Vérifié maintenant" : "En attente de vérification"} icon={Database} tone="oracle" checked={oracleOk === true} />
+      <MiniCard title="FTP" value={ftpOk === true ? "Disponible" : ftpOk === false ? "Indisponible" : "Non vérifié"} detail={lastKnown ? "Dernier état connu" : connections ? "Vérifié maintenant" : "En attente de vérification"} icon={CloudUpload} tone="ftp" checked={ftpOk === true} />
+      <MiniCard title="Mode" value={modeValue} detail={oracleBlocked ? "Oracle non validé" : runStatus?.active ? "Scénario actif" : report ? "Dernier scénario" : "En attente"} icon={Activity} tone="mode" />
+      <MiniCard title="Statut" value={statusValue} detail={oracleBlocked ? "Oracle indisponible" : runStatus?.active ? "Traitement démarré" : "Dernier état connu"} icon={Clock3} tone="status" checked={String(latestStatus).toUpperCase() === "COMPLETED"} />
     </section>
   );
 }
 
-function MiniCard({ title, value, detail, icon: Icon, tone }) {
+function MiniCard({ title, value, detail, icon: Icon, tone, checked = false }) {
   return (
-    <article className={`elt-status-card ${tone}`}>
-      <div className="elt-status-icon"><Icon size={20} /></div>
-      <div>
-        <span>{title}</span>
-        <strong>{value}</strong>
-        {detail && <small>{detail}</small>}
+    <article className={`elt-status-card ${tone} elt-status-card--${tone}`}>
+      <span className="elt-status-decoration" aria-hidden="true" />
+      {checked && <span className="elt-status-check" aria-hidden="true" />}
+      <div className="elt-status-icon"><Icon size={22} /></div>
+      <div className="elt-status-content">
+        <span className="elt-status-title">{title}</span>
+        <strong className="elt-status-value">{value}</strong>
+        {detail && <small className="elt-status-subtitle">{detail}</small>}
       </div>
     </article>
   );
-}
-
-function RealtimeStatus({ status }) {
-  const currentStatus = String(status?.status || "STOPPED").toUpperCase();
-  const active = ACTIVE_RUN_STATUSES.has(currentStatus) || status?.active;
-  const progress = Number(status?.global_progress_percent || 0);
-  if (!active) {
-    return (
-      <section className="elt-panel elt-realtime-idle">
-        <div className="elt-section-title">
-          <div>
-            <h2>Suivi temps réel</h2>
-            <p>Aucun traitement ELT actif pour le moment.</p>
-          </div>
-          <span className="elt-badge neutral">En attente</span>
-        </div>
-      </section>
-    );
-  }
-  return (
-    <section className="elt-panel elt-realtime-active">
-      <div className="elt-section-title">
-        <div>
-          <h2>Suivi temps réel</h2>
-          <p>{status?.message || "Aucun traitement actif pour le moment."}</p>
-        </div>
-        <span className={badgeClass(currentStatus)}>{statusLabel(currentStatus)}</span>
-      </div>
-      <Progress label="Progression globale" value={progress} />
-      <div className="elt-progress-split">
-        <Progress label="Avance" value={Number(status?.adv_progress_percent || 0)} />
-        <Progress label="Remboursement" value={Number(status?.rev_progress_percent || 0)} />
-      </div>
-      <div className="elt-kpi-row no-pad">
-        <Kpi label="Tâches terminées" value={status?.completed_count ?? 0} />
-        <Kpi label="En cours" value={status?.running_count ?? 0} />
-        <Kpi label="En attente" value={status?.waiting_count ?? 0} />
-        <Kpi label="Échouées" value={status?.failed_count ?? 0} />
-      </div>
-      <div className="elt-live-details">
-        <Info label="Tâche Avance en cours" value={status?.current_adv_task || "Aucune"} />
-        <Info label="Tâche Remboursement en cours" value={status?.current_rev_task || "Aucune"} />
-        <Info label="Temps écoulé" value={formatSeconds(status?.elapsed_seconds)} />
-        <Info label="Temps restant estimé" value={formatSeconds(status?.estimated_remaining_seconds)} />
-      </div>
-    </section>
-  );
-}
-
-function Progress({ label, value }) {
-  const percent = Math.max(0, Math.min(100, Number(value) || 0));
-  return (
-    <div className="elt-progress-block">
-      <div className="elt-progress-label"><span>{label}</span><strong>{percent}%</strong></div>
-      <div className="elt-progress"><div style={{ width: `${percent}%` }} /></div>
-    </div>
-  );
-}
-
-function Kpi({ label, value }) {
-  return <div className="elt-kpi"><span>{label}</span><strong>{value}</strong></div>;
 }
 
 function Info({ label, value }) {
   return <div className="elt-info-tile"><span>{label}</span><strong>{value || "-"}</strong></div>;
 }
 
-function WatcherPanel({ status, loading, runActive, onStart, onStop, onRefresh }) {
+function ReportsPanel({ report, txtReport, onOpenTechnical, onDownloadPdf, onPrint }) {
   return (
-    <section className="elt-panel">
+    <section className="elt-panel elt-report-print elt-reveal elt-reveal--delay-2">
       <div className="elt-section-title">
         <div>
-          <h2>Surveillance locale</h2>
-          <p>{status?.message || "Surveillance locale non initialisée."}</p>
-        </div>
-        <div className="actions">
-          {status?.active ? (
-            <button className="btn btn-secondary" onClick={onStop} disabled={loading || runActive}><Square size={18} />Désactiver surveillance locale</button>
-          ) : (
-            <button className="btn btn-secondary" onClick={onStart} disabled={loading || runActive}><Power size={18} />Activer surveillance locale</button>
-          )}
-          <button className="btn btn-secondary" onClick={onRefresh} disabled={loading}><RefreshCw size={18} />Actualiser</button>
-        </div>
-      </div>
-      <div className="elt-live-details">
-        <Info label="État" value={status?.state_label || "Surveillance arrêtée"} />
-        <div className="elt-info-tile"><span>Oracle</span>{yesNoBadge(status?.oracle_ok)}</div>
-        <div className="elt-info-tile"><span>FTP</span>{yesNoBadge(status?.ftp_ok)}</div>
-        <Info label="Dernier fichier détecté" value={status?.last_detected_file || "Aucun"} />
-      </div>
-    </section>
-  );
-}
-
-function ReportsPanel({ report, txtReport, onDownloadTxt, onOpenTechnical, onDownloadPdf, onPrint }) {
-  return (
-    <section className="elt-panel elt-report-print">
-      <div className="elt-section-title">
-        <div>
-          <h2>Rapports</h2>
+          <h2>{REPORT_DISPLAY_NAME}</h2>
         </div>
         {report && <span className={badgeClass(report.status)}>{statusLabel(report.status)}</span>}
       </div>
 
-      {report ? (
-        <>
-          <div className="elt-report-meta clean">
-            <Info label="Statut global métier" value={report.status_label || statusLabel(report.status)} />
-            <Info label="Scénario métier" value={report.scenario_label || scenarioLabel(report.scenario)} />
-            <Info label="Date génération" value={report.employee_report?.generated_at} />
-            <Info label="Run ID" value={report.run_id} />
-          </div>
-          <div className="actions elt-report-buttons">
-            <button className="btn btn-secondary" onClick={onDownloadTxt}><Download size={18} />Télécharger TXT</button>
-            <button className="btn btn-secondary" onClick={onOpenTechnical}><Eye size={18} />Suivi technique des tâches</button>
-            <button className="btn btn-secondary" onClick={onDownloadPdf}><FileText size={18} />Télécharger rapport PDF</button>
-            <button className="btn btn-primary" onClick={onPrint}><Printer size={18} />Imprimer</button>
-          </div>
-          <BusinessReportText text={txtReport} />
-        </>
-      ) : (
-        <div className="empty-cell">Aucun rapport métier disponible pour le moment.</div>
-      )}
+      <div className="elt-report-meta clean">
+        <Info label="Statut global métier" value={report.status_label || statusLabel(report.status)} />
+        <Info label="Scénario métier" value={report.scenario_label || scenarioLabel(report.scenario)} />
+        <Info label="Date génération" value={report.employee_report?.generated_at} />
+        <Info label="Run ID" value={report.run_id} />
+      </div>
+      <div className="actions elt-report-buttons">
+        <button className="btn btn-secondary" onClick={() => onOpenTechnical()}><Eye size={18} />Voir tableau technique</button>
+        <button className="btn btn-secondary" onClick={onDownloadPdf}><FileText size={18} />Télécharger rapport PDF</button>
+        <button className="btn btn-primary" onClick={onPrint}><Printer size={18} />Imprimer</button>
+      </div>
+      <BusinessReportText text={txtReport} />
     </section>
   );
 }
@@ -835,6 +995,7 @@ function BusinessReportText({ text }) {
   };
   const sectionTitles = new Set([
     "RAPPORT MÉTIER ELT - SOS SOLDE",
+    REPORT_DISPLAY_NAME.toUpperCase(),
     "INFORMATIONS GÉNÉRALES",
     "INFORMATIONS GENERALES",
     "FLUX AVANCE",
@@ -850,7 +1011,7 @@ function BusinessReportText({ text }) {
     .filter((line) => !line.toLowerCase().includes("rapport généré automatiquement"))
     .filter((line) => !isHiddenReportLine(line));
 
-  if (!lines.length) return <div className="elt-report-clean empty">Rapport métier TXT non disponible.</div>;
+  if (!lines.length) return null;
 
   const sections = [];
   let current = { title: "Rapport métier", rows: [] };
@@ -863,7 +1024,7 @@ function BusinessReportText({ text }) {
       skippingSection = isHiddenSection;
       if (skippingSection) return;
       if (current.rows.length || current.title !== "Rapport métier") sections.push(current);
-      current = { title: line, rows: [] };
+      current = { title: normalized.includes("SOS SOLDE") ? REPORT_DISPLAY_NAME : line, rows: [] };
     } else {
       if (skippingSection) return;
       current.rows.push(line);
@@ -897,20 +1058,18 @@ function BusinessReportText({ text }) {
   );
 }
 
-function ArchiveFilesPanel({ filesAdv, filesRev, search, onSearch, message, onRefresh }) {
+function ArchiveFilesPanel({ filesAdv, filesRev, search, onSearch }) {
   return (
-    <section className="elt-panel">
+    <section className="elt-panel elt-archives-panel elt-reveal elt-reveal--delay-3">
       <div className="elt-section-title">
         <div>
           <h2>Suivi des fichiers traités</h2>
-          <p>{message || "Lecture métier depuis ARCHIVE_ADV_TMP et ARCHIVE_REV_TMP."}</p>
         </div>
         <div className="actions">
           <label className="elt-search">
             <Search size={16} />
             <input value={search} onChange={(event) => onSearch(event.target.value)} placeholder="Rechercher un fichier" />
           </label>
-          <button className="btn btn-secondary" onClick={onRefresh}><RefreshCw size={18} />Actualiser</button>
         </div>
       </div>
       <div className="elt-archive-split">
@@ -944,7 +1103,7 @@ function ArchiveFileTable({ title, rows, columns, accent }) {
                 ))}
               </tr>
             )) : (
-              <tr><td className="empty-cell" colSpan={columns.length}>Aucun fichier traité à afficher.</td></tr>
+              <tr><td className="empty-cell" colSpan={columns.length}>-</td></tr>
             )}
           </tbody>
         </table>
@@ -960,43 +1119,120 @@ function renderFileCell(key, value) {
   return value ?? "-";
 }
 
-function PowerBiPanel() {
-  const configured = POWER_BI_URL.trim().length > 0;
+function BiSyncPanel({ report, navigate }) {
+  const latestStatus = String(report?.status || "").toUpperCase();
+  const oracleState = oracleSyncState(latestStatus);
+  const [nextRefresh, setNextRefresh] = useState(() => getNextPowerBiRefresh());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNextRefresh(getNextPowerBiRefresh()), 60000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   return (
-    <section className="elt-panel">
+    <section className="elt-panel elt-bi-sync-panel elt-reveal elt-reveal--delay-3">
       <div className="elt-section-title">
         <div>
-          <h2>Dashboard Power BI</h2>
-          <p>Visualisation décisionnelle des traitements ELT et indicateurs métier.</p>
+          <h2>Pilotage de fraîcheur décisionnelle</h2>
         </div>
-        {configured ? (
-          <a className="btn btn-primary" href={POWER_BI_URL} target="_blank" rel="noreferrer"><BarChart3 size={18} />Voir dashboard Power BI</a>
-        ) : (
-          <span className="elt-badge neutral">Dashboard Power BI non configuré.</span>
-        )}
+      </div>
+
+      <div className="elt-bi-sync-grid">
+        <div className={`elt-bi-sync-item elt-bi-sync-item--last ${latestStatus === "COMPLETED" ? "success" : "info"}`}>
+          <span>Dernier ELT</span>
+          <strong>{eltSyncLabel(latestStatus)}</strong>
+        </div>
+        <div className="elt-bi-sync-item elt-bi-sync-item--oracle success">
+          <span>Oracle</span>
+          <strong><span className={oracleState.className}>{oracleState.label}</span></strong>
+        </div>
+        <div className="elt-bi-sync-item elt-bi-sync-item--refresh accent">
+          <span>Prochain rafraîchissement</span>
+          <strong>{nextRefresh.isTomorrow ? `demain à ${nextRefresh.label}` : nextRefresh.label}</strong>
+        </div>
+      </div>
+
+      <div className="actions elt-bi-actions">
+        <button className="btn btn-primary" type="button" onClick={() => navigate("/dashboard/service-sos?reload=1")}>
+          <RefreshCw size={18} />
+          Recharger dashboard Service SOS
+        </button>
+        <button className="btn btn-primary" type="button" onClick={() => navigate("/dashboard/parc-service-sos?reload=1")}>
+          <RefreshCw size={18} />
+          Recharger dashboard Parc Service SOS
+        </button>
       </div>
     </section>
+  );
+}
+
+function Toast({ type, text, title, message, actionLabel, onAction, secondaryActionLabel, onSecondaryAction, onClose }) {
+  const displayMessage = message || text;
+  return (
+    <div className={`elt-toast ${type}`} role="status" aria-live="polite">
+      <div className="elt-toast-body">
+        {title && <strong>{title}</strong>}
+        {displayMessage && <span>{displayMessage}</span>}
+        {(actionLabel || secondaryActionLabel) && (
+          <div className="elt-toast-actions">
+            {actionLabel && onAction && (
+              <button
+                className="elt-toast-action"
+                type="button"
+                onClick={() => {
+                  onAction();
+                  onClose();
+                }}
+              >
+                {actionLabel}
+              </button>
+            )}
+            {secondaryActionLabel && onSecondaryAction && (
+              <button className="elt-toast-action elt-toast-action--secondary" type="button" onClick={onSecondaryAction}>
+                {secondaryActionLabel}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+      <button type="button" onClick={onClose} aria-label="Fermer la notification">×</button>
+    </div>
   );
 }
 
 function TechnicalModal({ data, onClose, onDownload }) {
   const columns = data.columns?.length ? data.columns : TECHNICAL_COLUMNS;
   const rows = data.rows || [];
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="elt-modal-backdrop" role="presentation">
-      <div className="elt-modal" role="dialog" aria-modal="true">
-        <div className="elt-section-title">
+    <div
+      className="elt-modal-backdrop elt-technical-modal-overlay"
+      role="presentation"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div className="elt-modal elt-technical-modal" role="dialog" aria-modal="true">
+        <div className="elt-section-title elt-technical-modal-header">
           <div>
-            <h2>Suivi technique des tâches</h2>
-            <p>Table technique affichée uniquement sur demande.</p>
+            <h2>Tableau technique des tâches ELT</h2>
+            <p>Détail technique de l’exécution des tâches</p>
           </div>
-          <div className="actions">
-            <button className="btn btn-secondary" onClick={onDownload}><Download size={18} />Télécharger</button>
+          <div className="actions elt-technical-modal-actions">
+            <button className="btn btn-secondary" onClick={onDownload}><Download size={18} />Télécharger CSV</button>
             <button className="btn btn-primary" onClick={onClose}>Fermer</button>
           </div>
         </div>
-        <div className="elt-table-wrap no-pad">
-          <table className="elt-table">
+        <div className="elt-table-wrap no-pad elt-technical-modal-body elt-technical-table-wrapper">
+          <table className="elt-table elt-technical-table">
             <thead>
               <tr>{columns.map((column) => <th key={column}>{column}</th>)}</tr>
             </thead>
@@ -1010,7 +1246,7 @@ function TechnicalModal({ data, onClose, onDownload }) {
                   ))}
                 </tr>
               )) : (
-                <tr><td className="empty-cell" colSpan={columns.length}>Aucune tâche technique disponible.</td></tr>
+                <tr><td className="empty-cell" colSpan={columns.length}>-</td></tr>
               )}
             </tbody>
           </table>

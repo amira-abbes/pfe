@@ -1,12 +1,38 @@
-import { Plus, RefreshCw, UserX } from "lucide-react";
+import { Plus, RefreshCw, UserCheck, UserX } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, getApiError } from "../api/api";
 import Layout from "../components/Layout";
 import { useAuth } from "../context/AuthContext";
 
+const STATUS_LABELS = {
+  ACTIF: "Actif",
+  EN_ATTENTE_PREMIERE_CONNEXION: "En attente de premiere connexion",
+  DESACTIVE_ADMIN: "Desactive",
+  BLOQUE_TENTATIVES: "Bloque",
+  SUPPRIME: "Supprime",
+};
+
+const STATUS_CLASSES = {
+  ACTIF: "badge badge-green",
+  EN_ATTENTE_PREMIERE_CONNEXION: "badge badge-orange",
+  DESACTIVE_ADMIN: "badge badge-orange",
+  BLOQUE_TENTATIVES: "badge badge-red",
+  SUPPRIME: "badge badge-gray",
+};
+
+function normalizeStatus(item) {
+  if (item.date_suppression) return "SUPPRIME";
+  const raw = String(item.statut_compte || "").toUpperCase();
+  if (raw === "ACTIVE") return "ACTIF";
+  if (raw === "PENDING_ACTIVATION" || raw === "MFA_SETUP_REQUIRED") {
+    return "EN_ATTENTE_PREMIERE_CONNEXION";
+  }
+  if (raw === "DISABLED") return "DESACTIVE_ADMIN";
+  return raw;
+}
+
 export default function AdminUsersPage() {
   const { user: currentUser } = useAuth();
-
   const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
   const isAdmin = currentUser?.role === "ADMIN";
 
@@ -16,7 +42,6 @@ export default function AdminUsersPage() {
     email: "",
     nom_complet: "",
     departement_nom: "",
-    role: "USER",
   });
   const [message, setMessage] = useState("");
   const [debugLink, setDebugLink] = useState("");
@@ -32,30 +57,24 @@ export default function AdminUsersPage() {
           api.get("/admin/users"),
           api.get("/admin/departements"),
         ]);
-
         const deps = Array.isArray(depsResponse.data) ? depsResponse.data : [];
-
         setUsers(usersResponse.data);
         setDepartements(deps);
-
         setForm((current) => ({
           ...current,
           departement_nom:
             current.departement_nom &&
-            deps.some((d) => d.nom_departement === current.departement_nom)
+            deps.some((item) => item.nom_departement === current.departement_nom)
               ? current.departement_nom
               : deps[0]?.nom_departement || "",
         }));
       } else {
         const usersResponse = await api.get("/admin/users");
-
         setUsers(usersResponse.data);
         setDepartements([]);
-
         setForm((current) => ({
           ...current,
           departement_nom: currentUser?.departement_nom || "",
-          role: "USER",
         }));
       }
     } catch (err) {
@@ -83,97 +102,88 @@ export default function AdminUsersPage() {
       const payload = {
         email: form.email,
         nom_complet: form.nom_complet,
-        role: isSuperAdmin ? form.role : "USER",
         departement_nom: isSuperAdmin
           ? form.departement_nom
           : currentUser?.departement_nom || form.departement_nom || "",
       };
 
       const response = await api.post("/admin/users", payload);
-
-      setMessage(response.data.message || "Utilisateur créé.");
+      setMessage(response.data.message || "Utilisateur cree.");
       setDebugLink(response.data.activation_link_debug || "");
-
-      setForm((current) => ({
-        ...current,
-        email: "",
-        nom_complet: "",
-        role: "USER",
-      }));
-
+      setForm((current) => ({ ...current, email: "", nom_complet: "" }));
       await loadData();
     } catch (err) {
-      setError(getApiError(err, "Erreur création utilisateur."));
+      setError(getApiError(err, "Erreur creation utilisateur."));
     } finally {
       setLoading(false);
     }
   }
 
-  async function toggleStatus(user) {
-    const action = user.est_actif ? "désactiver" : "réactiver";
-    if (!confirm(`Voulez-vous ${action} le compte ${user.email} ?`)) return;
-
-    setError("");
-    setMessage("");
-
-    try {
-      const response = await api.patch(`/admin/users/by-email/${encodeURIComponent(user.email)}/status`, {
-        est_actif: !user.est_actif,
-      });
-
-      setMessage(response.data.message || "Statut utilisateur mis à jour.");
-      await loadData();
-    } catch (err) {
-      setError(getApiError(err, "Erreur mise à jour statut."));
-    }
-  }
-
-  async function updateUserProfile(user, changes) {
+  async function updateUserDepartment(item, departementNom) {
     if (!isSuperAdmin) return;
-
     setError("");
     setMessage("");
 
     try {
-      await api.patch(`/admin/users/by-email/${encodeURIComponent(user.email)}/profile`, {
-        role: changes.role || user.role,
-        departement_nom:
-          changes.departement_nom ||
-          user.departement_nom ||
-          departements[0]?.nom_departement ||
-          "",
+      await api.patch(`/admin/users/by-email/${encodeURIComponent(item.email)}/profile`, {
+        departement_nom: departementNom,
       });
-
-      setMessage("Profil utilisateur mis à jour.");
+      setMessage("Departement utilisateur mis a jour.");
       await loadData();
     } catch (err) {
-      setError(getApiError(err, "Erreur mise à jour profil utilisateur."));
+      setError(getApiError(err, "Erreur mise a jour departement utilisateur."));
     }
   }
 
-  async function deleteUser(user) {
-    if (!confirm(`Supprimer l’utilisateur ${user.email} ?`)) return;
+  async function toggleStatus(item) {
+    const action = item.est_actif ? "desactiver" : "reactiver";
+    if (!confirm(`Voulez-vous ${action} le compte ${item.email} ?`)) return;
 
     setError("");
     setMessage("");
 
     try {
-      await api.delete(`/admin/users/by-email/${encodeURIComponent(user.email)}`);
-      setMessage("Utilisateur supprimé.");
+      const response = await api.patch(`/admin/users/by-email/${encodeURIComponent(item.email)}/status`, {
+        est_actif: !item.est_actif,
+      });
+      setMessage(response.data.message || "Statut utilisateur mis a jour.");
+      await loadData();
+    } catch (err) {
+      setError(getApiError(err, "Erreur mise a jour statut."));
+    }
+  }
+
+  async function deleteUser(item) {
+    if (!confirm(`Supprimer l'utilisateur ${item.email} ?`)) return;
+
+    setError("");
+    setMessage("");
+
+    try {
+      await api.delete(`/admin/users/by-email/${encodeURIComponent(item.email)}`);
+      setMessage("Utilisateur supprime.");
       await loadData();
     } catch (err) {
       setError(getApiError(err, "Erreur suppression utilisateur."));
     }
   }
 
+  function canDeactivate(item) {
+    return item.est_actif && normalizeStatus(item) === "ACTIF" && item.id !== currentUser?.id;
+  }
+
+  function canReactivate(item) {
+    return !item.est_actif && ["DESACTIVE_ADMIN", "BLOQUE_TENTATIVES"].includes(normalizeStatus(item));
+  }
+
   return (
     <Layout
       title="Gestion utilisateurs"
-      subtitle="Créer un compte, envoyer le lien d’activation et gérer les statuts."
+      subtitle="Creer un compte, envoyer le lien d'activation et gerer les statuts."
     >
       <div className="grid grid-2">
         <div className="card">
-          <h2>Créer un utilisateur</h2>
+          <h2>Creer un utilisateur</h2>
 
           {error && <div className="alert alert-error">{error}</div>}
           {message && <div className="alert alert-success">{message}</div>}
@@ -210,17 +220,15 @@ export default function AdminUsersPage() {
 
             {isSuperAdmin ? (
               <div className="input-group">
-                <label>Département</label>
+                <label>Departement</label>
                 <select
                   className="select"
                   value={form.departement_nom}
-                  onChange={(event) =>
-                    updateField("departement_nom", event.target.value)
-                  }
+                  onChange={(event) => updateField("departement_nom", event.target.value)}
                   required
                 >
                   <option value="" disabled>
-                    Choisir un département
+                    Choisir un departement
                   </option>
                   {departements.map((item) => (
                     <option key={item.id} value={item.nom_departement}>
@@ -231,56 +239,41 @@ export default function AdminUsersPage() {
               </div>
             ) : (
               <div className="input-group">
-                <label>Département</label>
+                <label>Departement</label>
                 <div className="input" style={{ display: "flex", alignItems: "center" }}>
-                  {currentUser?.departement_nom || "Département associé à votre compte"}
+                  {currentUser?.departement_nom || "Departement associe a votre compte"}
                 </div>
               </div>
             )}
 
-            {isSuperAdmin ? (
-              <div className="input-group">
-                <label>Rôle</label>
-                <select
-                  className="select"
-                  value={form.role}
-                  onChange={(event) => updateField("role", event.target.value)}
-                >
-                  <option value="USER">USER</option>
-                  <option value="ADMIN">ADMIN</option>
-                </select>
+            <div className="input-group">
+              <label>Role</label>
+              <div className="input" style={{ display: "flex", alignItems: "center" }}>
+                USER
               </div>
-            ) : (
-              <div className="input-group">
-                <label>Rôle</label>
-                <div className="input" style={{ display: "flex", alignItems: "center" }}>
-                  USER
-                </div>
-              </div>
-            )}
+            </div>
 
             <button
               className="btn btn-primary"
               disabled={loading || (isSuperAdmin && !form.departement_nom)}
             >
               <Plus size={18} />
-              {loading ? "Création..." : "Créer utilisateur"}
+              {loading ? "Creation..." : "Creer utilisateur"}
             </button>
           </form>
         </div>
 
         <div className="card">
-          <h2>Résumé</h2>
-
+          <h2>Resume</h2>
           <p>
-            Après création, l’utilisateur reçoit un email avec un bouton
-            d’activation. Il crée son mot de passe puis configure Authenticator.
+            Apres creation, l'utilisateur recoit un email avec un bouton
+            d'activation. Le role reste une donnee en lecture seule sur cette page.
           </p>
 
           {isAdmin && (
             <div className="alert alert-info">
-              En tant qu’administrateur, vous gérez uniquement les utilisateurs
-              de votre département.
+              En tant qu'administrateur, vous gerez uniquement les utilisateurs
+              de votre departement.
             </div>
           )}
 
@@ -298,100 +291,73 @@ export default function AdminUsersPage() {
           <table className="table">
             <thead>
               <tr>
+                <th>Nom complet</th>
                 <th>Email</th>
-                <th>Nom</th>
-                <th>Département</th>
-                <th>Rôle</th>
+                <th>Role</th>
+                <th>Departement</th>
                 <th>Statut compte</th>
-                <th>Actif</th>
                 <th>Actions</th>
               </tr>
             </thead>
 
             <tbody>
-              {users.map((item) => (
-                <tr key={item.id}>
-                  <td>{item.email}</td>
-                  <td>{item.nom_complet}</td>
-
-                  <td>
-                    {isSuperAdmin ? (
-                      <select
-                        className="select"
-                        value={item.departement_nom || ""}
-                        onChange={(event) =>
-                          updateUserProfile(item, {
-                            departement_nom: event.target.value,
-                          })
-                        }
-                      >
-                        <option value="">Aucun département</option>
-                        {departements.map((dep) => (
-                          <option key={dep.id} value={dep.nom_departement}>
-                            {dep.nom_departement}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      item.departement_nom || "-"
-                    )}
-                  </td>
-
-                  <td>
-                    {isSuperAdmin ? (
-                      <select
-                        className="select"
-                        value={item.role}
-                        onChange={(event) =>
-                          updateUserProfile(item, { role: event.target.value })
-                        }
-                      >
-                        <option value="USER">USER</option>
-                        <option value="ADMIN">ADMIN</option>
-                      </select>
-                    ) : (
-                      item.role
-                    )}
-                  </td>
-
-                  <td>
-                    <span
-                      className={
-                        item.est_actif && item.statut_compte === "ACTIVE"
-                          ? "badge badge-green"
-                          : "badge badge-orange"
-                      }
-                    >
-                      {item.est_actif ? item.statut_compte : "Désactivé"}
-                    </span>
-                  </td>
-
-                  <td>{item.est_actif ? "Oui" : "Non"}</td>
-
-                  <td>
-                    <div className="actions">
-                      <button
-                        className="btn btn-secondary"
-                        onClick={() => toggleStatus(item)}
-                      >
-                        {item.est_actif ? "Désactiver" : "Réactiver"}
-                      </button>
-
-                      <button
-                        className="btn btn-danger"
-                        onClick={() => deleteUser(item)}
-                      >
-                        <UserX size={16} />
-                        Supprimer
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {users.map((item) => {
+                const status = normalizeStatus(item);
+                return (
+                  <tr key={item.id}>
+                    <td>{item.nom_complet}</td>
+                    <td>{item.email}</td>
+                    <td>{item.role}</td>
+                    <td>
+                      {isSuperAdmin ? (
+                        <select
+                          className="select"
+                          value={item.departement_nom || ""}
+                          onChange={(event) => updateUserDepartment(item, event.target.value)}
+                        >
+                          <option value="">Aucun departement</option>
+                          {departements.map((dep) => (
+                            <option key={dep.id} value={dep.nom_departement}>
+                              {dep.nom_departement}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        item.departement_nom || "-"
+                      )}
+                    </td>
+                    <td>
+                      <span className={STATUS_CLASSES[status] || "badge badge-orange"}>
+                        {STATUS_LABELS[status] || status || "Indisponible"}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="actions">
+                        {canDeactivate(item) && (
+                          <button className="btn btn-secondary" onClick={() => toggleStatus(item)}>
+                            <UserX size={16} />
+                            Desactiver
+                          </button>
+                        )}
+                        {canReactivate(item) && (
+                          <button className="btn btn-secondary" onClick={() => toggleStatus(item)}>
+                            <UserCheck size={16} />
+                            {status === "BLOQUE_TENTATIVES" ? "Debloquer" : "Reactiver"}
+                          </button>
+                        )}
+                        <button className="btn btn-danger" onClick={() => deleteUser(item)}>
+                          <UserX size={16} />
+                          Supprimer
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
 
               {users.length === 0 && (
                 <tr>
-                  <td colSpan="7">Aucun utilisateur.</td>
+                  <td colSpan="6">Aucun utilisateur.</td>
                 </tr>
               )}
             </tbody>

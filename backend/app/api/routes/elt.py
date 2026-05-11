@@ -1,5 +1,4 @@
 import csv
-import json
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse, Response
@@ -36,6 +35,20 @@ def _route_log(message: str) -> None:
     print(message, flush=True)
 
 
+def _response_summary(response: dict) -> str:
+    if not isinstance(response, dict):
+        return "success=false"
+    parts = [
+        f"success={response.get('success')}",
+        f"status={response.get('status') or response.get('state')}",
+    ]
+    if response.get("run_id") is not None:
+        parts.append(f"run_id={response.get('run_id')}")
+    if response.get("active") is not None:
+        parts.append(f"active={response.get('active')}")
+    return " ".join(part for part in parts if not part.endswith("=None"))
+
+
 def require_any_right(*rights: str):
     def checker(current_user: Utilisateur = Depends(get_current_user)) -> Utilisateur:
         if str(current_user.role or "").upper() == ROLE_SUPER_ADMIN:
@@ -64,10 +77,7 @@ def start_elt_job(user_mode: str = "AUTO", _: Utilisateur = Depends(require_lanc
         response = run_elt_endpoint(user_mode="AUTO", _=_)
     else:
         response = start_runtime_run(user_mode=normalized_mode)
-    _route_log(
-        "[ELT JOB] start response="
-        + json.dumps(response, ensure_ascii=False, default=str)
-    )
+    _route_log(f"[ELT JOB] start response {_response_summary(response)}")
     return response
 
 
@@ -118,10 +128,7 @@ def run_elt_endpoint(user_mode: str = "AUTO", _: Utilisateur = Depends(require_l
                 response = start_runtime_run(user_mode="LOCAL_ONLY")
         else:
             response = start_runtime_run(user_mode=normalized_mode)
-        _route_log(
-            "[ELT API] route /elt/run final response="
-            + json.dumps(response, ensure_ascii=False, default=str)
-        )
+        _route_log(f"[ELT API] route /elt/run final response {_response_summary(response)}")
         return response
     except ModuleNotFoundError as exc:
         _route_log(f"[ELT API] route /elt/run ModuleNotFoundError={exc.name}")
@@ -162,10 +169,7 @@ def start_watch(_: Utilisateur = Depends(require_lancer_elt)):
             }
         _route_log("[ELT WATCH] start route called")
         response = start_local_watch()
-        _route_log(
-            "[ELT WATCH] start route response="
-            + json.dumps(response, ensure_ascii=False, default=str)
-        )
+        _route_log(f"[ELT WATCH] start route response {_response_summary(response)}")
         return response
     except Exception as exc:
         _route_log(f"[ELT WATCH] start route exception={exc}")
@@ -177,10 +181,7 @@ def stop_watch(_: Utilisateur = Depends(require_lancer_elt)):
     try:
         _route_log("[ELT WATCH] stop route called")
         response = stop_local_watch()
-        _route_log(
-            "[ELT WATCH] stop route response="
-            + json.dumps(response, ensure_ascii=False, default=str)
-        )
+        _route_log(f"[ELT WATCH] stop route response {_response_summary(response)}")
         return response
     except Exception as exc:
         _route_log(f"[ELT WATCH] stop route exception={exc}")
@@ -192,10 +193,7 @@ def watch_status(_: Utilisateur = Depends(require_lancer_elt)):
     try:
         _route_log("[ELT WATCH] status route called")
         response = get_watch_status()
-        _route_log(
-            "[ELT WATCH] status route response="
-            + json.dumps(response, ensure_ascii=False, default=str)
-        )
+        _route_log(f"[ELT WATCH] status route response {_response_summary(response)}")
         return response
     except Exception as exc:
         _route_log(f"[ELT WATCH] status route exception={exc}")
@@ -217,6 +215,7 @@ def latest_report_preferred(_: Utilisateur = Depends(require_elt_report_access))
     report = get_latest_report()
 
     if not report:
+        _route_log("[ELT LATEST REPORT] no report")
         return {
             "success": False,
             "message": "Aucun rapport généré.",
@@ -224,6 +223,7 @@ def latest_report_preferred(_: Utilisateur = Depends(require_elt_report_access))
         }
 
     report["success"] = True
+    _route_log(f"[ELT LATEST REPORT] loaded run_id={report.get('run_id')} status={report.get('status')}")
     return report
 
 
@@ -232,8 +232,8 @@ def archive_tables(limit: int = 20, _: Utilisateur = Depends(require_elt_report_
     _route_log(f"[ELT ARCHIVE] route called limit={limit}")
     response = get_archive_tables(limit=limit)
     _route_log(
-        "[ELT ARCHIVE] route response="
-        + json.dumps(response, ensure_ascii=False, default=str)
+        f"[ELT ARCHIVE] route response success={response.get('success')} "
+        f"adv={len(response.get('archive_adv') or [])} rev={len(response.get('archive_rev') or [])}"
     )
     return response
 
@@ -243,8 +243,8 @@ def archive_files(limit: int = 50, _: Utilisateur = Depends(require_elt_report_a
     _route_log(f"[ELT ARCHIVE FILES] route called limit={limit}")
     response = get_archive_files(limit=limit)
     _route_log(
-        "[ELT ARCHIVE FILES] route response="
-        + json.dumps(response, ensure_ascii=False, default=str)
+        f"[ELT ARCHIVE FILES] route response success={response.get('success')} "
+        f"adv={len(response.get('files_adv') or [])} rev={len(response.get('files_rev') or [])}"
     )
     return response
 
@@ -284,7 +284,9 @@ def csv_data(path: str, _: Utilisateur = Depends(require_elt_report_access)):
 @router.get("/txt-report")
 def txt_report(path: str, _: Utilisateur = Depends(require_elt_report_access)):
     try:
-        return read_txt_report(path)
+        response = read_txt_report(path)
+        _route_log(f"[ELT TXT REPORT] loaded path={path}")
+        return response
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except FileNotFoundError as exc:

@@ -69,6 +69,8 @@ TECHNICAL_TASK_COLUMNS = [
     "error_message",
 ]
 
+REPORT_DISPLAY_NAME = "Service SOS Solde & Data"
+
 ARCHIVE_ADV_COLUMNS = [
     "NOM_FICHIER",
     "DATE_AJOUT",
@@ -107,6 +109,19 @@ def _archive_columns_for(table_name: str) -> list[str]:
 
 def _log(message: str) -> None:
     print(message, flush=True)
+
+
+def _log_response(prefix: str, response: dict[str, Any]) -> None:
+    if not isinstance(response, dict):
+        _log(f"{prefix} success=false")
+        return
+    parts = [
+        f"success={response.get('success')}",
+        f"status={response.get('status') or response.get('state')}",
+        f"active={response.get('active')}",
+        f"run_id={response.get('run_id')}",
+    ]
+    _log(f"{prefix} " + " ".join(part for part in parts if not part.endswith("=None")))
 
 
 def _normalize_result_paths(result: dict[str, Any]) -> dict[str, Any]:
@@ -457,7 +472,7 @@ def start_runtime_run(user_mode: str) -> dict[str, Any]:
 
         watcher = get_watch_status()
         watcher_active = bool(watcher.get("active") or watcher.get("watching") or _is_manual_watcher_active())
-        _log(f"[ELT RUN] watcher active? {watcher_active} status={json.dumps(watcher, ensure_ascii=False, default=str)}")
+        _log(f"[ELT RUN] watcher active={watcher_active} state={watcher.get('state')}")
         if watcher_active:
             return {
                 "success": False,
@@ -468,7 +483,7 @@ def start_runtime_run(user_mode: str) -> dict[str, Any]:
 
         _log("[ELT RUN] start accepted")
         result = runtime_start()
-        _log(f"[RUNTIME] start_run result={json.dumps(result, ensure_ascii=False, default=str)}")
+        _log_response("[RUNTIME] start_run result", result)
         if not result.get("success"):
             error_code = result.get("error")
             return {
@@ -501,19 +516,19 @@ def get_runtime_run_status() -> dict[str, Any]:
     try:
         status = _runtime_call("get_current_run_status")
         response = _normalize_run_status(status)
-        _log(f"[ELT RUN] status response = {json.dumps(response, ensure_ascii=False, default=str)}")
+        _log_response("[ELT RUN] status response", response)
         return response
     except ModuleNotFoundError as exc:
         if exc.name == "platform_runtime":
             response = _normalize_run_status(_fallback_get_current_run_status())
-            _log(f"[ELT RUN] status response = {json.dumps(response, ensure_ascii=False, default=str)}")
+            _log_response("[ELT RUN] status response", response)
             return response
         raise
     except Exception as exc:
         fallback = _read_json_file(ELT_CURRENT_RUN_STATUS_FILE, None)
         if isinstance(fallback, dict):
             response = _normalize_run_status(fallback)
-            _log(f"[ELT RUN] status response = {json.dumps(response, ensure_ascii=False, default=str)}")
+            _log_response("[ELT RUN] status response", response)
             return response
         response = {
             "success": True,
@@ -522,7 +537,7 @@ def get_runtime_run_status() -> dict[str, Any]:
             "status_label": _status_label("STOPPED"),
             "message": "Aucun traitement ELT actif pour le moment.",
         }
-        _log(f"[ELT RUN] status response = {json.dumps(response, ensure_ascii=False, default=str)}")
+        _log_response("[ELT RUN] status response", response)
         return response
 
 
@@ -850,7 +865,7 @@ def run_elt(user_mode: str = "AUTO"):
             "status": "RUNNING",
             "message": "Un traitement ELT est deja en cours. Veuillez attendre la fin.",
         }
-        _log(f"[ELT API] decision=ALREADY_RUNNING response={response}")
+        _log_response("[ELT API] decision=ALREADY_RUNNING response", response)
         return response
 
     _log("[ELT API] lock acquired")
@@ -868,7 +883,7 @@ def run_elt(user_mode: str = "AUTO"):
                 "message": "Oracle indisponible, traitement impossible.",
             }
             _log("[ELT API] decision=BLOCKED")
-            _log(f"[ELT API] response JSON={response}")
+            _log_response("[ELT API] response", response)
             return response
 
         if user_mode == "AUTO":
@@ -883,7 +898,7 @@ def run_elt(user_mode: str = "AUTO"):
                 }
                 _log("[ELT API] decision=requires_choice")
                 _log("[ELT API] FTP available -> returning requires_choice=true")
-                _log(f"[ELT API] response JSON={response}")
+                _log_response("[ELT API] response", response)
                 return response
 
             user_mode = "LOCAL_ONLY"
@@ -902,14 +917,14 @@ def run_elt(user_mode: str = "AUTO"):
         finally:
             os.chdir(old_cwd)
 
-        _log(f"[ELT API] raw ELT result={result}")
+        _log(f"[ELT API] raw ELT result type={type(result).__name__}")
         if not isinstance(result, dict):
             raise RuntimeError("L'ELT n'a pas retourne un dictionnaire de resultat.")
 
         result = _normalize_result_paths(result)
         _save_latest_report(result)
         _log(f"[ELT API] ELT finished status={result.get('status')}")
-        _log(f"[ELT API] response JSON={result}")
+        _log_response("[ELT API] response", result)
         _log("[ELT API] response sent")
         return result
 
@@ -922,7 +937,7 @@ def run_elt(user_mode: str = "AUTO"):
             "message": f"Erreur lors du traitement ELT : {str(exc)}",
             "error": str(exc),
         }
-        _log(f"[ELT API] response JSON={response}")
+        _log_response("[ELT API] response", response)
         return response
     finally:
         ELT_RUN_LOCK.release()
@@ -949,7 +964,7 @@ def start_local_watch():
                 "message": "La surveillance locale est deja lancee.",
                 "pid": pid,
             }
-            _log(f"[ELT WATCH] response JSON={response}")
+            _log_response("[ELT WATCH] response", response)
             return response
 
     python_exe = str(ELT_PYTHON_EXE if ELT_PYTHON_EXE.exists() else sys.executable)
@@ -998,7 +1013,7 @@ def start_local_watch():
         "message": "Surveillance locale lancee. Ajoute un fichier dans le dossier surveille.",
         "pid": process.pid,
     }
-    _log(f"[ELT WATCH] response JSON={response}")
+    _log_response("[ELT WATCH] response", response)
     return response
 
 
@@ -1033,7 +1048,7 @@ def stop_local_watch():
             "status": "NOT_RUNNING",
             "message": "Aucune surveillance locale active.",
         }
-        _log(f"[ELT WATCH] status response = {json.dumps(response, ensure_ascii=False, default=str)}")
+        _log_response("[ELT WATCH] status response", response)
         return response
 
     with open(ELT_WATCH_PROCESS_FILE, "r", encoding="utf-8") as f:
@@ -1049,8 +1064,7 @@ def stop_local_watch():
             "status": "NOT_RUNNING",
             "message": "PID introuvable.",
         }
-        _log(f"[ELT WATCH] status response = {json.dumps(response, ensure_ascii=False, default=str)}")
-        _log(f"[WATCH] status result={json.dumps(response, ensure_ascii=False, default=str)}")
+        _log_response("[ELT WATCH] status response", response)
         return response
 
     if not _pid_matches_watcher(pid):
@@ -1062,7 +1076,7 @@ def stop_local_watch():
             "message": "Aucune surveillance locale active.",
         }
         _log(f"[WATCH] stale or unsafe watcher pid ignored pid={pid}")
-        _log(f"[ELT WATCH] response JSON={response}")
+        _log_response("[ELT WATCH] response", response)
         return response
 
     if os.name == "nt":
@@ -1078,7 +1092,7 @@ def stop_local_watch():
         "status": "STOPPED",
         "message": "Surveillance locale arretee.",
     }
-    _log(f"[ELT WATCH] response JSON={response}")
+    _log_response("[ELT WATCH] response", response)
     return response
 
 
@@ -1140,6 +1154,7 @@ def _normalize_business_report(report: dict[str, Any]) -> dict[str, Any]:
     conclusion = _build_business_conclusion(report)
 
     employee["scenario_label"] = scenario_label
+    employee["report_title"] = REPORT_DISPLAY_NAME
     employee["final_conclusion"] = conclusion
     employee["employee_summary"] = conclusion
     report["scenario_label"] = scenario_label
@@ -1168,7 +1183,7 @@ def _build_clean_txt_report(report: dict[str, Any]) -> str:
         ]
 
     lines = [
-        "RAPPORT MÉTIER ELT - SOS SOLDE",
+        REPORT_DISPLAY_NAME,
         "",
         "Informations générales",
         f"Date de génération : {employee.get('generated_at') or datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
@@ -1257,7 +1272,7 @@ def get_watch_status():
         if isinstance(process_data, dict) and process_data.get("pid"):
             response["pid"] = process_data.get("pid")
 
-        _log(f"[ELT WATCH] response JSON={response}")
+        _log_response("[ELT WATCH] response", response)
         return response
     except Exception as exc:
         response = {
@@ -1268,7 +1283,7 @@ def get_watch_status():
             "state_label": "Surveillance arrêtée",
             "message": f"Erreur lors de la verification du statut : {str(exc)}",
         }
-        _log(f"[ELT WATCH] response JSON={response}")
+        _log_response("[ELT WATCH] response", response)
         return response
 
 
@@ -1401,7 +1416,7 @@ def build_pdf_report(path: str | None = None) -> tuple[bytes, str]:
         leftMargin=1.25 * cm,
         topMargin=1.1 * cm,
         bottomMargin=1.1 * cm,
-        title="Rapport d'exécution ELT",
+        title=REPORT_DISPLAY_NAME,
     )
 
     base = getSampleStyleSheet()
@@ -1504,7 +1519,7 @@ def build_pdf_report(path: str | None = None) -> tuple[bytes, str]:
     else:
         header_cells.append(p("Tunisie Telecom", "title"))
     header_cells.append([
-        p("Rapport d'exécution ELT", "title"),
+        p(REPORT_DISPLAY_NAME, "title"),
         p("Supervision des flux Avance et Remboursement", "subtitle"),
     ])
     header = Table([header_cells], colWidths=[3.5 * cm, 14.0 * cm])

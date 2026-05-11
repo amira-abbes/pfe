@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_admin_or_super_admin
@@ -32,7 +32,7 @@ def create_user(
         email=str(payload.email),
         nom_complet=payload.nom_complet,
         departement_nom=payload.departement_nom,
-        role=payload.role,
+        role="USER",
         admin_user=current_user,
     )
 
@@ -75,9 +75,17 @@ def update_user_profile_by_email(
     current_user: Utilisateur = Depends(require_admin_or_super_admin),
     service: AdminService = Depends(get_admin_service),
 ):
+    fields_set = getattr(payload, "model_fields_set", getattr(payload, "__fields_set__", set()))
+    if "role" in fields_set:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "status": "role_update_forbidden",
+                "message": "Le rôle n’est pas modifiable depuis cette API.",
+            },
+        )
     return service.update_user_profile_by_email(
         email=email,
-        role=payload.role,
         departement_nom=payload.departement_nom,
         admin_user=current_user,
     )

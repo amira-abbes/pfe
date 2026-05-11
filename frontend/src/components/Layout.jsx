@@ -13,14 +13,16 @@ import { NavLink } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 
-export default function Layout({ children, title, subtitle }) {
+export default function Layout({ children, title, subtitle, hideSidebar = false, className = "" }) {
   const { hasRight, user, logout } = useAuth();
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
   const isAdmin = user?.role === "ADMIN";
   const isAdminArea = isAdmin || isSuperAdmin;
+  const isEltLayout = className.includes("app-shell--elt");
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${hideSidebar ? "app-shell--no-sidebar" : ""} ${className}`}>
+      {!hideSidebar && (
       <aside className="sidebar">
         <div className="brand">
           <img src="/tt-logo.png" alt="Tunisie Telecom" />
@@ -121,14 +123,17 @@ export default function Layout({ children, title, subtitle }) {
           </button>
         </div>
       </aside>
+      )}
 
       <main className="main-content">
-        <header className="topbar">
-          <div>
-            <h1>{title}</h1>
-            {subtitle && <p>{subtitle}</p>}
-          </div>
-        </header>
+        {!isEltLayout && (
+          <header className="topbar">
+            <div>
+              <h1>{title}</h1>
+              {subtitle && <p>{subtitle}</p>}
+            </div>
+          </header>
+        )}
 
         {children}
       </main>

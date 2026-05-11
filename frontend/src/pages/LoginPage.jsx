@@ -1,12 +1,13 @@
 import { KeyRound, LogIn } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
 import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { completeLogin } = useAuth();
   const passwordInputRef = useRef(null);
 
@@ -18,6 +19,13 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const loginReason = searchParams.get("reason");
+  const infoMessage =
+    loginReason === "session_expired"
+      ? "Session expirée après 15 minutes d’inactivité."
+      : loginReason === "auth_required"
+        ? "Veuillez vous reconnecter."
+        : "";
 
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -77,12 +85,20 @@ export default function LoginPage() {
           return;
         }
 
-        if (data.status === "account_disabled") {
+        if (
+          [
+            "account_disabled",
+            "account_blocked",
+            "account_pending_first_login",
+            "account_deleted",
+          ].includes(data.status)
+        ) {
           navigate(data.redirect_to || "/account-disabled", {
             state: {
               email: data.email || form.email,
               role: data.role || "USER",
               message: data.message,
+              reason: data.status,
               can_request_reactivation: data.can_request_reactivation,
             },
           });
@@ -159,6 +175,7 @@ export default function LoginPage() {
         <h1>Connexion</h1>
         <p>Accédez à la plateforme interne Tunisie Telecom.</p>
 
+        {infoMessage && <div className="alert alert-info">{infoMessage}</div>}
         {error && <div className="alert alert-error">{error}</div>}
 
         <form className="form" onSubmit={handleSubmit}>

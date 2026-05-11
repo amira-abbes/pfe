@@ -142,7 +142,7 @@ class ActivationService:
                 self.db.commit()
                 return generic_response
 
-            if not user.est_actif:
+            if not user.est_actif and user.statut_compte != STATUT_PENDING_ACTIVATION:
                 self._audit(
                     action="ACTIVATION_RESEND_DISABLED_ACCOUNT",
                     cible_id=user.id,
@@ -342,6 +342,7 @@ class ActivationService:
             now = utc_now()
 
             user.mot_de_passe_hash = hash_password(nouveau_mot_de_passe)
+            user.est_actif = False
             user.statut_compte = STATUT_MFA_SETUP_REQUIRED
             user.nombre_echecs_password = 0
             user.nombre_echecs_totp = 0
@@ -595,6 +596,7 @@ class ActivationService:
         now = utc_now()
 
         user.statut_compte = STATUT_ACTIVE
+        user.est_actif = True
         user.nombre_echecs_totp = 0
         user.blocage_totp_jusqu_a = None
         user.date_modification = now

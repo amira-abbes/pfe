@@ -10,14 +10,14 @@ from app.core.constants import (
     ROLE_USER,
     SESSION_REVOKED,
     STATUT_ACTIVE,
+    STATUT_BLOQUE_TENTATIVES,
     STATUT_DISABLED,
-    STATUT_MFA_SETUP_REQUIRED,
     STATUT_PENDING_ACTIVATION,
+    STATUT_SUPPRIME,
     TOKEN_ACCOUNT_ACTIVATION,
 )
 from app.core.security import generate_raw_activation_token, hash_activation_token, utc_now
 from app.models.departement import Departement
-from app.models.identifiant_totp import IdentifiantTotp
 from app.models.jeton_activation import JetonActivation
 from app.models.journal_audit import JournalAudit
 from app.models.session_utilisateur import SessionUtilisateur
@@ -32,6 +32,20 @@ class AdminService:
 
     def _is_super_admin(self, user: Utilisateur) -> bool:
         return str(user.role or "").upper() == ROLE_SUPER_ADMIN
+
+    def _account_status(self, user: Utilisateur) -> str:
+        if user.date_suppression is not None:
+            return STATUT_SUPPRIME
+        raw = str(user.statut_compte or "").upper()
+        if raw in {"ACTIVE", STATUT_ACTIVE} and user.est_actif:
+            return STATUT_ACTIVE
+        if raw in {"PENDING_ACTIVATION", "MFA_SETUP_REQUIRED", STATUT_PENDING_ACTIVATION}:
+            return STATUT_PENDING_ACTIVATION
+        if raw in {"DISABLED", STATUT_DISABLED}:
+            return STATUT_DISABLED
+        if raw == STATUT_BLOQUE_TENTATIVES:
+            return STATUT_BLOQUE_TENTATIVES
+        return raw or STATUT_DISABLED
 
     def _assert_can_manage_user(self, actor: Utilisateur, target: Utilisateur) -> None:
         if self._is_super_admin(actor):
@@ -165,7 +179,7 @@ class AdminService:
                 user.nom_complet = nom_clean
                 user.departement_id = departement.id
                 user.mot_de_passe_hash = None
-                user.est_actif = True
+                user.est_actif = False
                 user.role = role_clean
                 user.statut_compte = STATUT_PENDING_ACTIVATION
                 user.nombre_echecs_password = 0
@@ -193,7 +207,7 @@ class AdminService:
                     nom_complet=nom_clean,
                     departement_id=departement.id,
                     mot_de_passe_hash=None,
-                    est_actif=True,
+                    est_actif=False,
                     role=role_clean,
                     statut_compte=STATUT_PENDING_ACTIVATION,
                     nombre_echecs_password=0,
@@ -274,7 +288,7 @@ class AdminService:
                 "nom_complet": user.nom_complet,
                 "departement_nom": departement.nom_departement,
                 "role": user.role,
-                "statut_compte": user.statut_compte,
+                "statut_compte": self._account_status(user),
                 "est_actif": user.est_actif,
                 "activation_email_sent": email_sent,
                 "activation_link_debug": activation_link if settings.MAIL_DEBUG_MODE else None,
@@ -316,7 +330,7 @@ class AdminService:
                     "nom_complet": user.nom_complet,
                     "est_actif": user.est_actif,
                     "role": user.role,
-                    "statut_compte": user.statut_compte,
+                    "statut_compte": self._account_status(user),
                     "departement_nom": (
                         user.departement.nom_departement
                         if user.departement
@@ -359,7 +373,7 @@ class AdminService:
             "nom_complet": user.nom_complet,
             "est_actif": user.est_actif,
             "role": user.role,
-            "statut_compte": user.statut_compte,
+            "statut_compte": self._account_status(user),
             "departement_nom": (
                 user.departement.nom_departement
                 if user.departement
@@ -398,19 +412,18 @@ class AdminService:
 
             now = utc_now()
 
-            user.est_actif = est_actif
-            user.date_modification = now
-            user.date_desactivation = None if est_actif else now
-
             if est_actif:
-                has_active_mfa = (
-                    self.db.query(IdentifiantTotp.id)
-                    .filter(IdentifiantTotp.utilisateur_id == user.id)
-                    .filter(IdentifiantTotp.est_actif.is_(True))
-                    .first()
-                    is not None
-                )
-                user.statut_compte = STATUT_ACTIVE if has_active_mfa else STATUT_MFA_SETUP_REQUIRED
+                if self._account_status(user) not in {STATUT_DISABLED, STATUT_BLOQUE_TENTATIVES}:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail={
+                            "status": "reactivation_forbidden",
+                            "message": "Ce compte ne peut pas être réactivé par cette action.",
+                        },
+                    )
+                user.est_actif = True
+                user.statut_compte = STATUT_ACTIVE
+                user.date_desactivation = None
                 user.nombre_echecs_password = 0
                 user.nombre_echecs_totp = 0
                 user.blocage_password_jusqu_a = None
@@ -436,7 +449,25 @@ class AdminService:
                     details={"type": "ACCOUNT_REACTIVATED", "actor": admin_user.email},
                 )
             else:
+                if user.id == admin_user.id:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail={
+                            "status": "self_deactivation_forbidden",
+                            "message": "Vous ne pouvez pas désactiver votre propre compte.",
+                        },
+                    )
+                if self._account_status(user) != STATUT_ACTIVE or not user.est_actif:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail={
+                            "status": "deactivation_forbidden",
+                            "message": "Seul un compte actif peut être désactivé.",
+                        },
+                    )
+                user.est_actif = False
                 user.statut_compte = STATUT_DISABLED
+                user.date_desactivation = now
                 self.db.query(SessionUtilisateur).filter(
                     SessionUtilisateur.utilisateur_id == user.id,
                     SessionUtilisateur.revoque_a.is_(None),
@@ -449,6 +480,7 @@ class AdminService:
                     synchronize_session=False,
                 )
 
+            user.date_modification = now
             self.db.add(user)
 
             self.db.add(
@@ -486,7 +518,6 @@ class AdminService:
     def update_user_profile_by_email(
         self,
         email: str,
-        role: str,
         departement_nom: str,
         admin_user: Utilisateur,
     ):
@@ -496,7 +527,7 @@ class AdminService:
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail={
                         "status": "forbidden",
-                        "message": "Seul le super administrateur peut modifier le rôle ou le département d’un utilisateur.",
+                        "message": "Accès refusé.",
                     },
                 )
 
@@ -516,14 +547,6 @@ class AdminService:
 
             self._assert_can_manage_user(admin_user, user)
 
-            role_clean = str(role or ROLE_USER).strip().upper()
-
-            if role_clean not in {ROLE_USER, ROLE_ADMIN}:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Le rôle doit être ADMIN ou USER.",
-                )
-
             departement_clean = str(departement_nom or "").strip()
 
             departement = (
@@ -538,12 +561,10 @@ class AdminService:
                     detail="Département introuvable.",
                 )
 
-            old_role = user.role
             old_departement = (
                 user.departement.nom_departement if user.departement else None
             )
 
-            user.role = role_clean
             user.departement_id = departement.id
             user.date_modification = utc_now()
 
@@ -557,8 +578,6 @@ class AdminService:
                     niveau_risque="MOYEN",
                     details={
                         "email": user.email,
-                        "old_role": old_role,
-                        "new_role": role_clean,
                         "old_departement": old_departement,
                         "new_departement": departement.nom_departement,
                     },
@@ -569,9 +588,9 @@ class AdminService:
 
             return {
                 "success": True,
-                "message": "Profil utilisateur mis à jour avec succès.",
+                "message": "Département utilisateur mis à jour avec succès.",
                 "email": user.email,
-                "role": role_clean,
+                "role": user.role,
                 "departement_nom": departement.nom_departement,
             }
 
@@ -607,6 +626,7 @@ class AdminService:
             user_email = user.email
 
             user.est_actif = False
+            user.statut_compte = STATUT_SUPPRIME
             user.date_suppression = now
             user.date_desactivation = now
             user.date_modification = now
@@ -618,6 +638,7 @@ class AdminService:
                 {
                     "revoque_a": now,
                     "raison_revocation": "Utilisateur supprimé par administrateur",
+                    "statut_session": SESSION_REVOKED,
                 },
                 synchronize_session=False,
             )
