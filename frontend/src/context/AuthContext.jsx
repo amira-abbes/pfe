@@ -1,11 +1,24 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { api } from "../api/api";
 
 const AuthContext = createContext(null);
-const INACTIVITY_LIMIT_MS = 15 * 60 * 1000;
+const SESSION_EXPIRED_REASON = "session_expired";
+const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 const ACTIVITY_THROTTLE_MS = 1500;
 const ACCOUNT_STATUS_CHECK_MS = 30 * 1000;
 const LAST_ACTIVITY_KEY = "lastActivityAt";
+const AUTH_FLOW_PREFIXES = [
+  "/login",
+  "/session-expired",
+  "/auth",
+  "/mfa",
+  "/activation",
+  "/forgot-password",
+  "/password-reset",
+  "/recovery-code",
+  "/account-disabled",
+];
 
 const MFA_SESSION_KEYS = [
   "mfa_token",
@@ -52,6 +65,10 @@ function userHasRight(user, code) {
   return Array.isArray(user?.permissions) && user.permissions.includes(code);
 }
 
+function isAuthFlowPath(pathname = window.location.pathname) {
+  return AUTH_FLOW_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
 async function stopEltWatchBestEffort() {
   try {
     await api.post("/elt/watch/stop", null, { skipAuthRedirect: true });
@@ -78,9 +95,13 @@ function stopEltWatchOnUnload() {
 }
 
 export function AuthProvider({ children }) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const inactivityTimerRef = useRef(null);
   const accountStatusTimerRef = useRef(null);
   const lastActivityResetRef = useRef(0);
+  const redirectingRef = useRef(false);
+  const sessionExpiredByInactivityRef = useRef(false);
   const [accessToken, setAccessToken] = useState(() =>
     localStorage.getItem("access_token")
   );
@@ -97,6 +118,18 @@ export function AuthProvider({ children }) {
   function clearInactivityTimer() {
     window.clearTimeout(inactivityTimerRef.current);
     inactivityTimerRef.current = null;
+  }
+
+  function clearAccountStatusTimer() {
+    window.clearInterval(accountStatusTimerRef.current);
+    accountStatusTimerRef.current = null;
+  }
+
+  function navigateOnce(to, options = {}) {
+    if (!to || redirectingRef.current) return;
+    if (isAuthFlowPath(location.pathname) && isAuthFlowPath(to)) return;
+    redirectingRef.current = true;
+    navigate(to, { replace: options.replace !== false });
   }
 
   function saveLogin(token) {
@@ -116,20 +149,20 @@ export function AuthProvider({ children }) {
     localStorage.removeItem(LAST_ACTIVITY_KEY);
     delete api.defaults.headers.common.Authorization;
     clearInactivityTimer();
-    window.clearInterval(accountStatusTimerRef.current);
-    accountStatusTimerRef.current = null;
+    clearAccountStatusTimer();
     setAccessToken(null);
     setUser(null);
     setLoading(false);
   }
 
   async function expireSessionDueToInactivity() {
+    sessionExpiredByInactivityRef.current = true;
     try {
       await stopEltWatchBestEffort();
     } finally {
       logoutLocal();
-      if (!window.location.pathname.startsWith("/login")) {
-        window.location.replace("/login?reason=session_expired");
+      if (!isAuthFlowPath()) {
+        navigateOnce(`/login?reason=${SESSION_EXPIRED_REASON}`);
       }
     }
   }
@@ -138,11 +171,12 @@ export function AuthProvider({ children }) {
     if (!accessToken) return;
     clearInactivityTimer();
     const elapsed = Date.now() - readLastActivityAt();
-    const remaining = Math.max(0, INACTIVITY_LIMIT_MS - elapsed);
+    const remaining = Math.max(0, INACTIVITY_TIMEOUT_MS - elapsed);
 
+    // The frontend session expires only after 30 minutes without real user activity.
     inactivityTimerRef.current = window.setTimeout(() => {
       const inactiveFor = Date.now() - readLastActivityAt();
-      if (inactiveFor >= INACTIVITY_LIMIT_MS) {
+      if (inactiveFor >= INACTIVITY_TIMEOUT_MS) {
         expireSessionDueToInactivity();
         return;
       }
@@ -150,6 +184,7 @@ export function AuthProvider({ children }) {
     }, remaining);
   }
 
+  // Any real interaction in the active tab refreshes the shared lastActivity timestamp.
   function handleUserActivity() {
     if (!localStorage.getItem("access_token")) return;
     const now = Date.now();
@@ -164,7 +199,9 @@ export function AuthProvider({ children }) {
     if (!token) return null;
 
     api.defaults.headers.common.Authorization = `Bearer ${token}`;
-    setLoading(true);
+    if (!options.silent) {
+      setLoading(true);
+    }
 
     try {
       const response = await api.get("/auth/me", {
@@ -174,11 +211,14 @@ export function AuthProvider({ children }) {
       localStorage.setItem("current_user", JSON.stringify(response.data));
       return response.data;
     } finally {
-      setLoading(false);
+      if (!options.silent) {
+        setLoading(false);
+      }
     }
   }
 
   async function completeLogin(data) {
+    sessionExpiredByInactivityRef.current = false;
     if (!data?.access_token) {
       throw new Error("La connexion a réussi, mais le token est absent.");
     }
@@ -194,6 +234,7 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
+    sessionExpiredByInactivityRef.current = false;
     try {
       await stopEltWatchBestEffort();
       await api.post("/auth/logout");
@@ -201,7 +242,7 @@ export function AuthProvider({ children }) {
       // ignore
     } finally {
       logoutLocal();
-      window.location.href = "/login";
+      navigateOnce("/login");
     }
   }
 
@@ -210,7 +251,14 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return;
     }
-    refreshMe({ skipAuthRedirect: true }).catch(() => logoutLocal());
+    refreshMe({ skipAuthRedirect: true }).catch((err) => {
+      if (err?.response?.status === 401) {
+        logoutLocal();
+        if (!isAuthFlowPath()) {
+          navigateOnce("/login?reason=auth_required");
+        }
+      }
+    });
   }, [accessToken]);
 
   useEffect(() => {
@@ -219,7 +267,9 @@ export function AuthProvider({ children }) {
       return undefined;
     }
 
-    markActivity();
+    if (!localStorage.getItem(LAST_ACTIVITY_KEY)) {
+      markActivity();
+    }
     resetInactivityTimer();
 
     const events = [
@@ -229,8 +279,6 @@ export function AuthProvider({ children }) {
       "keydown",
       "scroll",
       "touchstart",
-      "touchmove",
-      "focus",
     ];
 
     events.forEach((eventName) => {
@@ -240,17 +288,16 @@ export function AuthProvider({ children }) {
     const handleVisibilityChange = () => {
       if (document.visibilityState !== "visible") return;
       const inactiveFor = Date.now() - readLastActivityAt();
-      if (inactiveFor >= INACTIVITY_LIMIT_MS) {
+      if (inactiveFor >= INACTIVITY_TIMEOUT_MS) {
         expireSessionDueToInactivity();
-        return;
       }
-      handleUserActivity();
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       clearInactivityTimer();
+      // Cleanup prevents duplicated listeners/timers after navigation or refresh.
       events.forEach((eventName) => {
         window.removeEventListener(eventName, handleUserActivity, eventName === "scroll" ? { capture: true } : undefined);
       });
@@ -260,11 +307,47 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (!accessToken) return undefined;
+    clearAccountStatusTimer();
     accountStatusTimerRef.current = window.setInterval(() => {
-      refreshMe().catch(() => {});
+      refreshMe({ skipAuthRedirect: true, silent: true }).catch((err) => {
+        const detail = err?.response?.data?.detail;
+        const detailStatus =
+          detail && typeof detail === "object" ? String(detail.status || "") : "";
+        const accountStatuses = new Set([
+          "account_disabled",
+          "account_blocked",
+          "account_pending_first_login",
+          "account_deleted",
+          "account_unavailable",
+        ]);
+
+        if (err?.response?.status === 403 && accountStatuses.has(detailStatus)) {
+          logoutLocal();
+          const message = encodeURIComponent(detail.message || "Compte indisponible.");
+          navigateOnce(`/account-disabled?reason=${encodeURIComponent(detailStatus)}&message=${message}`);
+        }
+      });
     }, ACCOUNT_STATUS_CHECK_MS);
-    return () => window.clearInterval(accountStatusTimerRef.current);
+    return () => clearAccountStatusTimer();
   }, [accessToken]);
+
+  useEffect(() => {
+    redirectingRef.current = false;
+  }, [location.pathname]);
+
+  useEffect(() => {
+    function handleAuthRedirect(event) {
+      sessionExpiredByInactivityRef.current = false;
+      logoutLocal();
+      const target = event.detail?.to;
+      if (target && !isAuthFlowPath(location.pathname)) {
+        navigateOnce(target);
+      }
+    }
+
+    window.addEventListener("auth:redirect", handleAuthRedirect);
+    return () => window.removeEventListener("auth:redirect", handleAuthRedirect);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!accessToken) return undefined;

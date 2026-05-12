@@ -4794,6 +4794,97 @@
     0 0 0 5px rgba(55, 184, 255, 0.10) !important;
 }
 
+/* ELT scoped notifications: compact, deduplicated in React, and non-invasive. */
+.app-shell--elt .elt-toast {
+  display: grid !important;
+  grid-template-columns: 34px minmax(0, 1fr) auto !important;
+  align-items: start !important;
+  gap: 11px !important;
+  width: min(360px, calc(100vw - 32px)) !important;
+  padding: 13px 14px !important;
+  border-radius: 18px !important;
+  border: 1px solid rgba(120, 160, 220, 0.22) !important;
+  background: rgba(255, 255, 255, 0.84) !important;
+  color: #203a7a !important;
+  box-shadow:
+    0 22px 52px rgba(31, 62, 120, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82) !important;
+  backdrop-filter: blur(18px) saturate(1.12) !important;
+  -webkit-backdrop-filter: blur(18px) saturate(1.12) !important;
+}
+
+.app-shell--elt .elt-toast-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 12px;
+  background: rgba(47, 107, 255, 0.1);
+  color: #2f6bff;
+}
+
+.app-shell--elt .elt-toast.success {
+  border-color: rgba(53, 199, 192, 0.34) !important;
+  background: rgba(240, 253, 250, 0.88) !important;
+  color: #08746f !important;
+}
+
+.app-shell--elt .elt-toast.success .elt-toast-icon {
+  background: rgba(53, 199, 192, 0.14);
+  color: #08746f;
+}
+
+.app-shell--elt .elt-toast.warning {
+  border-color: rgba(255, 159, 67, 0.34) !important;
+  background: rgba(255, 250, 235, 0.9) !important;
+  color: #9a5b00 !important;
+}
+
+.app-shell--elt .elt-toast.warning .elt-toast-icon {
+  background: rgba(255, 159, 67, 0.14);
+  color: #b54708;
+}
+
+.app-shell--elt .elt-toast.error {
+  border-color: rgba(242, 77, 77, 0.3) !important;
+  background: rgba(255, 241, 240, 0.9) !important;
+  color: #a32118 !important;
+}
+
+.app-shell--elt .elt-toast.error .elt-toast-icon {
+  background: rgba(242, 77, 77, 0.13);
+  color: #b42318;
+}
+
+.app-shell--elt .elt-toast.info {
+  border-color: rgba(123, 77, 255, 0.28) !important;
+  background: rgba(246, 248, 255, 0.9) !important;
+  color: #203a7a !important;
+}
+
+.app-shell--elt .elt-toast-body {
+  gap: 3px !important;
+}
+
+.app-shell--elt .elt-toast-body strong,
+.app-shell--elt .elt-toast-body span {
+  font-size: 13px !important;
+  line-height: 1.4 !important;
+}
+
+.app-shell--elt .elt-toast > button {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  font-size: 18px !important;
+  opacity: 0.7;
+}
+
+.app-shell--elt .elt-toast > button:hover {
+  background: rgba(15, 23, 42, 0.06) !important;
+  opacity: 1;
+}
+
 @media (max-width: 720px) {
   .elt-premium-page .elt-hero-title {
     font-size: clamp(1.7rem, 8.5vw, 2.55rem) !important;
@@ -4868,4 +4959,3 @@
     grid-template-columns: 1fr;
   }
 }
-

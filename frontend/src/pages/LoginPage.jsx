@@ -1,12 +1,13 @@
 import { KeyRound, LogIn } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
 import { useAuth } from "../context/AuthContext";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { completeLogin } = useAuth();
   const passwordInputRef = useRef(null);
@@ -19,10 +20,10 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
-  const loginReason = searchParams.get("reason");
+  const loginReason = location.state?.reason || searchParams.get("reason");
   const infoMessage =
     loginReason === "session_expired"
-      ? "Session expirée après 15 minutes d’inactivité."
+      ? "Votre session a expiré après 30 minutes d’inactivité. Veuillez vous reconnecter."
       : loginReason === "auth_required"
         ? "Veuillez vous reconnecter."
         : "";

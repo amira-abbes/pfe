@@ -1,12 +1,15 @@
 ﻿import {
   Activity,
   BarChart3,
+  AlertCircle,
+  CheckCircle2,
   Clock3,
   CloudUpload,
   Database,
   Download,
   Eye,
   FileText,
+  Info as InfoIcon,
   LayoutDashboard,
   Loader2,
   LogOut,
@@ -213,7 +216,10 @@ export default function AdminEltPage() {
   const dashboardPath = user?.role === "SUPER_ADMIN" ? "/super-admin/dashboard" : "/admin/dashboard";
 
   const [loading, setLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isStartingRun, setIsStartingRun] = useState(false);
+  const [isStartingWatcher, setIsStartingWatcher] = useState(false);
+  const [isStoppingWatcher, setIsStoppingWatcher] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [toast, setToast] = useState(null);
   const [connections, setConnections] = useState(null);
@@ -226,33 +232,43 @@ export default function AdminEltPage() {
   const [archiveFilesRev, setArchiveFilesRev] = useState([]);
   const [archiveSearch, setArchiveSearch] = useState("");
   const [showModeChoice, setShowModeChoice] = useState(false);
-  const [showWatcherConflict, setShowWatcherConflict] = useState(false);
   const [hasStartedEltFlow, setHasStartedEltFlow] = useState(false);
-  const [showBiSyncPanel, setShowBiSyncPanel] = useState(false);
-  const [showReportsPanel, setShowReportsPanel] = useState(false);
+  const [hasRunStartedFromPage, setHasRunStartedFromPage] = useState(false);
+  const [hasRunReachedFinalStatus, setHasRunReachedFinalStatus] = useState(false);
   const [technicalData, setTechnicalData] = useState({ columns: [], rows: [] });
   const [showTechnical, setShowTechnical] = useState(false);
 
   const runPollRef = useRef(null);
   const watchPollRef = useRef(null);
   const toastTimerRef = useRef(null);
+  const lastToastRef = useRef({ key: "", at: 0 });
   const lastFinalToastRef = useRef("");
-  const pendingLaunchAfterWatcherStop = useRef(false);
   const manualRunStartedRef = useRef(false);
   const runPollStartedAtRef = useRef(0);
   const hasSeenActiveRunRef = useRef(false);
   const runStartLockRef = useRef(false);
 
   const activeRun = isRunning || ACTIVE_RUN_STATUSES.has(String(runStatus?.status || "").toUpperCase()) || runStatus?.active === true;
-  const runButtonDisabled = !canRunElt || loading || isStartingRun || activeRun;
   const watcherActive = isWatcherActive(watchStatus);
+  const runButtonDisabled = !canRunElt || isStartingRun || activeRun || watcherActive || isStartingWatcher || connectionChecking;
+  const startWatcherDisabled = isStartingWatcher || activeRun || isStartingRun || watcherActive || connectionChecking;
+  const stopWatcherDisabled = isStoppingWatcher;
+  const refreshDisabled = isRefreshing;
+  const shouldShowReport = hasRunStartedFromPage && hasRunReachedFinalStatus && !activeRun && Boolean(report);
+  const shouldShowFreshnessPanel = hasRunStartedFromPage && hasRunReachedFinalStatus && !activeRun && Boolean(report);
 
   function showToast(typeOrConfig, text) {
-    window.clearTimeout(toastTimerRef.current);
     const nextToast =
       typeof typeOrConfig === "object"
         ? typeOrConfig
         : { type: typeOrConfig, text, message: text };
+    const toastKey = nextToast.key || `${nextToast.type || ""}:${nextToast.title || ""}:${nextToast.message || nextToast.text || ""}`;
+    const now = Date.now();
+    if (lastToastRef.current.key === toastKey && now - lastToastRef.current.at < 5000) {
+      return;
+    }
+    lastToastRef.current = { key: toastKey, at: now };
+    window.clearTimeout(toastTimerRef.current);
     setToast(nextToast);
     toastTimerRef.current = window.setTimeout(() => setToast(null), nextToast.actionLabel ? 7200 : 4200);
   }
@@ -276,10 +292,10 @@ export default function AdminEltPage() {
     if (watcherActive) {
       console.log("[ELT UI] watcher polling started");
       watchPollRef.current = window.setInterval(async () => {
-        const nextWatchStatus = await loadWatchStatus();
+        const nextWatchStatus = await loadWatchStatus({ silent: true });
         const state = String(nextWatchStatus?.state || nextWatchStatus?.status || "").toUpperCase();
         if (state === "PROCESSING") {
-          await loadRunStatus();
+          await loadRunStatus({ suppressErrors: true });
         }
       }, 2000);
     }
@@ -317,42 +333,34 @@ export default function AdminEltPage() {
 
   async function refreshPage() {
     console.log("[ELT UI] refresh visible data");
-    setLoading(true);
-    showToast("info", "Actualisation en cours...");
+    setIsRefreshing(true);
     setShowModeChoice(false);
     try {
-      const [watcher, status] = await Promise.all([
-        loadWatchStatus(),
-        loadRunStatus(),
+      const [, status] = await Promise.all([
+        loadWatchStatus({ silent: true }),
+        loadRunStatus({ silent: true }),
         loadArchiveFiles(),
       ]);
       if (ACTIVE_RUN_STATUSES.has(String(status?.status || "").toUpperCase()) || status?.active) {
         setIsRunning(true);
-        setShowReportsPanel(false);
-        setShowBiSyncPanel(false);
-        setReport(null);
-        setTxtReport("");
-        showToast("info", "Traitement en cours. Le rapport sera disponible à la fin.");
+        setHasRunReachedFinalStatus(false);
         startRunPolling();
         return;
       }
       setIsRunning(false);
-      const latest = await loadLatestReport();
-      if (latest?.run_id || latest?.status) {
-        setShowReportsPanel(true);
-        setShowBiSyncPanel(true);
+      if (hasRunStartedFromPage && hasRunReachedFinalStatus) {
+        await loadLatestReportWithRetry(3, { preserveExisting: true });
       }
-      showToast("success", "Données actualisées.");
     } catch {
-      showToast("error", "Actualisation impossible.");
+      showToast({ type: "error", key: "refresh-error", message: "Erreur backend lors de l’action demandée." });
     } finally {
-      setLoading(false);
+      setIsRefreshing(false);
     }
   }
 
-  async function loadLatestReportWithRetry(maxAttempts = 6) {
+  async function loadLatestReportWithRetry(maxAttempts = 6, options = {}) {
     for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-      const latest = await loadLatestReport();
+      const latest = await loadLatestReport(options);
       if (latest?.run_id || latest?.status) return latest;
       await new Promise((resolve) => window.setTimeout(resolve, 800));
     }
@@ -367,12 +375,9 @@ export default function AdminEltPage() {
     releaseRunStartLock();
 
     if (manualRunStartedRef.current) {
+      setHasRunReachedFinalStatus(true);
       const latest = await loadLatestReportWithRetry();
       await Promise.all([loadArchiveFiles(), loadWatchStatus({ silent: true })]);
-      if (latest?.run_id || latest?.status) {
-        setShowReportsPanel(true);
-        setShowBiSyncPanel(true);
-      }
       const finalToastKey = `${data?.run_id || latest?.run_id || ""}-${status}`;
       if (!silent && lastFinalToastRef.current !== finalToastKey) {
         const [type, text] = FINAL_TOASTS[status] || ["info", "Traitement ELT terminé."];
@@ -401,9 +406,9 @@ export default function AdminEltPage() {
     hasSeenActiveRunRef.current = false;
     console.log("[ELT UI] polling started");
     runPollRef.current = window.setInterval(() => {
-      loadRunStatus().catch(() => {});
+      loadRunStatus({ suppressErrors: true }).catch(() => {});
     }, 2000);
-    window.setTimeout(() => loadRunStatus().catch(() => {}), 900);
+    window.setTimeout(() => loadRunStatus({ suppressErrors: true }).catch(() => {}), 900);
   }
 
   async function loadConnections({ silent = false } = {}) {
@@ -431,7 +436,7 @@ export default function AdminEltPage() {
     }
   }
 
-  async function loadRunStatus({ silent = false } = {}) {
+  async function loadRunStatus({ silent = false, suppressErrors = false } = {}) {
     try {
       const response = await api.get("/elt/run/status");
       const data = response.data;
@@ -441,8 +446,7 @@ export default function AdminEltPage() {
       if (ACTIVE_RUN_STATUSES.has(status) || data?.active) {
         hasSeenActiveRunRef.current = true;
         setIsRunning(true);
-        setShowReportsPanel(false);
-        setShowBiSyncPanel(false);
+        setHasRunReachedFinalStatus(false);
       }
       if (FINAL_STATUSES.has(status)) {
         const elapsedSinceStart = Date.now() - runPollStartedAtRef.current;
@@ -453,12 +457,14 @@ export default function AdminEltPage() {
       }
       return data;
     } catch (err) {
-      if (!silent) showToast("error", getApiError(err, "Impossible de suivre le traitement ELT."));
+      if (!silent && !suppressErrors) {
+        showToast({ type: "error", key: "run-status-error", message: getApiError(err, "Erreur backend lors de l’action demandée.") });
+      }
       return null;
     }
   }
 
-  async function loadLatestReport() {
+  async function loadLatestReport({ preserveExisting = false } = {}) {
     try {
       const response = await api.get("/elt/latest-report");
       if (response.data?.success === false && !response.data?.run_id) return;
@@ -466,8 +472,10 @@ export default function AdminEltPage() {
       await loadTxtReport(response.data);
       return response.data;
     } catch {
-      setReport(null);
-      setTxtReport("");
+      if (!preserveExisting) {
+        setReport(null);
+        setTxtReport("");
+      }
       return null;
     }
   }
@@ -497,22 +505,27 @@ export default function AdminEltPage() {
     } catch (err) {
       setArchiveFilesAdv([]);
       setArchiveFilesRev([]);
-      showToast("error", getApiError(err, "Impossible de charger le suivi des fichiers traités."));
+      showToast({ type: "error", key: "archive-load-error", message: getApiError(err, "Erreur backend lors de l’action demandée.") });
     }
   }
 
   async function handleLaunchClick() {
     console.log("[ELT UI] lancer clicked");
+    if (watcherActive) {
+      showToast({ type: "warning", key: "launch-blocked-watcher", message: "Action impossible : surveillance locale active." });
+      return;
+    }
     if (runStartLockRef.current || isStartingRun || activeRun) {
-      showToast("warning", "Un traitement ELT est déjà en cours.");
+      showToast({ type: "warning", key: "launch-blocked-run", message: "Action impossible : traitement ELT en cours." });
       return;
     }
     runStartLockRef.current = true;
     setIsStartingRun(true);
     setHasStartedEltFlow(true);
     setShowModeChoice(false);
-    setShowReportsPanel(false);
-    setShowBiSyncPanel(false);
+    setHasRunReachedFinalStatus(false);
+    setReport(null);
+    setTxtReport("");
 
     const connectionState = await loadConnections();
     if (!connectionState) {
@@ -532,7 +545,7 @@ export default function AdminEltPage() {
     const status = await loadRunStatus();
     if (ACTIVE_RUN_STATUSES.has(String(status?.status || "").toUpperCase()) || status?.active) {
       setIsRunning(true);
-      showToast("warning", "Un traitement ELT est déjà en cours.");
+      showToast({ type: "warning", key: "launch-blocked-run", message: "Action impossible : traitement ELT en cours." });
       releaseRunStartLock();
       return;
     }
@@ -542,9 +555,8 @@ export default function AdminEltPage() {
     const watcherIsActive = isWatcherActive(watcher);
     console.log("[ELT UI] computed watcher active", watcherIsActive);
     if (watcherIsActive) {
-      setShowWatcherConflict(true);
-      pendingLaunchAfterWatcherStop.current = true;
-      showToast("warning", "Surveillance locale activée. Désactivez-la avant de lancer un ELT manuel.");
+      setWatchStatus(watcher);
+      showToast({ type: "warning", key: "launch-blocked-watcher", message: "Action impossible : surveillance locale active." });
       releaseRunStartLock();
       return;
     }
@@ -574,13 +586,11 @@ export default function AdminEltPage() {
 
       if (data.ftp_ok) {
         setShowModeChoice(true);
-        showToast("info", "FTP disponible. Choisissez le mode de traitement.");
         releaseRunStartLock();
         return;
       }
 
       console.log("[ELT UI] chosen mode", "LOCAL_ONLY");
-      showToast("warning", "FTP indisponible. Lancement du traitement local.");
       await startRun("LOCAL_ONLY", { allowLockedStart: keepStartingLock });
     } catch (err) {
       showToast("error", getApiError(err, "Impossible de vérifier Oracle et FTP."));
@@ -594,24 +604,29 @@ export default function AdminEltPage() {
   async function startRun(userMode, { allowLockedStart = false } = {}) {
     console.log("[ELT START] userMode=", userMode);
     console.log("[ELT UI] chosen mode", userMode);
+    if (watcherActive) {
+      showToast({ type: "warning", key: "launch-blocked-watcher", message: "Action impossible : surveillance locale active." });
+      return;
+    }
     if ((runStartLockRef.current && !allowLockedStart) || isStartingRun || activeRun) {
-      showToast("warning", "Un traitement ELT est déjà en cours.");
+      showToast({ type: "warning", key: "launch-blocked-run", message: "Action impossible : traitement ELT en cours." });
       return;
     }
     runStartLockRef.current = true;
     setIsStartingRun(true);
     setLoading(true);
     setShowModeChoice(false);
-    setShowReportsPanel(false);
-    setShowBiSyncPanel(false);
+    setHasRunReachedFinalStatus(false);
+    setReport(null);
+    setTxtReport("");
     try {
       const response = await api.post("/elt/run/start", null, { params: { user_mode: userMode } });
       const data = response.data;
       console.log("[ELT START RESPONSE]", data);
       console.log("[ELT UI] start run response", data);
       if (data.watch_active) {
-        setShowWatcherConflict(true);
-        showToast("warning", "Surveillance locale activée. Désactivez-la avant de lancer un ELT manuel.");
+        setWatchStatus({ success: true, active: true, watching: true, state: "WAITING_FOR_FILE" });
+        showToast({ type: "warning", key: "launch-blocked-watcher", message: "Action impossible : surveillance locale active." });
         releaseRunStartLock();
         return;
       }
@@ -620,11 +635,11 @@ export default function AdminEltPage() {
         releaseRunStartLock();
         return;
       }
-      showToast("success", "Traitement ELT lancé.");
+      showToast({ type: "success", key: "run-started", message: "Traitement ELT lancé." });
       manualRunStartedRef.current = true;
+      setHasRunStartedFromPage(true);
+      setHasRunReachedFinalStatus(false);
       setIsRunning(true);
-      setShowReportsPanel(false);
-      setShowBiSyncPanel(false);
       setReport(null);
       setTxtReport("");
       setRunStatus({ status: "RUNNING", active: true, user_mode: userMode, scenario_label: data.scenario_label });
@@ -638,34 +653,21 @@ export default function AdminEltPage() {
     }
   }
 
-  async function stopWatcherAndContinue() {
-    setLoading(true);
-    try {
-      await api.post("/elt/watch/stop");
-      setShowWatcherConflict(false);
-      const watcher = await loadWatchStatus();
-      if (isWatcherActive(watcher)) {
-        showToast("error", "La surveillance locale est encore active. Veuillez réessayer.");
-        return;
-      }
-      showToast("success", "Surveillance locale désactivée.");
-      if (pendingLaunchAfterWatcherStop.current) {
-        pendingLaunchAfterWatcherStop.current = false;
-        await checkConnectionsAndLaunch();
-      }
-    } catch (err) {
-      showToast("error", getApiError(err, "Impossible de désactiver la surveillance locale."));
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function startWatch() {
     if (activeRun) {
-      showToast("warning", "Impossible d’activer la surveillance pendant un traitement ELT.");
+      showToast({ type: "warning", key: "watch-blocked-run", message: "Action impossible : traitement ELT en cours." });
+      return;
+    }
+    if (isStartingRun || isStartingWatcher || connectionChecking) {
+      showToast({ type: "warning", key: "watch-blocked-action", message: "Action impossible pour le moment." });
+      return;
+    }
+    if (watcherActive) {
+      showToast({ type: "warning", key: "watch-already-active", message: "Surveillance locale déjà active." });
       return;
     }
     setHasStartedEltFlow(true);
+    setIsStartingWatcher(true);
     setLoading(true);
     try {
       const connectionState = await loadConnections();
@@ -680,7 +682,7 @@ export default function AdminEltPage() {
       }
       const response = await api.post("/elt/watch/start");
       if (response.data?.success) {
-        showToast("success", "Surveillance locale activée.");
+        showToast({ type: "success", key: "watch-started", message: "Surveillance locale activée." });
         setWatchStatus({
           success: true,
           active: true,
@@ -698,15 +700,18 @@ export default function AdminEltPage() {
     } catch (err) {
       showToast("error", getApiError(err, "Impossible d'activer la surveillance locale."));
     } finally {
+      setIsStartingWatcher(false);
       setLoading(false);
     }
   }
 
   async function stopWatch() {
+    if (isStoppingWatcher) return;
+    setIsStoppingWatcher(true);
     setLoading(true);
     try {
       await api.post("/elt/watch/stop");
-      showToast("success", "Surveillance locale désactivée.");
+      showToast({ type: "success", key: "watch-stopped", message: "Surveillance locale désactivée." });
       const nextStatus = await loadWatchStatus();
       if (!nextStatus) {
         setWatchStatus({ success: true, active: false, watching: false, state: "STOPPED" });
@@ -714,6 +719,7 @@ export default function AdminEltPage() {
     } catch (err) {
       showToast("error", getApiError(err, "Impossible de désactiver la surveillance locale."));
     } finally {
+      setIsStoppingWatcher(false);
       setLoading(false);
     }
   }
@@ -775,16 +781,35 @@ export default function AdminEltPage() {
           <h1 className="elt-hero-title">Pilotage ELT Service SOS Solde & Data</h1>
         </div>
         <div className="actions elt-primary-actions elt-hero-actions">
-          <button className="btn btn-primary elt-btn elt-btn--primary" onClick={handleLaunchClick} disabled={runButtonDisabled}>
+          <button
+            className="btn btn-primary elt-btn elt-btn--primary"
+            onClick={handleLaunchClick}
+            disabled={runButtonDisabled}
+            title={watcherActive ? "Surveillance locale active. Désactivez-la avant de lancer un ELT manuel." : activeRun ? "Traitement ELT en cours." : ""}
+          >
             {isStartingRun || activeRun ? <Loader2 className="spin" size={18} /> : <PlayCircle size={18} />}
             {isStartingRun || activeRun ? "Traitement en cours…" : "Lancer ELT"}
           </button>
           {watcherActive ? (
-            <button className="btn btn-secondary" onClick={stopWatch} disabled={loading || isStartingRun || activeRun}><Square size={18} />Désactiver surveillance locale</button>
+            <button className="btn btn-secondary" onClick={stopWatch} disabled={stopWatcherDisabled} title={isStoppingWatcher ? "Arrêt de la surveillance en cours." : ""}>
+              {isStoppingWatcher ? <Loader2 className="spin" size={18} /> : <Square size={18} />}
+              Désactiver surveillance locale
+            </button>
           ) : (
-            <button className="btn btn-secondary" onClick={startWatch} disabled={loading || isStartingRun || activeRun}><Power size={18} />Activer surveillance locale</button>
+            <button
+              className="btn btn-secondary"
+              onClick={startWatch}
+              disabled={startWatcherDisabled}
+              title={activeRun ? "Traitement ELT en cours. La surveillance locale ne peut pas être activée pendant l’exécution." : ""}
+            >
+              {isStartingWatcher ? <Loader2 className="spin" size={18} /> : <Power size={18} />}
+              Activer surveillance locale
+            </button>
           )}
-          <button className="btn btn-secondary" onClick={refreshPage} disabled={loading}><RefreshCw size={18} />Actualiser</button>
+          <button className="btn btn-secondary" onClick={refreshPage} disabled={refreshDisabled}>
+            <RefreshCw className={isRefreshing ? "spin" : ""} size={18} />
+            Actualiser
+          </button>
         </div>
         <div className="elt-hero-orbit" aria-hidden="true">
           <span />
@@ -801,11 +826,11 @@ export default function AdminEltPage() {
           <>
             <h3 className="elt-choice-title">Choix du mode de traitement</h3>
             <div className="elt-mode-grid">
-              <button className="elt-mode-card" onClick={() => startRun("FTP_DIRECT")} disabled={loading || isStartingRun || activeRun}>
+              <button className="elt-mode-card" onClick={() => startRun("FTP_DIRECT")} disabled={loading || isStartingRun || activeRun || watcherActive}>
                 <span>Traitement direct depuis FTP</span>
                 <small>Traite directement les fichiers présents sur le serveur FTP sans copie locale.</small>
               </button>
-              <button className="elt-mode-card" onClick={() => startRun("FTP_TO_LOCAL")} disabled={loading || isStartingRun || activeRun}>
+              <button className="elt-mode-card" onClick={() => startRun("FTP_TO_LOCAL")} disabled={loading || isStartingRun || activeRun || watcherActive}>
                 <span>Récupération FTP puis traitement local</span>
                 <small>Récupère les fichiers depuis FTP vers le dossier local puis lance le traitement.</small>
               </button>
@@ -819,7 +844,7 @@ export default function AdminEltPage() {
         <ConnectionCards connections={connections} watchStatus={watchStatus} runStatus={runStatus} report={report} />
       )}
 
-      {showReportsPanel && !activeRun && report && (
+      {shouldShowReport && (
         <ReportsPanel
           report={report}
           txtReport={txtReport}
@@ -836,28 +861,9 @@ export default function AdminEltPage() {
         onSearch={setArchiveSearch}
       />
 
-      {showBiSyncPanel && !activeRun && report && <BiSyncPanel report={report} navigate={navigate} />}
+      {shouldShowFreshnessPanel && <BiSyncPanel report={report} navigate={navigate} />}
 
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
-
-      {showWatcherConflict && (
-        <div className="elt-modal-backdrop" role="presentation">
-          <div className="elt-confirm-modal" role="dialog" aria-modal="true">
-            <ShieldAlert size={30} />
-            <h2>Surveillance locale active</h2>
-            <p>La surveillance locale est active. Vous ne pouvez pas lancer un traitement manuel tant qu’elle est activée.</p>
-            <div className="actions">
-              <button className="btn btn-danger" onClick={stopWatcherAndContinue} disabled={loading}>
-                <Square size={18} />
-                Désactiver la surveillance
-              </button>
-              <button className="btn btn-secondary" onClick={() => setShowWatcherConflict(false)} disabled={loading}>
-                Annuler
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {showTechnical && (
         <TechnicalModal
@@ -1168,8 +1174,12 @@ function BiSyncPanel({ report, navigate }) {
 
 function Toast({ type, text, title, message, actionLabel, onAction, secondaryActionLabel, onSecondaryAction, onClose }) {
   const displayMessage = message || text;
+  const Icon = type === "success" ? CheckCircle2 : type === "error" ? AlertCircle : type === "warning" ? ShieldAlert : InfoIcon;
   return (
     <div className={`elt-toast ${type}`} role="status" aria-live="polite">
+      <div className="elt-toast-icon" aria-hidden="true">
+        <Icon size={18} />
+      </div>
       <div className="elt-toast-body">
         {title && <strong>{title}</strong>}
         {displayMessage && <span>{displayMessage}</span>}

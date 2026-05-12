@@ -213,22 +213,35 @@ def _runtime_call(function_name: str, *args):
 
 
 def _fallback_is_run_active() -> bool:
-    status = _read_json_file(ELT_CURRENT_RUN_STATUS_FILE, {})
-    if isinstance(status, dict) and status.get("active"):
-        return True
     with FALLBACK_RUN_STATE_LOCK:
         return bool(FALLBACK_RUN_STATE.get("active"))
 
 
+def _write_fallback_run_status(status: dict[str, Any]) -> None:
+    try:
+        ELT_CURRENT_RUN_STATUS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        with open(ELT_CURRENT_RUN_STATUS_FILE, "w", encoding="utf-8") as f:
+            json.dump(status, f, indent=2, ensure_ascii=False)
+    except Exception as exc:
+        _log(f"[RUNTIME FALLBACK] current status write skipped: {exc}")
+
+
 def _fallback_get_current_run_status() -> dict[str, Any]:
+    with FALLBACK_RUN_STATE_LOCK:
+        fallback_state = dict(FALLBACK_RUN_STATE)
+
     status = _read_json_file(ELT_CURRENT_RUN_STATUS_FILE, {})
     if isinstance(status, dict) and status:
-        with FALLBACK_RUN_STATE_LOCK:
-            if FALLBACK_RUN_STATE.get("active") and str(status.get("status") or "").upper() not in FINAL_RUN_STATUSES:
+        if fallback_state.get("active"):
+            file_status = str(status.get("status") or "").upper()
+            if status.get("active") or file_status not in FINAL_RUN_STATUSES:
                 status["active"] = True
+                status.setdefault("user_mode", fallback_state.get("user_mode"))
+                status.setdefault("scenario_label", fallback_state.get("scenario_label"))
+                return status
+            return fallback_state
         return status
-    with FALLBACK_RUN_STATE_LOCK:
-        return dict(FALLBACK_RUN_STATE)
+    return fallback_state
 
 
 def _fallback_run_worker(user_mode: str) -> None:
@@ -243,7 +256,11 @@ def _fallback_run_worker(user_mode: str) -> None:
                 "message": normalized.get("message") or _status_label(final_status),
                 "user_mode": user_mode,
                 "scenario_label": _scenario_label(normalized.get("scenario") or user_mode),
+                "run_id": normalized.get("run_id"),
+                "scenario": normalized.get("scenario") or user_mode,
             })
+            current_state = dict(FALLBACK_RUN_STATE)
+        _write_fallback_run_status(current_state)
     except Exception as exc:
         _log(f"[RUNTIME FALLBACK] worker error={exc}")
         _log(traceback.format_exc())
@@ -254,6 +271,8 @@ def _fallback_run_worker(user_mode: str) -> None:
                 "message": f"Erreur lors du traitement ELT : {exc}",
                 "user_mode": user_mode,
             })
+            current_state = dict(FALLBACK_RUN_STATE)
+        _write_fallback_run_status(current_state)
 
 
 def _fallback_start_run(user_mode: str) -> dict[str, Any]:
@@ -267,6 +286,8 @@ def _fallback_start_run(user_mode: str) -> dict[str, Any]:
             "user_mode": user_mode,
             "scenario_label": _scenario_label(user_mode),
         })
+        current_state = dict(FALLBACK_RUN_STATE)
+    _write_fallback_run_status(current_state)
     thread = threading.Thread(target=_fallback_run_worker, args=(user_mode,), daemon=True)
     thread.start()
     return {"success": True, "status": "RUNNING", "message": "Traitement lancé."}

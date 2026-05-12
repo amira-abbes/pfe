@@ -1,0 +1,27 @@
+==========================================================================================
+Audit qualité synthétique du dataset Machine Learning Bad Debts
+==========================================================================================
+Lignes source  : 9748
+Colonnes source: 14
+Doublons MSISDN: 0
+
+Valeurs manquantes non nulles :
+SUBSCRIBER_TYPE_IN        28
+RATE_PLAN                 28
+ACCOUNT_ACTIVATED_DATE    28
+dtype: int64
+
+Contrôles financiers :
+AVG_CREDIT_AMOUNT: valeurs négatives = 0
+AVG_CREDIT_FEE: valeurs négatives = 0
+AVG_REIMBURSED_AMOUNT: valeurs négatives = 0
+AVG_FEE_REIMBURSED: valeurs négatives = 0
+AVG_REIMBURSE_RATIO: valeurs négatives = 0
+AVG_DAYS_SINCE_CREDIT: valeurs négatives = 0
+TOTAL_OUTSTANDING_AMOUNT: valeurs négatives = 0
+TOTAL_OUTSTANDING_FEE: valeurs négatives = 0
+NB_SOS: valeurs négatives = 0
+AVG_REIMBURSE_RATIO < 0 : 0
+AVG_REIMBURSE_RATIO > 1 : 0
+
+Conclusion : dataset source exploitable pour segmentation comportementale non supervisée.
