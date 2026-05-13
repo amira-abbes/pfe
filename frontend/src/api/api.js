@@ -211,6 +211,18 @@ export function runBadDebtsAgent(msisdn) {
   return api.post(`/api/v1/bad-debts/clients/${encodeURIComponent(msisdn)}/run-agent`);
 }
 
+export function runBadDebtsAgentBatch(params = {}) {
+  return api.post("/api/v1/bad-debts/agent/run-batch", null, { params });
+}
+
+export function getBadDebtsAgentReports(params = {}) {
+  return api.get("/api/v1/bad-debts/agent/reports", { params });
+}
+
 export function getBadDebtsRecentActions(params = {}) {
   return api.get("/api/v1/bad-debts/actions/recent", { params });
+}
+
+export function getBadDebtsImportRuns(params = {}) {
+  return api.get("/api/v1/bad-debts/import-runs", { params });
 }

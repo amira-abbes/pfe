@@ -6,6 +6,8 @@ from app.schemas.bad_debts import (
     AgentActionItem,
     BadDebtClientDetail,
     BadDebtClientsPage,
+    BadDebtsAgentBatchResponse,
+    BadDebtsAgentReportItem,
     BadDebtsHealthResponse,
     BadDebtsSummary,
     BadDebtsAgentResponse,
@@ -13,7 +15,13 @@ from app.schemas.bad_debts import (
     N8nAtRiskClientsPage,
     N8nSummary,
 )
-from app.services.bad_debts_agent_service import get_recent_agent_actions, run_bad_debts_agent
+from app.services.bad_debts_agent_service import (
+    AgentRunError,
+    get_recent_agent_actions,
+    get_recent_agent_reports,
+    run_bad_debts_agent,
+    run_bad_debts_agent_batch,
+)
 from app.services.bad_debts_service import BadDebtsService
 
 
@@ -74,13 +82,36 @@ def list_recent_bad_debt_agent_actions(
 
 @router.post("/bad-debts/clients/{msisdn}/run-agent", response_model=BadDebtsAgentResponse)
 def run_bad_debt_agent(msisdn: str, db: Session = Depends(get_db)):
-    response = run_bad_debts_agent(db, msisdn)
+    try:
+        response = run_bad_debts_agent(db, msisdn)
+    except AgentRunError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
     if not response:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Client introuvable : {msisdn}",
         )
     return response
+
+
+@router.post("/bad-debts/agent/run-batch", response_model=BadDebtsAgentBatchResponse)
+def run_bad_debt_agent_batch(
+    tier: str = Query(default="high"),
+    limit: int = Query(default=50, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    return run_bad_debts_agent_batch(db, tier=tier, limit=limit)
+
+
+@router.get("/bad-debts/agent/reports", response_model=list[BadDebtsAgentReportItem])
+def list_bad_debt_agent_reports(
+    limit: int = Query(default=10, ge=1, le=50),
+    db: Session = Depends(get_db),
+):
+    return get_recent_agent_reports(db, limit=limit)
 
 
 @router.get("/bad-debts/clients/{msisdn}", response_model=BadDebtClientDetail)

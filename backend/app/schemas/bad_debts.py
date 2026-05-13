@@ -105,12 +105,52 @@ class N8nAtRiskClientsPage(BaseModel):
 
 class BadDebtsAgentResponse(BaseModel):
     run_id: str
+    agent_run_id: int | None = None
     msisdn: str
     profile: dict[str, Any]
     explanations: dict[str, Any]
     decision: dict[str, Any]
     message: dict[str, Any]
     errors: list[str] = Field(default_factory=list)
+
+
+class BadDebtsAgentBatchItem(BaseModel):
+    msisdn: str
+    status: str
+    client_label: str | None = None
+    processing_label: str | None = None
+    action_id: int | None = None
+    action_type: str | None = None
+    action_label: str | None = None
+    priority: int | None = None
+    priority_label: str | None = None
+    agent_run_id: int | None = None
+    business_comment: str | None = None
+    error: str | None = None
+
+
+class BadDebtsAgentBatchResponse(BaseModel):
+    status: str
+    tier: str
+    limit: int
+    clients_analyzed: int
+    actions_created: int
+    actions_reused: int
+    errors_count: int
+    items: list[BadDebtsAgentBatchItem] = Field(default_factory=list)
+    report_id: int | None = None
+    report_summary: str | None = None
+    message: str | None = None
+
+
+class BadDebtsAgentReportItem(BaseModel):
+    id: int
+    report_type: str
+    period_label: str | None = None
+    summary: str | None = None
+    recommendations: str | None = None
+    kpis_json: dict[str, Any] | None = None
+    generated_at: datetime | None = None
 
 
 class AgentActionItem(BaseModel):
