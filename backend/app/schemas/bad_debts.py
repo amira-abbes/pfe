@@ -105,6 +105,7 @@ class N8nAtRiskClientsPage(BaseModel):
 
 class BadDebtsAgentResponse(BaseModel):
     run_id: str
+    action_id: int | None = None
     agent_run_id: int | None = None
     msisdn: str
     profile: dict[str, Any]

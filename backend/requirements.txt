@@ -19,3 +19,6 @@ oracledb
 pandas
 requests
 reportlab
+langgraph
+langchain-core
+langchain-openai
