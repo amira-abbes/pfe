@@ -22,3 +22,23 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+# Python virtual environments
+backend/venv/
+venv/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Logs
+*.log
+
+# Runtime/generated files
+backend/runtime_data/
+
+# Frontend generated files
+node_modules/
+dist/
