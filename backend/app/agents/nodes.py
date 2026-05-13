@@ -112,6 +112,8 @@ def message_generation_node(state: AgentState) -> AgentState:
                 generated_by="template",
                 llm_error=f"LLM output rejected by guard: {rejection_reason}",
                 llm_duration_ms=llm_result.get("llm_duration_ms"),
+                fallback_to_template=True,
+                hallucination_detected=True,
             )
             return {
                 "message": message,
@@ -596,6 +598,8 @@ def _response_payload(
         "llm_error": message.get("llm_error"),
         "llm_duration_ms": message.get("llm_duration_ms"),
         "llm_cache_hit": bool(message.get("llm_cache_hit")),
+        "fallback_to_template": bool(message.get("fallback_to_template")),
+        "hallucination_detected": bool(message.get("hallucination_detected")),
         "decision_locked": True,
         "action_type": decision.get("action_type") or decision.get("recommended_action"),
         "effective_tier": decision.get("effective_tier"),
@@ -616,8 +620,11 @@ def _lock_message_metadata(
     llm_error: Any = None,
     llm_cache_hit: bool = False,
     llm_duration_ms: Any = 0,
+    fallback_to_template: bool | None = None,
+    hallucination_detected: bool = False,
 ) -> dict[str, Any]:
     used_llm = generated_by in {"llm", "llm_cache"}
+    used_template = not used_llm
     return {
         **message,
         "generated_by": generated_by,
@@ -626,6 +633,8 @@ def _lock_message_metadata(
         "llm_error": None if used_llm else llm_error,
         "llm_cache_hit": bool(llm_cache_hit),
         "llm_duration_ms": int(llm_duration_ms or 0),
+        "fallback_to_template": bool(used_template if fallback_to_template is None else fallback_to_template),
+        "hallucination_detected": bool(hallucination_detected),
         "decision_locked": True,
     }
 
@@ -680,6 +689,7 @@ def _llm_cache_key(model_name: str, context: dict[str, Any]) -> str:
     relevant = {
         "model": model_name,
         "action_type": decision.get("action_type"),
+        "priority": decision.get("priority"),
         "effective_tier": decision.get("effective_tier"),
         "safe_to_send": decision.get("safe_to_send"),
         "channel": context.get("channel"),
