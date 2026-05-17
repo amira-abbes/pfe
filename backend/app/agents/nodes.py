@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-import os
 import json
-import time
-from collections import OrderedDict
+import re
 from datetime import datetime
 from typing import Any
 
 from app.agents.state import AgentState
 from app.services.bad_debts_agent_service import (
+    build_deterministic_client_analysis,
     build_client_profile,
     build_explanations,
+    compute_client_decision,
     decide_next_action,
     generate_message,
     log_agent_action,
@@ -21,10 +21,6 @@ try:
     from app.core.config import settings
 except Exception:
     settings = None
-
-
-LLM_REWRITE_CACHE_MAX_SIZE = 256
-_LLM_REWRITE_CACHE: OrderedDict[str, str] = OrderedDict()
 
 
 def effective_risk_tier(ml_outputs: dict[str, Any] | None) -> str:
@@ -73,6 +69,7 @@ def message_generation_node(state: AgentState) -> AgentState:
         client = _client_from_state(state)
         decision = state.get("decision") or {}
         fallback_message = _normalize_message_contract(generate_message(client, decision))
+        message = _generate_local_contact_message(client, decision, fallback_message)
     except Exception as exc:
         fallback_message = _fallback_message(state.get("decision") or {})
         return {
@@ -84,58 +81,22 @@ def message_generation_node(state: AgentState) -> AgentState:
             ),
         }
 
-    if not fallback_message.get("safe_to_send") or decision.get("action_type") == "recovery_review":
-        return {"message": _lock_message_metadata(fallback_message, generated_by="template")}
+    return {"message": _lock_message_metadata(message, generated_by=message.get("generated_by") or "deterministic_template")}
 
-    if not state.get("enable_llm", True):
-        return {"message": _lock_message_metadata(fallback_message, generated_by="template")}
 
-    llm_context = {
-        "profile": _client_llm_profile(client),
-        "decision": _decision_llm_context(decision),
-        "explanations": _explanations_llm_context(state.get("explanations") or {}),
-        "template_message": fallback_message.get("content") or "",
-        "channel": fallback_message.get("channel"),
-        "safe_to_send": fallback_message.get("safe_to_send"),
-    }
-    llm_result = safe_llm_rewrite_recommendation(llm_context)
-    if llm_result.get("content"):
-        content = str(llm_result["content"])
-        is_valid, rejection_reason = validate_llm_recommendation(
-            content,
-            decision,
-            fallback_message,
-        )
-        if not is_valid:
-            message = _lock_message_metadata(
-                fallback_message,
-                generated_by="template",
-                llm_error=f"LLM output rejected by guard: {rejection_reason}",
-                llm_duration_ms=llm_result.get("llm_duration_ms"),
-                fallback_to_template=True,
-                hallucination_detected=True,
-            )
-            return {
-                "message": message,
-                "errors": [message["llm_error"]],
-            }
+def ai_analysis_node(state: AgentState) -> AgentState:
+    try:
+        client = _client_from_state(state)
+        decision = state.get("decision") or {}
+        explanations = state.get("explanations") or {}
+        profile = state.get("profile") or build_client_profile(client)
+        analysis = build_deterministic_client_analysis(client, profile, explanations, decision)
+        return {"ai_analysis": analysis}
+    except Exception as exc:
         return {
-            "message": _lock_message_metadata(
-                {**fallback_message, "content": content, "message_text": content},
-                generated_by="llm_cache" if llm_result.get("llm_cache_hit") else "llm",
-                llm_model=llm_result.get("llm_model"),
-                llm_cache_hit=bool(llm_result.get("llm_cache_hit")),
-                llm_duration_ms=llm_result.get("llm_duration_ms"),
-            )
+            "errors": [f"ai_analysis_node: {exc}"],
+            "ai_analysis": build_ai_analysis(_client_from_state(state), state.get("decision") or {}, state.get("explanations") or {}),
         }
-
-    message = _lock_message_metadata(
-        fallback_message,
-        generated_by="template",
-        llm_error=llm_result.get("llm_error"),
-        llm_duration_ms=llm_result.get("llm_duration_ms"),
-    )
-    return {"message": message}
 
 
 def monitoring_node(state: AgentState) -> AgentState:
@@ -152,7 +113,7 @@ def monitoring_node(state: AgentState) -> AgentState:
             "persisted": False,
             "monitoring": {
                 "status": "memory_only",
-                "summary": "Execution LangGraph preparee sans persistance PostgreSQL.",
+                "summary": "Analyse préparée sans enregistrement persistant.",
                 "action_type": decision.get("action_type"),
                 "effective_tier": decision.get("effective_tier"),
             },
@@ -243,23 +204,12 @@ def _client_from_state(state: AgentState) -> dict[str, Any]:
 def _normalize_decision_contract(client: dict[str, Any], decision: dict[str, Any]) -> dict[str, Any]:
     action_type = decision.get("action_type") or decision.get("recommended_action") or "monitor_only"
     effective_tier_value = decision.get("effective_tier") or effective_risk_tier(client)
-
-    if _is_sensitive_client(client):
-        action_type = "recovery_review"
-        decision = {
-            **decision,
-            "recommended_action": action_type,
-            "action_type": action_type,
-            "priority": 1,
-            "next_best_action": "Verification recouvrement et traitement prioritaire",
-            "effective_tier": effective_tier_value,
-        }
-
-    safe_to_send = action_type not in {"monitor_only", "recovery_review"}
+    safe_to_send = action_type != "monitor_only"
     recommendation = decision.get("recommendation") or decision.get("next_best_action") or decision.get("reason")
     return {
         **decision,
         "action_type": action_type,
+        "recommended_action": action_type,
         "recommendation": recommendation,
         "effective_tier": _normalize_tier(effective_tier_value),
         "safe_to_send": safe_to_send,
@@ -270,11 +220,235 @@ def _normalize_message_contract(message: dict[str, Any]) -> dict[str, Any]:
     content = message.get("content") or message.get("message_text") or ""
     return {
         **message,
+        "contact_type": message.get("contact_type") or _contact_type_for_action(message.get("channel")),
+        "title": message.get("title") or _contact_title_for_type(message.get("contact_type") or _contact_type_for_action(message.get("channel"))),
         "content": content,
         "message_text": content,
+        "internal_notice": "Proposition interne non envoyée automatiquement.",
         "safe_to_send": bool(message.get("safe_to_send")),
-        "generated_by": message.get("generated_by") or "template",
+        "generated_by": message.get("generated_by") or "deterministic_template",
+        "llm_used": bool(message.get("llm_used")),
     }
+
+
+def _generate_local_contact_message(
+    client: dict[str, Any],
+    decision: dict[str, Any],
+    fallback_message: dict[str, Any],
+) -> dict[str, Any]:
+    action_type = str(decision.get("action_type") or decision.get("recommended_action") or "")
+    if action_type != "sms_retention_offer":
+        return fallback_message
+    if not settings or not bool(getattr(settings, "BAD_DEBTS_OLLAMA_ENABLED", False)):
+        return fallback_message
+
+    prompt = _contact_prompt(client, decision, fallback_message)
+    primary_model = str(getattr(settings, "BAD_DEBTS_OLLAMA_MODEL", "") or "").strip() or None
+    backup_model = str(getattr(settings, "BAD_DEBTS_OLLAMA_BACKUP_MODEL", "") or "").strip()
+    generated = _call_contact_llm(prompt, primary_model)
+    message = _build_contact_message(client, decision, fallback_message, generated)
+    if _validate_contact_message(message, client, decision):
+        return message
+    if backup_model and backup_model != primary_model:
+        generated = _call_contact_llm(prompt, backup_model)
+        message = _build_contact_message(client, decision, fallback_message, generated)
+        if _validate_contact_message(message, client, decision):
+            return message
+    return fallback_message
+
+
+def _call_contact_llm(prompt: str, model_name: str | None) -> dict[str, Any] | None:
+    try:
+        from app.services.bad_debts_llm_report_service import call_ollama_json
+
+        return call_ollama_json(prompt, model_name=model_name, num_predict=120)
+    except Exception:
+        return None
+
+
+def _contact_prompt(client: dict[str, Any], decision: dict[str, Any], fallback_message: dict[str, Any]) -> str:
+    action_type = str(decision.get("action_type") or decision.get("recommended_action") or "")
+    contact_type = fallback_message.get("contact_type")
+    title = fallback_message.get("title")
+    context = {
+        "contact_type": contact_type,
+        "title": title,
+        "action": action_type,
+        "risk_effective": decision.get("effective_tier"),
+        "risk_raw": decision.get("raw_risk_tier"),
+        "priority": decision.get("priority_label") or decision.get("priority"),
+        "segment": client.get("cluster_name") or client.get("state"),
+        "is_anomaly": bool(client.get("is_anomaly")),
+        "debt": client.get("total_outstanding_amount"),
+        "reimbursement_ratio": client.get("avg_reimburse_ratio"),
+        "safe_to_send": bool(fallback_message.get("safe_to_send")),
+    }
+    if action_type == "call_center_priority":
+        instruction = "Rédige un script d'appel conseiller court. Ce n'est pas un SMS."
+    else:
+        instruction = "Rédige un SMS préventif court, neutre et sans offre commerciale."
+    return (
+        f"{instruction} Réponds uniquement par un objet JSON avec la clé message_text. "
+        "N'invente aucun chiffre. Ne dis jamais qu'un message est envoyé ou qu'un appel a eu lieu. "
+        "Ne change pas l'action, le risque, la priorité ou le segment. "
+        "Interdits: plan d'apurement, offre de restructuration, remise, réduction, bonus, cadeau, "
+        "offre commerciale, sanction, menace, contentieux, poursuite, recouvrement agressif, fraude, blacklist, "
+        "Qwen, Ollama, API, JSON, backend, frontend, modèle IA, LLM, fallback. "
+        "Le texte doit rester une proposition interne non envoyée automatiquement. "
+        f"Contexte Python verrouillé:{json.dumps(context, ensure_ascii=False, default=str)}"
+    )
+
+
+def _build_contact_message(
+    client: dict[str, Any],
+    decision: dict[str, Any],
+    fallback_message: dict[str, Any],
+    generated: dict[str, Any] | None,
+) -> dict[str, Any]:
+    content = str((generated or {}).get("message_text") or "").strip()
+    if not content:
+        return fallback_message
+    action_type = str(decision.get("action_type") or decision.get("recommended_action") or "")
+    contact_type, title, safe_to_send = _contact_contract(action_type)
+    return {
+        **fallback_message,
+        "contact_type": contact_type,
+        "title": title,
+        "channel": "sms" if contact_type == "preventive_sms" else "call" if contact_type == "call_script" else "monitoring",
+        "message_text": content,
+        "content": content,
+        "language": "fr",
+        "internal_notice": "Proposition interne non envoyée automatiquement.",
+        "safe_to_send": safe_to_send,
+        "generated_by": "local_llm",
+        "llm_used": True,
+    }
+
+
+def _contact_contract(action_type: str) -> tuple[str, str, bool]:
+    if action_type == "call_center_priority":
+        return "call_script", "Script conseiller", False
+    if action_type == "sms_retention_offer":
+        return "preventive_sms", "SMS préventif proposé", True
+    return "monitoring_note", "Note de suivi", False
+
+
+def _contact_type_for_action(channel: Any) -> str:
+    if channel == "call":
+        return "call_script"
+    if channel == "sms":
+        return "preventive_sms"
+    return "monitoring_note"
+
+
+def _contact_title_for_type(contact_type: Any) -> str:
+    if contact_type == "call_script":
+        return "Script conseiller"
+    if contact_type == "preventive_sms":
+        return "SMS préventif proposé"
+    return "Note de suivi"
+
+
+def _validate_contact_message(message: dict[str, Any], client: dict[str, Any], decision: dict[str, Any]) -> bool:
+    text = str(message.get("message_text") or message.get("content") or "").strip()
+    if not text or len(text) > 420 or _contains_forbidden_contact_text(text):
+        return False
+    action_type = str(decision.get("action_type") or decision.get("recommended_action") or "")
+    expected_contact_type, expected_title, expected_safe = _contact_contract(action_type)
+    if message.get("contact_type") != expected_contact_type or message.get("title") != expected_title:
+        return False
+    if bool(message.get("safe_to_send")) != expected_safe:
+        return False
+    lowered = text.lower()
+    if action_type == "call_center_priority" and any(term in lowered for term in ("sms", "message envoyé", "envoyé")):
+        return False
+    if action_type == "sms_retention_offer" and any(term in lowered for term in ("appel prioritaire", "urgence", "critique")):
+        return False
+    if action_type == "monitor_only" and any(term in lowered for term in ("urgent", "critique", "prioritaire")):
+        return False
+    if not bool(client.get("is_anomaly")) and "anomal" in lowered:
+        return False
+    debt = _as_float(client.get("total_outstanding_amount"))
+    if debt is not None and debt == 0 and any(term in lowered for term in ("dette active", "encours actif", "impayé actif", "montant à recouvrer")):
+        return False
+    reimb = _as_float(client.get("avg_reimburse_ratio"))
+    reimb_percent = reimb * 100 if reimb is not None and reimb <= 1 else reimb
+    if reimb_percent is not None and reimb_percent >= 95 and any(term in lowered for term in ("remboursement faible", "remboursement dégradé", "moins régulier", "baisse de remboursement")):
+        return False
+    if not _numbers_allowed(text, client, decision):
+        return False
+    if any(term in lowered for term in ("a été envoyé", "sms envoyé", "appel effectué", "conseiller a appelé")):
+        return False
+    return True
+
+
+def _contains_forbidden_contact_text(text: str) -> bool:
+    lowered = str(text or "").lower()
+    forbidden = (
+        "plan d'apurement",
+        "plan d’apurement",
+        "offre de restructuration",
+        "remise",
+        "réduction",
+        "reduction",
+        "bonus",
+        "cadeau",
+        "offre commerciale",
+        "sanction",
+        "menace",
+        "contentieux",
+        "poursuite",
+        "recouvrement agressif",
+        "fraude",
+        "blacklist",
+        "qwen",
+        "ollama",
+        "api",
+        "json",
+        "backend",
+        "frontend",
+        "modèle ia",
+        "llm",
+        "fallback",
+    )
+    return any(term in lowered for term in forbidden) or _contains_complete_msisdn(lowered)
+
+
+def _numbers_allowed(text: str, client: dict[str, Any], decision: dict[str, Any]) -> bool:
+    allowed: set[str] = {"1", "2", "3", "4"}
+    for value in (
+        client.get("final_risk_score"),
+        client.get("total_outstanding_amount"),
+        client.get("avg_reimburse_ratio"),
+        client.get("debt_to_credit"),
+        client.get("nb_sos"),
+        decision.get("priority"),
+    ):
+        _add_allowed_number(allowed, value)
+    for raw in re.findall(r"\d+(?:[\s\u202f]\d{3})*(?:[.,]\d+)?|\d+", str(text or "")):
+        normalized = raw.replace("\u202f", "").replace(" ", "").replace(",", ".")
+        if normalized.startswith("216") and len(normalized) >= 8:
+            return False
+        if normalized not in allowed:
+            return False
+    return True
+
+
+def _add_allowed_number(allowed: set[str], value: Any) -> None:
+    if value is None or value == "":
+        return
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return
+    if numeric.is_integer():
+        allowed.add(str(int(numeric)))
+    allowed.add(f"{numeric:.3f}".rstrip("0").rstrip("."))
+    allowed.add(str(round(numeric, 3)).rstrip("0").rstrip("."))
+
+
+def _contains_complete_msisdn(text: str) -> bool:
+    return bool(re.search(r"\b216\d{5,9}\b", str(text or ""))) or bool(re.search(r"\b\d{8,12}\b", str(text or "")))
 
 
 def _fallback_profile(state: AgentState) -> dict[str, Any]:
@@ -302,277 +476,63 @@ def _fallback_explanations(state: AgentState) -> dict[str, Any]:
 
 def _fallback_decision(state: AgentState) -> dict[str, Any]:
     client = _client_from_state(state)
-    effective_tier_value = effective_risk_tier(client)
-    if _is_sensitive_client(client):
-        action_type, priority, recommendation, safe_to_send = (
-            "recovery_review",
-            1,
-            "Verification recouvrement et traitement prioritaire",
-            False,
-        )
-    elif effective_tier_value == "high":
-        action_type, priority, recommendation, safe_to_send = (
-            "call_center_priority",
-            1,
-            "Contact prioritaire par l'equipe recouvrement",
-            True,
-        )
-    elif effective_tier_value == "medium":
-        action_type, priority, recommendation, safe_to_send = (
-            "sms_reminder",
-            2,
-            "Rappel SMS de regularisation",
-            True,
-        )
-    else:
-        action_type, priority, recommendation, safe_to_send = (
-            "monitor_only",
-            4,
-            "Surveillance simple sans action immediate",
-            False,
-        )
+    decision = compute_client_decision(client)
+    action_type = decision["recommended_action"]
     return {
+        **decision,
         "action_type": action_type,
-        "priority": priority,
-        "recommendation": recommendation,
-        "effective_tier": effective_tier_value,
-        "anomaly_escalated": effective_tier_value != _normalize_tier(client.get("risk_tier")),
-        "safe_to_send": safe_to_send,
+        "recommendation": decision["next_best_action"],
+        "safe_to_send": action_type != "monitor_only",
+    }
+
+
+def build_ai_analysis(
+    client: dict[str, Any],
+    decision: dict[str, Any],
+    explanations: dict[str, Any],
+) -> dict[str, Any]:
+    return build_deterministic_client_analysis(
+        client,
+        build_client_profile(client),
+        explanations,
+        decision,
+    )
+
+
+def _normalize_ai_analysis(value: Any, fallback: dict[str, Any]) -> dict[str, Any]:
+    source = value if isinstance(value, dict) else {}
+    return {
+        "business_summary": str(source.get("business_summary") or fallback.get("business_summary") or ""),
+        "decision_reasoning": str(source.get("decision_reasoning") or fallback.get("decision_reasoning") or ""),
+        "key_risk_factors": _string_list(source.get("key_risk_factors") or fallback.get("key_risk_factors")),
+        "recommended_next_steps": _string_list(source.get("recommended_next_steps") or fallback.get("recommended_next_steps")),
+        "internal_note": str(source.get("internal_note") or fallback.get("internal_note") or ""),
     }
 
 
 def _fallback_message(decision: dict[str, Any]) -> dict[str, Any]:
     action_type = decision.get("action_type")
-    if not decision.get("safe_to_send") or action_type == "recovery_review":
+    if not decision.get("safe_to_send"):
         return {
+            "contact_type": "monitoring_note",
+            "title": "Note de suivi",
             "channel": "internal_review",
             "message_text": "Traitement interne recommande avant toute communication client.",
             "content": "Traitement interne recommande avant toute communication client.",
             "language": "fr",
+            "internal_notice": "Proposition interne non envoyée automatiquement.",
             "safe_to_send": False,
-            "generated_by": "template",
+            "generated_by": "deterministic_template",
+            "llm_used": False,
         }
     if action_type == "call_center_priority":
-        content = "Contact prioritaire recommande pour regulariser le solde client."
-        return {"channel": "call", "message_text": content, "content": content, "language": "fr", "safe_to_send": True}
-    if action_type == "sms_reminder":
-        content = "Bonjour, merci de regulariser votre solde via votre espace client Tunisie Telecom."
-        return {"channel": "sms", "message_text": content, "content": content, "language": "fr", "safe_to_send": True}
-    content = "Surveillance simple recommandee."
-    return {"channel": "monitoring", "message_text": content, "content": content, "language": "fr", "safe_to_send": False}
-
-
-def is_llm_available() -> bool:
-    return _llm_enabled()
-
-
-def safe_llm_rewrite_recommendation(context: dict[str, Any]) -> dict[str, Any]:
-    model_name = str(_setting_value("OPENAI_MODEL", "gpt-4o-mini"))
-    if not is_llm_available():
-        return {
-            "content": None,
-            "llm_used": False,
-            "llm_model": None,
-            "llm_error": "LLM desactive ou cle API absente.",
-            "llm_cache_hit": False,
-            "llm_duration_ms": 0,
-        }
-    cache_key = _llm_cache_key(model_name, context)
-    cached = _LLM_REWRITE_CACHE.get(cache_key)
-    if cached is not None:
-        _LLM_REWRITE_CACHE.move_to_end(cache_key)
-        return {
-            "content": cached,
-            "llm_used": True,
-            "llm_model": model_name,
-            "llm_error": None,
-            "llm_cache_hit": True,
-            "llm_duration_ms": 0,
-        }
-    started = time.perf_counter()
-    try:
-        from langchain_core.messages import HumanMessage, SystemMessage
-        from langchain_openai import ChatOpenAI
-
-        llm = ChatOpenAI(
-            model=model_name,
-            api_key=_setting_value("OPENAI_API_KEY"),
-            temperature=0.2,
-            timeout=int(_setting_value("LLM_TIMEOUT_SECONDS", 12)),
-            max_tokens=int(_setting_value("LLM_MAX_TOKENS", 220)),
-        )
-        response = llm.invoke(
-            [
-                SystemMessage(
-                    content=(
-                        "Tu es un assistant metier pour une plateforme interne Tunisie Telecom. "
-                        "Tu dois reformuler la recommandation suivante en francais professionnel, clair et concis. "
-                        "Ne modifie jamais l'action decidee, le niveau de risque, la priorite, le canal ou safe_to_send. "
-                        "N'invente aucune donnee. "
-                        "Si safe_to_send=false, la recommandation doit rester interne et ne doit pas etre formulee comme un message envoye au client. "
-                        "Reponds uniquement avec le texte reformule."
-                    )
-                ),
-                HumanMessage(content=json.dumps(context, ensure_ascii=False, default=str)),
-            ]
-        )
-        content = str(getattr(response, "content", "") or "").strip()
-        duration_ms = _duration_ms(started)
-        if content:
-            _cache_llm_rewrite(cache_key, content)
-        return {
-            "content": content or None,
-            "llm_used": bool(content),
-            "llm_model": model_name if content else None,
-            "llm_error": None if content else "Reponse LLM vide.",
-            "llm_cache_hit": False,
-            "llm_duration_ms": duration_ms,
-        }
-    except Exception as exc:
-        return {
-            "content": None,
-            "llm_used": False,
-            "llm_model": None,
-            "llm_error": str(exc)[:180] or exc.__class__.__name__,
-            "llm_cache_hit": False,
-            "llm_duration_ms": _duration_ms(started),
-        }
-
-
-def safe_llm_generate_batch_summary(context: dict[str, Any]) -> dict[str, Any]:
-    if not is_llm_available():
-        return {
-            "summary": None,
-            "recommendations": None,
-            "ai_summary_used": False,
-            "llm_model": None,
-            "llm_error": "LLM desactive ou cle API absente.",
-            "ai_summary_duration_ms": 0,
-        }
-    started = time.perf_counter()
-    try:
-        from langchain_core.messages import HumanMessage, SystemMessage
-        from langchain_openai import ChatOpenAI
-
-        model_name = _setting_value("OPENAI_MODEL", "gpt-4o-mini")
-        llm = ChatOpenAI(
-            model=model_name,
-            api_key=_setting_value("OPENAI_API_KEY"),
-            temperature=0.2,
-            timeout=int(_setting_value("LLM_TIMEOUT_SECONDS", 12)),
-            max_tokens=int(_setting_value("LLM_MAX_TOKENS", 220)),
-        )
-        response = llm.invoke(
-            [
-                SystemMessage(
-                    content=(
-                        "Tu es un assistant d'aide a la decision pour une plateforme interne Tunisie Telecom. "
-                        "A partir des KPIs batch ci-dessous, redige une synthese executive courte et des recommandations metier. "
-                        "Ne modifie pas les chiffres. N'invente pas de donnees. Ne cite pas d'informations absentes. "
-                        "Le ton doit etre professionnel, oriente recouvrement et priorisation operationnelle. "
-                        "Reponds uniquement avec un JSON strict: {\"summary\":\"...\",\"recommendations\":\"...\"}."
-                    )
-                ),
-                HumanMessage(content=json.dumps(context, ensure_ascii=False, default=str)),
-            ]
-        )
-        raw_content = str(getattr(response, "content", "") or "").strip()
-        parsed = json.loads(raw_content)
-        summary = str(parsed.get("summary") or "").strip()
-        recommendations = str(parsed.get("recommendations") or "").strip()
-        if not summary or not recommendations:
-            raise ValueError("JSON LLM incomplet")
-        is_valid, rejection_reason = validate_llm_batch_summary(summary, recommendations, context)
-        if not is_valid:
-            raise ValueError(f"LLM batch output rejected by guard: {rejection_reason}")
-        return {
-            "summary": summary,
-            "recommendations": recommendations,
-            "ai_summary_used": True,
-            "llm_model": model_name,
-            "llm_error": None,
-            "ai_summary_duration_ms": _duration_ms(started),
-        }
-    except Exception as exc:
-        return {
-            "summary": None,
-            "recommendations": None,
-            "ai_summary_used": False,
-            "llm_model": None,
-            "llm_error": str(exc)[:180] or exc.__class__.__name__,
-            "ai_summary_duration_ms": _duration_ms(started),
-        }
-
-
-def validate_llm_recommendation(
-    text: str,
-    decision: dict[str, Any],
-    template_message: dict[str, Any],
-) -> tuple[bool, str | None]:
-    content = str(text or "").strip()
-    lowered = content.lower()
-    if not content:
-        return False, "empty output"
-    if len(content) < 12:
-        return False, "too short"
-    if len(content) > 600:
-        return False, "too long"
-
-    safe_to_send = bool(decision.get("safe_to_send"))
-    channel = str(template_message.get("channel") or "").lower()
-    action_type = str(decision.get("action_type") or decision.get("recommended_action") or "").lower()
-    effective_tier = str(decision.get("effective_tier") or "").lower()
-
-    if not safe_to_send:
-        forbidden_client_terms = (
-            "cher client",
-            "chere cliente",
-            "veuillez regulariser",
-            "veuillez régulariser",
-            "votre ligne",
-            "nous vous invitons a payer",
-            "nous vous invitons à payer",
-        )
-        if any(term in lowered for term in forbidden_client_terms):
-            return False, "sensitive internal action phrased as client message"
-
-    forbidden_promises = ("remise", "bonus", "offre", "reduction", "réduction", "annulation de dette")
-    if any(term in lowered for term in forbidden_promises):
-        return False, "unauthorized commercial promise"
-
-    if channel == "internal_review" and ("sms" in lowered or "envoyer" in lowered):
-        return False, "channel changed"
-    if action_type == "monitor_only" and ("appel" in lowered or "sms" in lowered):
-        return False, "action changed"
-    if effective_tier == "high" and ("risque faible" in lowered or "faible risque" in lowered):
-        return False, "risk tier changed"
-    return True, None
-
-
-def validate_llm_batch_summary(
-    summary: str,
-    recommendations: str,
-    context: dict[str, Any],
-) -> tuple[bool, str | None]:
-    combined = f"{summary}\n{recommendations}".strip()
-    lowered = combined.lower()
-    if not summary.strip() or not recommendations.strip():
-        return False, "missing summary or recommendations"
-    if len(summary) > 900 or len(recommendations) > 900:
-        return False, "too long"
-    forbidden_promises = ("remise", "bonus", "offre commerciale", "reduction", "réduction", "annulation de dette")
-    if any(term in lowered for term in forbidden_promises):
-        return False, "unauthorized commercial promise"
-    if _contains_full_msisdn(combined):
-        return False, "full msisdn detected"
-
-    allowed_numbers = {str(value) for key, value in context.items() if isinstance(value, int)}
-    allowed_numbers.update(str(value) for value in (context.get("top_action_types") or {}).values())
-    mentioned_numbers = set(_extract_numbers(combined))
-    unexpected_numbers = {number for number in mentioned_numbers if number not in allowed_numbers and len(number) <= 4}
-    if unexpected_numbers:
-        return False, "invented number"
-    return True, None
+        content = "Appel prioritaire recommandé par le centre de relation client."
+        return {"contact_type": "call_script", "title": "Script conseiller", "channel": "call", "message_text": content, "content": content, "language": "fr", "internal_notice": "Proposition interne non envoyée automatiquement.", "safe_to_send": False, "generated_by": "deterministic_template", "llm_used": False}
+    if action_type == "sms_retention_offer":
+        content = "Bonjour, un rappel personnalisé est disponible avec un lien selfcare pour votre ligne."
+        return {"contact_type": "preventive_sms", "title": "SMS préventif proposé", "channel": "sms", "message_text": content, "content": content, "language": "fr", "internal_notice": "Proposition interne non envoyée automatiquement.", "safe_to_send": True, "generated_by": "deterministic_template", "llm_used": False}
+    content = "Suivi routine recommandé."
+    return {"contact_type": "monitoring_note", "title": "Note de suivi", "channel": "monitoring", "message_text": content, "content": content, "language": "fr", "internal_notice": "Proposition interne non envoyée automatiquement.", "safe_to_send": False, "generated_by": "deterministic_template", "llm_used": False}
 
 
 def _response_payload(
@@ -590,6 +550,10 @@ def _response_payload(
         "explanations": state.get("explanations") or {},
         "decision": decision,
         "message": message,
+        "ai_analysis": state.get("ai_analysis") or {},
+        "ml_signature": state.get("ml_signature") or "",
+        "ml_signature_fields": state.get("ml_signature_fields") or {},
+        "decision_policy_version": state.get("decision_policy_version") or "",
         "action_id": action_id,
         "agent_run_id": agent_run_id,
         "llm_used": bool(message.get("llm_used")),
@@ -608,10 +572,6 @@ def _response_payload(
     }
 
 
-def _llm_enabled() -> bool:
-    return _setting_bool("ENABLE_LLM_AGENT", False) and bool(_setting_value("OPENAI_API_KEY"))
-
-
 def _lock_message_metadata(
     message: dict[str, Any],
     *,
@@ -623,7 +583,7 @@ def _lock_message_metadata(
     fallback_to_template: bool | None = None,
     hallucination_detected: bool = False,
 ) -> dict[str, Any]:
-    used_llm = generated_by in {"llm", "llm_cache"}
+    used_llm = generated_by in {"llm", "llm_cache", "local_llm"}
     used_template = not used_llm
     return {
         **message,
@@ -639,94 +599,89 @@ def _lock_message_metadata(
     }
 
 
-def _client_llm_profile(client: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "risk_tier": client.get("risk_tier"),
-        "risk_label": client.get("risk_label"),
-        "cluster_name": client.get("cluster_name"),
-        "state": client.get("state"),
-        "is_anomaly": bool(client.get("is_anomaly")),
-        "final_risk_score": client.get("final_risk_score"),
+def _risk_label(value: Any) -> str:
+    tier = _normalize_tier(value)
+    if tier == "high":
+        return "élevé"
+    if tier == "medium":
+        return "moyen"
+    return "faible"
+
+
+def _action_label(value: Any) -> str:
+    labels = {
+        "call_center_priority": "Appel prioritaire centre de relation client",
+        "sms_retention_offer": "SMS personnalisé",
+        "monitor_only": "Suivi routine",
     }
+    return labels.get(str(value or ""), "Suivi routine")
 
 
-def _decision_llm_context(decision: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "action_type": decision.get("action_type") or decision.get("recommended_action"),
-        "effective_tier": decision.get("effective_tier"),
-        "priority": decision.get("priority"),
-        "safe_to_send": bool(decision.get("safe_to_send")),
-        "recommendation": decision.get("recommendation") or decision.get("next_best_action"),
-        "anomaly_escalated": bool(decision.get("anomaly_escalated")),
+def _priority_label(value: Any) -> str:
+    try:
+        numeric = int(value)
+    except (TypeError, ValueError):
+        return "Normal"
+    if numeric == 1:
+        return "Très urgent"
+    if numeric == 2:
+        return "Urgent"
+    if numeric == 4:
+        return "Normal"
+    return "Normal"
+
+
+def _segment_label(value: Any) -> str:
+    labels = {
+        "DISCONNECTED": "Déconnecté",
+        "SUSPENDED": "Suspendu",
+        "ON-HOLD": "En attente",
+        "Bon-payeur": "Bon payeur",
+        "Standard": "Standard",
     }
+    return labels.get(str(value or ""), "Segment non défini")
 
 
-def _explanations_llm_context(explanations: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "business_rules": (explanations.get("business_rules") or [])[:5],
-        "top_drivers": (explanations.get("primary_factors") or explanations.get("top_drivers") or [])[:3],
+def _business_factor_labels(value: Any) -> list[str]:
+    labels = {
+        "AVG_CREDIT_AMOUNT": "Montant moyen crédité",
+        "avg_credit_amount": "Montant moyen crédité",
+        "never_repaid": "Aucun remboursement détecté",
+        "reimburse_ratio": "Ratio de remboursement",
+        "TOTAL_OUTSTANDING_AMOUNT": "Encours restant",
+        "total_outstanding_amount": "Encours restant",
+        "credit_intensity": "Fréquence d'utilisation SOS",
+        "full_repayer": "Historique de remboursement complet",
+        "debt_to_credit": "Dette rapportée au crédit",
+        "NB_SOS": "Nombre d'usages SOS",
     }
+    factors = []
+    raw_items = value if isinstance(value, list) else [value] if value else []
+    for item in raw_items:
+        if isinstance(item, dict):
+            key = str(item.get("feature") or item.get("name") or "")
+        else:
+            key = str(item or "")
+        if key:
+            factors.append(labels.get(key, "Facteur explicatif"))
+    return factors
 
 
-def _setting_value(name: str, default: Any = None) -> Any:
-    if settings is not None:
-        value = getattr(settings, name, None)
-        if value is not None:
-            return value
-    return os.getenv(name, default)
+def _string_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item) for item in value if str(item).strip()]
+    if value:
+        return [str(value)]
+    return []
 
 
-def _setting_bool(name: str, default: bool = False) -> bool:
-    value = _setting_value(name, default)
-    if isinstance(value, bool):
-        return value
-    return str(value).strip().lower() in {"1", "true", "yes", "on"}
-
-
-def _llm_cache_key(model_name: str, context: dict[str, Any]) -> str:
-    decision = context.get("decision") or {}
-    explanations = context.get("explanations") or {}
-    relevant = {
-        "model": model_name,
-        "action_type": decision.get("action_type"),
-        "priority": decision.get("priority"),
-        "effective_tier": decision.get("effective_tier"),
-        "safe_to_send": decision.get("safe_to_send"),
-        "channel": context.get("channel"),
-        "template_message": context.get("template_message"),
-        "business_rules": explanations.get("business_rules"),
-        "top_drivers": explanations.get("top_drivers"),
-    }
-    return json.dumps(relevant, ensure_ascii=False, sort_keys=True, default=str)
-
-
-def _cache_llm_rewrite(cache_key: str, content: str) -> None:
-    _LLM_REWRITE_CACHE[cache_key] = content
-    _LLM_REWRITE_CACHE.move_to_end(cache_key)
-    while len(_LLM_REWRITE_CACHE) > LLM_REWRITE_CACHE_MAX_SIZE:
-        _LLM_REWRITE_CACHE.popitem(last=False)
-
-
-def _duration_ms(started: float) -> int:
-    return max(0, int((time.perf_counter() - started) * 1000))
-
-
-def _contains_full_msisdn(text: str) -> bool:
-    return any(len(number) >= 8 and number.startswith("216") for number in _extract_numbers(text))
-
-
-def _extract_numbers(text: str) -> list[str]:
-    numbers: list[str] = []
-    current = []
-    for char in text:
-        if char.isdigit():
-            current.append(char)
-        elif current:
-            numbers.append("".join(current))
-            current = []
-    if current:
-        numbers.append("".join(current))
-    return numbers
+def _format_optional(value: Any) -> str:
+    if value is None or value == "":
+        return "non disponible"
+    try:
+        return f"{float(value):.3f}".rstrip("0").rstrip(".")
+    except (TypeError, ValueError):
+        return str(value)
 
 
 def _is_sensitive_client(client: dict[str, Any]) -> bool:

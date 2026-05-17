@@ -1,12 +1,8 @@
 import {
   AlertTriangle,
-  ArrowLeft,
   Bot,
-  Brain,
   CheckCircle2,
   CloudUpload,
-  Download,
-  Eye,
   FileDown,
   FileText,
   Gauge,
@@ -14,46 +10,39 @@ import {
   Loader2,
   LogOut,
   Moon,
-  MoreHorizontal,
-  Play,
   Printer,
-  RefreshCw,
   RotateCcw,
   Search,
   Settings,
   ShieldAlert,
-  Sparkles,
   Sun,
-  Target,
   TrendingDown,
   Users,
   Zap,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Navigate, useNavigate, useParams } from "react-router-dom";
 
 import {
+  generateBadDebtsGlobalReport,
   getApiError,
-  getBadDebtsAgentReports,
   getBadDebtsAtRisk,
-  getBadDebtsClientDetail,
   getBadDebtsClients,
   getBadDebtsImportRuns,
-  getBadDebtsRecentActions,
   getBadDebtsSummary,
+  generateBadDebtsClientReport,
   runBadDebtsAgent,
-  runBadDebtsAgentBatch,
 } from "../api/api";
 import { useAuth } from "../context/AuthContext";
 import "../styles/bad-debts-dashboard.css";
 
 const BAD_DEBTS_THEME_KEY = "badDebtsTheme";
+const DEFAULT_CLIENT_FILTERS = { risk_tier: "", search: "", is_anomaly: "", cluster_name: "", action_type: "" };
 
 const ACTION_LABELS = {
-  recovery_review: "Revue recouvrement",
-  sms_reminder: "Rappel SMS",
-  call_center_priority: "Appel prioritaire",
-  monitor_only: "Surveillance simple",
+  call_center_priority: "Appel prioritaire centre de relation client",
+  sms_retention_offer: "SMS personnalisé",
+  monitor_only: "Suivi routine",
 };
 
 const TIER_LABELS = {
@@ -62,20 +51,52 @@ const TIER_LABELS = {
   low: "Faible",
 };
 
-const STATUS_LABELS = {
-  generated: "Nouvelle",
-  pending: "En attente",
-  completed: "Traitee",
+const SEGMENT_LABELS = {
+  DISCONNECTED: "Déconnecté",
+  SUSPENDED: "Suspendu",
+  "ON-HOLD": "En attente",
+  "Bon-payeur": "Bon payeur",
+  Standard: "Standard",
+};
+
+const SEGMENT_OPTIONS = [
+  ["", "Tous les segments"],
+  ["Standard", "Standard"],
+  ["Bon-payeur", "Bon payeur"],
+  ["SUSPENDED", "Suspendu"],
+  ["DISCONNECTED", "Déconnecté"],
+  ["ON-HOLD", "En attente"],
+];
+
+const PRIORITY_LABELS = {
+  1: "Très urgent",
+  2: "Urgent",
+  4: "Normal",
+};
+
+const DRIVER_LABELS = {
+  AVG_CREDIT_AMOUNT: "Montant moyen crédité",
+  avg_credit_amount: "Montant moyen crédité",
+  never_repaid: "Aucun remboursement détecté",
+  reimburse_ratio: "Ratio de remboursement",
+  TOTAL_OUTSTANDING_AMOUNT: "Encours restant",
+  total_outstanding_amount: "Encours restant",
+  credit_intensity: "Fréquence d'utilisation SOS",
+  full_repayer: "Historique de remboursement complet",
+  debt_to_credit: "Dette rapportée au crédit",
+};
+
+const IMPORT_STATUS_LABELS = {
+  success: "Succès",
+  failed: "Échec",
+  error: "Erreur",
 };
 
 const VIEW_META = {
   overview: "Vue globale",
-  clients: "Clients a risque",
-  agentic: "Analyse agentic",
-  actions: "Actions recommandees",
-  reports: "Rapports agentic",
+  clients: "Clients à risque",
   imports: "Historique imports",
-  settings: "Parametres",
+  settings: "Paramètres",
 };
 
 function formatNumber(value) {
@@ -97,27 +118,214 @@ function formatPercent(value) {
   return `${Math.round(numeric * 100)}%`;
 }
 
+function formatRatioPercent(value) {
+  if (value === null || value === undefined || value === "") return "-";
+  const numeric = Number(value);
+  if (Number.isNaN(numeric)) return String(value);
+  const percent = numeric > 1 ? numeric : numeric * 100;
+  return `${Math.round(percent)} %`;
+}
+
 function formatDate(value) {
   if (!value) return "-";
   return new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short" }).format(new Date(value));
 }
 
 function normalizeTier(value) {
-  const tier = String(value || "low").toLowerCase();
-  return ["high", "medium", "low"].includes(tier) ? tier : "low";
+  const tier = String(value || "").toLowerCase();
+  return ["high", "medium", "low"].includes(tier) ? tier : "";
 }
 
 function tierLabel(value) {
-  return TIER_LABELS[normalizeTier(value)] || value || "-";
+  return TIER_LABELS[normalizeTier(value)] || "Non classé";
 }
 
 function actionLabel(value) {
-  return ACTION_LABELS[String(value || "")] || value || "-";
+  return ACTION_LABELS[String(value || "")] || "Suivi routine";
 }
 
-function initials(value = "") {
-  const text = String(value || "CL");
-  return text.slice(-2).toUpperCase();
+function importStatusLabel(value) {
+  return IMPORT_STATUS_LABELS[String(value || "")] || displayValue(value);
+}
+
+function segmentLabel(value) {
+  return SEGMENT_LABELS[String(value || "")] || (value ? String(value) : "Segment non défini");
+}
+
+function priorityLabel(value) {
+  return PRIORITY_LABELS[Number(value)] || "Normal";
+}
+
+function contactTypeLabel(value) {
+  if (value === "call_script") return "Script conseiller";
+  if (value === "preventive_sms") return "SMS préventif proposé";
+  return "Note de suivi";
+}
+
+function driverLabel(value) {
+  return DRIVER_LABELS[String(value || "")] || "Facteur explicatif";
+}
+
+function hasCompleteAiAnalysis(analysis = {}) {
+  return Boolean(
+    analysis.business_summary &&
+    analysis.decision_reasoning &&
+    analysis.internal_note &&
+    Array.isArray(analysis.key_risk_factors) &&
+    analysis.key_risk_factors.length &&
+    Array.isArray(analysis.recommended_next_steps) &&
+    analysis.recommended_next_steps.length
+  );
+}
+
+function normalizeSummary(raw = {}) {
+  const byTier = raw.by_tier || {};
+  const high = raw.high_risk_count ?? byTier.high ?? 0;
+  const medium = raw.medium_risk_count ?? byTier.medium ?? 0;
+  const low = raw.low_risk_count ?? byTier.low ?? 0;
+  return {
+    ...raw,
+    total_clients: raw.total_clients ?? raw.total_clients_scored ?? 0,
+    high_risk_count: high,
+    medium_risk_count: medium,
+    low_risk_count: low,
+    at_risk_count: raw.at_risk_count ?? Number(high || 0) + Number(medium || 0),
+    anomaly_count: raw.anomaly_count ?? 0,
+    by_tier: { low, medium, high, ...byTier },
+    by_cluster_name: raw.by_cluster_name || {},
+  };
+}
+
+function cleanBusinessText(value, fallback = "-") {
+  if (!value) return fallback;
+  return String(value)
+    .replace(/LangGraph/gi, "analyse automatique")
+    .replace(/local_llm/gi, "système")
+    .replace(/deterministic_fallback/gi, "système")
+    .replace(/fallback/gi, "système")
+    .replace(/repaired/gi, "contrôlé")
+    .replace(/Qwen/gi, "modèle métier")
+    .replace(/Ollama/gi, "système")
+    .replace(/DISCONNECTED/g, "Déconnecté")
+    .replace(/SUSPENDED/g, "Suspendu")
+    .replace(/ON-HOLD/g, "En attente")
+    .replace(/\bterminee\b/gi, "terminée")
+    .replace(/\beleve\b/gi, "élevé")
+    .replace(/\belevee\b/gi, "élevée")
+    .replace(/\bgenerees\b/gi, "générées")
+    .replace(/\bgeneree\b/gi, "générée")
+    .replace(/\breutilisees\b/gi, "réutilisées")
+    .replace(/\breutilisee\b/gi, "réutilisée")
+    .replace(/\banalyses\b/gi, "analysés")
+    .replace(/\ba risque\b/gi, "à risque")
+    .replace(/\bdeja\b/gi, "déjà")
+    .replace(/\bclasses\b/gi, "classés")
+    .replace(/\bdetectee\b/gi, "détectée")
+    .replace(/\bdetectees\b/gi, "détectées")
+    .replace(/\boperationnelle\b/gi, "opérationnelle")
+    .replace(/\boperationnel\b/gi, "opérationnel")
+    .replace(/\boperationnels\b/gi, "opérationnels")
+    .replace(/\bpriorite\b/gi, "priorité")
+    .replace(/\bverification\b/gi, "vérification")
+    .replace(/\bechec\b/gi, "échec")
+    .replace(/\beviter\b/gi, "éviter")
+    .replace(/\bdoublons operationnels\b/gi, "doublons opérationnels")
+    .replace(/\b1 actions générées\b/gi, "1 action générée")
+    .replace(/\b1 actions réutilisées\b/gi, "1 action réutilisée")
+    .replace(/\b1 clients analysés\b/gi, "1 client analysé");
+}
+
+function displayValue(value, fallback = "Non disponible") {
+  return value === null || value === undefined || value === "" ? fallback : value;
+}
+
+function boolLabel(value, fallback = "Non disponible") {
+  if (value === null || value === undefined || value === "") return fallback;
+  return value ? "Oui" : "Non";
+}
+
+function clientsTitle(filters) {
+  const activeFilters = Object.entries(filters).filter(([, value]) => value !== "");
+  if (activeFilters.length > 1) return "Clients filtrés du Service SOS Solde & Data";
+  if (filters.search) return "Résultat de recherche client";
+  if (filters.cluster_name) return `Clients du segment : ${segmentLabel(filters.cluster_name)}`;
+  if (filters.is_anomaly === "true" || filters.is_anomaly === true) return "Clients avec anomalie détectée";
+  if (filters.is_anomaly === "false" || filters.is_anomaly === false) return "Clients sans anomalie détectée";
+  if (filters.risk_tier === "high") return "Clients à risque élevé";
+  if (filters.risk_tier === "medium") return "Clients à risque moyen";
+  if (filters.risk_tier === "low") return "Clients à risque faible";
+  return "Clients du Service SOS Solde & Data";
+}
+
+function recommendedActionForClient(client = {}) {
+  if (client.recommended_action || client.action_type) return client.recommended_action || client.action_type;
+  const rawTier = normalizeTier(client.risk_tier) || "low";
+  const effectiveTier = client.is_anomaly && rawTier === "medium" ? "high" : client.is_anomaly && rawTier === "low" ? "medium" : rawTier;
+  if (effectiveTier === "high") return "call_center_priority";
+  if (effectiveTier === "medium") return "sms_retention_offer";
+  return "monitor_only";
+}
+
+function priorityForClient(client = {}) {
+  if (client.priority) return client.priority;
+  if (recommendedActionForClient(client) === "call_center_priority") return 1;
+  if (recommendedActionForClient(client) === "sms_retention_offer") return 2;
+  return 4;
+}
+
+function getClientsTableTitle(filters = {}) {
+  if (filters.search) return "Résultats de recherche";
+  const parts = [];
+  if (filters.risk_tier) parts.push(`Clients à risque ${tierLabel(filters.risk_tier).toLowerCase()}`);
+  if (filters.cluster_name) parts.push(`Segment ${segmentLabel(filters.cluster_name)}`);
+  if (filters.action_type) parts.push(`Clients avec ${actionLabel(filters.action_type)}`);
+  if (filters.is_anomaly === "true") parts.push("Clients avec anomalie");
+  if (filters.is_anomaly === "false") parts.push("Clients sans anomalie");
+  if (!parts.length) return "Clients du Service SOS Solde & Data";
+  if (parts.length === 1) return parts[0];
+  return "Clients filtrés";
+}
+
+function activeClientsFilterText(filters = {}) {
+  const parts = [];
+  if (filters.risk_tier) parts.push(`Risque ${tierLabel(filters.risk_tier).toLowerCase()}`);
+  if (filters.cluster_name) parts.push(`Segment ${segmentLabel(filters.cluster_name)}`);
+  if (filters.is_anomaly === "true") parts.push("Avec anomalie");
+  if (filters.is_anomaly === "false") parts.push("Sans anomalie");
+  if (filters.action_type) parts.push(`Action : ${actionLabel(filters.action_type)}`);
+  if (filters.search) parts.push(`MSISDN : ${filters.search}`);
+  return parts.length ? `Filtres actifs : ${parts.join(" · ")}` : "";
+}
+
+function clientActionOptions(rows = []) {
+  const values = Array.from(new Set(rows.map((client) => recommendedActionForClient(client)).filter(Boolean)));
+  const fallback = ["call_center_priority", "sms_retention_offer", "monitor_only"];
+  return (values.length ? values : fallback).map((value) => [value, actionLabel(value)]);
+}
+
+function clientActionFilterOptions(clients = {}) {
+  const options = clients.filter_options.recommended_actions;
+  if (Array.isArray(options) && options.length) {
+    return options.map((option) => ({
+      value: option.value,
+      label: actionLabel(option.value) || option.label,
+    }));
+  }
+  return clientActionOptions(clients.items || []).map(([value, label]) => ({ value, label }));
+}
+
+function clientsTotalText(total = 0) {
+  return `${formatNumber(total || 0)} clients`;
+}
+
+function clientsSummaryValue(clients = {}) {
+  return clients.summary || {
+    total_clients: clients.total || 0,
+    high_risk_count: 0,
+    average_score: null,
+    average_reimburse_ratio: null,
+    priority_actions_count: 0,
+  };
 }
 
 function toPercent(value, max = 1) {
@@ -132,7 +340,7 @@ export default function DashboardBadDebtsPage() {
   const [view, detailMsisdn] = leaf.split("/");
 
   if (!leaf) return <Navigate to="/dashboard/bad-debts/overview" replace />;
-  if (view === "client" && detailMsisdn) return <BadDebtsClientDetailPage msisdn={detailMsisdn} />;
+  if (view === "client" && detailMsisdn) return <Navigate to="/dashboard/bad-debts/clients" replace />;
   if (!VIEW_META[view]) return <Navigate to="/dashboard/bad-debts/overview" replace />;
 
   return <BadDebtsWorkspace view={view} />;
@@ -142,12 +350,19 @@ function BadDebtsWorkspace({ view }) {
   const [theme, setTheme] = useState(() => localStorage.getItem(BAD_DEBTS_THEME_KEY) || "dark");
   const [summary, setSummary] = useState(null);
   const [clients, setClients] = useState({ items: [], total: 0, page: 1, page_size: 10, total_pages: 0 });
-  const [actions, setActions] = useState([]);
-  const [reports, setReports] = useState([]);
   const [imports, setImports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [clientsLoading, setClientsLoading] = useState(false);
   const [agentLoadingMsisdn, setAgentLoadingMsisdn] = useState("");
+  const [agentFeedback, setAgentFeedback] = useState(null);
+  const [clientReport, setClientReport] = useState(null);
+  const [clientReportLoading, setClientReportLoading] = useState(false);
+  const [clientReportError, setClientReportError] = useState("");
+  const [globalReport, setGlobalReport] = useState(null);
+  const [globalReportLoading, setGlobalReportLoading] = useState(false);
+  const [globalReportLoadingStage, setGlobalReportLoadingStage] = useState("");
+  const [globalReportError, setGlobalReportError] = useState("");
+  const globalReportCacheRef = useRef(new Map());
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -162,17 +377,13 @@ function BadDebtsWorkspace({ view }) {
     setLoading(true);
     setError("");
     try {
-      const [summaryResponse, clientsResponse, actionsResponse, reportsResponse, importsResponse] = await Promise.all([
+      const [summaryResponse, clientsResponse, importsResponse] = await Promise.all([
         getBadDebtsSummary(),
         getBadDebtsAtRisk({ tier: "high", page: 1, page_size: 10 }),
-        getBadDebtsRecentActions({ limit: 50 }),
-        getBadDebtsAgentReports({ limit: 20 }),
         getBadDebtsImportRuns({ limit: 20 }),
       ]);
-      setSummary(summaryResponse.data);
-      setClients(clientsResponse.data);
-      setActions(actionsResponse.data || []);
-      setReports(reportsResponse.data || []);
+      setSummary(normalizeSummary(summaryResponse.data));
+      setClients(clientsResponse.data || { items: [], total: 0, page: 1, page_size: 10, total_pages: 0 });
       setImports(importsResponse.data || []);
     } catch (err) {
       setError(getApiError(err, "Impossible de charger l'espace Bad Debts."));
@@ -186,7 +397,7 @@ function BadDebtsWorkspace({ view }) {
     setError("");
     try {
       const response = await getBadDebtsClients({ page: 1, page_size: 10, ...params });
-      setClients(response.data);
+      setClients(response.data || { items: [], total: 0, page: 1, page_size: 10, total_pages: 0 });
     } catch (err) {
       setError(getApiError(err, "Impossible de charger les clients."));
     } finally {
@@ -197,29 +408,134 @@ function BadDebtsWorkspace({ view }) {
   async function runAgent(msisdn) {
     setAgentLoadingMsisdn(msisdn);
     setError("");
+    setClientReport(null);
+    setClientReportError("");
     try {
-      await runBadDebtsAgent(msisdn);
-      const actionsResponse = await getBadDebtsRecentActions({ limit: 50 });
-      setActions(actionsResponse.data || []);
+      const response = await runBadDebtsAgent(msisdn);
+      const decision = response.data.decision || {};
+      const analysis = response.data.ai_analysis || {};
+      const profile = response.data.profile || {};
+      const contactMessage = response.data.message || {};
+      setAgentFeedback({
+        msisdn,
+        action: decision.recommended_action_label || actionLabel(decision.action_type || decision.recommended_action),
+        priority: decision.priority_label || priorityLabel(decision.priority),
+        risk: profile.risk_tier || decision.effective_tier,
+        effectiveTier: decision.effective_tier,
+        rawRiskTier: decision.raw_risk_tier || profile.risk_tier,
+        anomalyEscalated: Boolean(decision.anomaly_escalated),
+        score: profile.final_risk_score,
+        segment: profile.cluster_name || profile.state,
+        debt: profile.total_outstanding_amount,
+        reimbursement: profile.avg_reimburse_ratio,
+        anomaly: Boolean(profile.is_anomaly),
+        factors: Array.isArray(analysis.key_risk_factors) ? analysis.key_risk_factors : [],
+        contact: {
+          type: contactMessage.contact_type,
+          title: contactMessage.title,
+          text: contactMessage.message_text || contactMessage.content,
+          notice: contactMessage.internal_notice,
+          safeToSend: Boolean(contactMessage.safe_to_send),
+        },
+        reused: Boolean(response.data.reused_existing_analysis),
+      });
     } catch (err) {
-      setError(getApiError(err, "Impossible de lancer l'agent Bad Debts."));
+      setError("L’analyse métier assistée n'a pas pu être lancée. Veuillez réessayer.");
     } finally {
       setAgentLoadingMsisdn("");
+    }
+  }
+
+  async function generateClientReport(msisdn) {
+    setClientReportLoading(true);
+    setClientReportError("");
+    try {
+      const response = await generateBadDebtsClientReport(msisdn);
+      setClientReport(response.data.report || null);
+    } catch (err) {
+      setClientReportError("Le rapport client n'a pas pu être généré. Une nouvelle tentative est possible.");
+    } finally {
+      setClientReportLoading(false);
+    }
+  }
+
+  function buildGlobalReportPayload(activeFilters = {}) {
+    const payload = {};
+    if (activeFilters.risk_tier) payload.risk_tier = activeFilters.risk_tier;
+    if (activeFilters.cluster_name) payload.cluster_name = activeFilters.cluster_name;
+    if (activeFilters.is_anomaly !== "" && activeFilters.is_anomaly !== undefined && activeFilters.is_anomaly !== null) {
+      payload.is_anomaly = activeFilters.is_anomaly === "true" || activeFilters.is_anomaly === true;
+    }
+    if (activeFilters.recommended_action || activeFilters.action_type) {
+      payload.recommended_action = activeFilters.recommended_action || activeFilters.action_type;
+    }
+    if (activeFilters.search) payload.search = activeFilters.search;
+    return payload;
+  }
+
+  function globalReportCacheKey(payload = {}) {
+    return JSON.stringify(Object.keys(payload).sort().reduce((acc, key) => {
+      acc[key] = payload[key];
+      return acc;
+    }, {}));
+  }
+
+  async function generateGlobalReport(activeFilters = {}) {
+    if (globalReportLoading) return;
+    const payload = buildGlobalReportPayload(activeFilters);
+    const cacheKey = globalReportCacheKey(payload);
+    if (globalReportCacheRef.current.has(cacheKey)) {
+      setGlobalReportError("");
+      setGlobalReport(globalReportCacheRef.current.get(cacheKey));
+      return;
+    }
+    setGlobalReportLoading(true);
+    setGlobalReportLoadingStage("Analyse des indicateurs...");
+    setGlobalReportError("");
+    setGlobalReport(null);
+    const stages = [
+      "Analyse des indicateurs...",
+      "Rédaction de la synthèse métier...",
+      "Contrôle de cohérence du rapport...",
+    ];
+    let stageIndex = 0;
+    const stageTimer = window.setInterval(() => {
+      setGlobalReportLoadingStage(stages[Math.min(stageIndex, stages.length - 1)]);
+      stageIndex += 1;
+    }, 18000);
+    try {
+      const response = await generateBadDebtsGlobalReport(payload);
+      globalReportCacheRef.current.set(cacheKey, response.data);
+      setGlobalReport(response.data || null);
+    } catch (err) {
+      setGlobalReportError("Le rapport global n'a pas pu être généré. Vérifiez la connexion et réessayez.");
+    } finally {
+      window.clearInterval(stageTimer);
+      setGlobalReportLoadingStage("");
+      setGlobalReportLoading(false);
     }
   }
 
   const context = {
     summary,
     clients,
-    actions,
-    reports,
     imports,
     loading,
     clientsLoading,
     agentLoadingMsisdn,
+    agentFeedback,
+    clientReport,
+    clientReportLoading,
+    clientReportError,
+    globalReport,
+    globalReportLoading,
+    globalReportLoadingStage,
+    globalReportError,
     refreshDashboard,
     loadClients,
     runAgent,
+    generateClientReport,
+    generateGlobalReport,
   };
   const headerNode = <BadDebtsHeader view={view} />;
 
@@ -227,7 +543,7 @@ function BadDebtsWorkspace({ view }) {
     <div className={`bdx-shell ${theme === "light" ? "is-light" : "is-dark"}`}>
       <BadDebtsSidebar theme={theme} onThemeToggle={() => setTheme((current) => (current === "dark" ? "light" : "dark"))} />
       <main className="bdx-main">
-        {view !== "overview" && headerNode}
+        {view !== "overview" && view !== "clients" && headerNode}
         {error && <div className="bdx-alert"><AlertTriangle size={18} />{error}</div>}
         {loading ? (
           <div className="bdx-loading"><Loader2 className="spin" size={24} />Chargement Bad Debts...</div>
@@ -243,11 +559,8 @@ function BadDebtsSidebar({ theme, onThemeToggle }) {
   const { logout } = useAuth();
   const items = [
     ["overview", "Vue globale", Home],
-    ["clients", "Clients a risque", Users],
-    ["agentic", "Analyse agentic", Brain],
-    ["actions", "Actions recommandees", Target],
-    ["reports", "Rapports agentic", FileText],
-    ["imports", "Historique imports", CloudUpload],
+    ["clients", "Clients à risque", Users],
+    ["imports", "Historique des imports", CloudUpload],
     ["settings", "Paramètres", Settings],
   ];
 
@@ -294,31 +607,27 @@ function BadDebtsHeader({ view }) {
 function ViewRenderer({ view, context }) {
   if (view === "overview") return <OverviewPage {...context} />;
   if (view === "clients") return <RiskClientsPage {...context} />;
-  if (view === "agentic") return <AgenticAnalysisPage {...context} />;
-  if (view === "actions") return <RecommendedActionsPage {...context} />;
-  if (view === "reports") return <AgenticReportsPage reports={context.reports} />;
   if (view === "imports") return <ImportHistoryPage imports={context.imports} />;
   return <SettingsPage />;
 }
 
-function OverviewPage({ summary, clients, actions, reports, headerNode }) {
+function OverviewPage({ summary, clients, headerNode }) {
   const navigate = useNavigate();
   const [activeRisk, setActiveRisk] = useState(null);
-  const [activeCluster, setActiveCluster] = useState(null);
-  const [activeScoreCluster, setActiveScoreCluster] = useState(null);
+  const [activeSegment, setActiveSegment] = useState(null);
+  const [activeScoreSegment, setActiveScoreSegment] = useState(null);
   const [activeDebtRisk, setActiveDebtRisk] = useState(null);
   const tierRows = buildTierRows(summary);
-  const clusterRows = buildClusterRows(summary);
-  const scoreValue = summary?.avg_final_risk_score ?? 0.242;
+  const segmentRows = buildSegmentRows(summary);
+  const scoreValue = summary.avg_final_risk_score ?? 0;
   const scoreRows = buildScoreRows();
-  const highRiskCount = summary?.high_risk_count ?? 1233;
+  const highRiskCount = summary.high_risk_count ?? 0;
   const kpis = [
-    ["Total clients scorés", summary?.total_clients ?? 9748, Users, "blue"],
-    ["Clients à risque", summary?.at_risk_count ?? 3430, TrendingDown, "violet", 0, "/dashboard/bad-debts/clients"],
+    ["Total clients scorés", summary.total_clients ?? 0, Users, "blue"],
+    ["Clients à risque", summary.at_risk_count ?? 0, TrendingDown, "violet", 0, "/dashboard/bad-debts/clients"],
     ["Risque élevé", highRiskCount, ShieldAlert, "pink", 0, "/dashboard/bad-debts/clients"],
-    ["Anomalies détectées", summary?.anomaly_count ?? 277, AlertTriangle, "orange"],
+    ["Anomalies détectées", summary.anomaly_count ?? 0, AlertTriangle, "orange"],
     ["Score moyen", scoreValue, Gauge, "green", 3],
-    ["Actions agentic générées", actions?.length || 50, Zap, "sunset", 0, "/dashboard/bad-debts/actions"],
   ];
 
   return (
@@ -331,13 +640,13 @@ function OverviewPage({ summary, clients, actions, reports, headerNode }) {
         {headerNode}
         <section className="bdx-chart-grid">
           <Panel title="Répartition du risque" meta="Population ML">
-            <DonutChart rows={tierRows} total={summary?.total_clients || 9748} active={activeRisk} onActiveChange={setActiveRisk} />
+            <DonutChart rows={tierRows} total={summary.total_clients || 0} active={activeRisk} onActiveChange={setActiveRisk} />
           </Panel>
-          <Panel title="Risque par cluster" meta="Nombre de clients">
-            <VerticalBars rows={clusterRows} active={activeCluster} onActiveChange={setActiveCluster} onSelect={(row) => navigate(`/dashboard/bad-debts/clients?cluster=${encodeURIComponent(row.label)}`)} />
+          <Panel title="Risque par segment client" meta="Nombre de clients">
+            <VerticalBars rows={segmentRows} active={activeSegment} onActiveChange={setActiveSegment} onSelect={(row) => navigate(`/dashboard/bad-debts/clientssegment=${encodeURIComponent(row.label)}`)} />
           </Panel>
-          <Panel title="Score moyen par cluster">
-            <HorizontalBars rows={scoreRows} active={activeScoreCluster} onActiveChange={setActiveScoreCluster} />
+          <Panel title="Score moyen par segment">
+            <HorizontalBars rows={scoreRows} active={activeScoreSegment} onActiveChange={setActiveScoreSegment} />
           </Panel>
           <Panel title="Dette moyenne par niveau de risque">
             <RadialDebt active={activeDebtRisk} onActiveChange={setActiveDebtRisk} />
@@ -349,256 +658,681 @@ function OverviewPage({ summary, clients, actions, reports, headerNode }) {
   );
 }
 
-function RiskClientsPage({ clients, clientsLoading, loadClients, runAgent, agentLoadingMsisdn }) {
-  const navigate = useNavigate();
-  const [filters, setFilters] = useState({ risk_tier: "high", search: "", is_anomaly: "", cluster_name: "" });
+function RiskClientsPage({
+  clients,
+  clientsLoading,
+  loadClients,
+  runAgent,
+  agentLoadingMsisdn,
+  agentFeedback,
+  clientReport,
+  clientReportLoading,
+  clientReportError,
+  generateClientReport,
+  globalReport,
+  globalReportLoading,
+  globalReportLoadingStage,
+  globalReportError,
+  generateGlobalReport,
+}) {
+  const [filters, setFilters] = useState(DEFAULT_CLIENT_FILTERS);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [showGlobalReport, setShowGlobalReport] = useState(false);
+  const globalReportRef = useRef(null);
+  const searchDebounceRef = useRef(null);
   const rows = clients.items || [];
+  const visibleRows = rows;
+  const page = Math.max(Number(clients.page || 1), 1);
+  const pageSize = Math.max(Number(clients.page_size || 10), 1);
+  const totalPages = Math.max(Number(clients.total_pages || Math.ceil(Number(clients.total || 0) / pageSize)), 1);
+  const tableTitle = getClientsTableTitle(filters);
+  const activeFilters = activeClientsFilterText(filters);
 
-  function apply(next = filters) {
-    const params = Object.fromEntries(Object.entries(next).filter(([, value]) => value !== ""));
-    loadClients(params);
+  useEffect(() => {
+    if (agentFeedback) setIsDrawerOpen(true);
+  }, [agentFeedback]);
+
+  useEffect(() => () => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+  }, []);
+
+  function apply(next = filters, nextPage = 1) {
+    const entries = Object.entries(next).map(([key, value]) => [key === "action_type" ? "recommended_action" : key, value]);
+    const params = Object.fromEntries(entries.filter(([, value]) => value !== ""));
+    loadClients({ ...params, page: nextPage, page_size: pageSize });
   }
 
-  return (
-    <div className="bdx-view">
-      <Panel title="Filtres rapides" meta="Segments operationnels">
-        <div className="bdx-pill-row">
-          {[
-            ["Priorite du jour", { risk_tier: "high" }],
-            ["High risk", { risk_tier: "high" }],
-            ["Avec anomalie", { is_anomaly: true }],
-            ["Blacklist / Disconnected", { search: "DISCONNECTED" }],
-            ["Sans action", {}],
-            ["Deja traites recemment", {}],
-          ].map(([label, next]) => <button key={label} className="bdx-pill" type="button" onClick={() => apply({ ...filters, ...next })}>{label}</button>)}
-        </div>
-      </Panel>
-
-      <Panel title="Filtres avances" meta="Recherche et scoring">
-        <div className="bdx-filter-grid">
-          <select value={filters.risk_tier} onChange={(event) => setFilters({ ...filters, risk_tier: event.target.value })}>
-            <option value="">Tous niveaux</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option>
-          </select>
-          <input value={filters.cluster_name} onChange={(event) => setFilters({ ...filters, cluster_name: event.target.value })} placeholder="Cluster" />
-          <select value={filters.is_anomaly} onChange={(event) => setFilters({ ...filters, is_anomaly: event.target.value })}>
-            <option value="">Anomalie</option><option value="true">Oui</option><option value="false">Non</option>
-          </select>
-          <input placeholder="Score minimum" />
-          <input placeholder="Dette minimum (TND)" />
-          <label className="bdx-search"><Search size={16} /><input value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} placeholder="Recherche MSISDN" /></label>
-          <button className="bdx-button ghost" type="button" onClick={() => { const reset = { risk_tier: "high", search: "", is_anomaly: "", cluster_name: "" }; setFilters(reset); apply(reset); }}><RotateCcw size={16} />Reinitialiser</button>
-          <button className="bdx-button primary" type="button" onClick={() => apply()}><RefreshCw size={16} />Filtrer</button>
-        </div>
-      </Panel>
-
-      <Panel title="Clients a risque" meta={`${formatNumber(clients.total)} clients`}>
-        {clientsLoading ? <InlineLoading /> : (
-          <div className="bdx-table-wrap">
-            <table className="bdx-table wide">
-              <thead><tr><th>Client</th><th>Cluster</th><th>Risque</th><th>Score</th><th>Dette (TND)</th><th>Remboursement</th><th>Anomalie</th><th>Action recommandee</th><th>Priorite</th><th>Statut</th><th>Derniere action</th><th>Actions</th></tr></thead>
-              <tbody>{rows.map((client) => (
-                <tr key={client.msisdn}>
-                  <td><ClientCell value={client.msisdn} /></td>
-                  <td>{client.cluster_name || "-"}</td>
-                  <td><Badge tone={normalizeTier(client.risk_tier)}>{tierLabel(client.risk_tier)}</Badge></td>
-                  <td><ScoreBar score={client.final_risk_score} /></td>
-                  <td>{formatNumber(client.total_outstanding_amount)}</td>
-                  <td>{formatPercent(client.avg_reimburse_ratio)}</td>
-                  <td>{client.is_anomaly ? <Badge tone="orange">Oui</Badge> : <Badge>Non</Badge>}</td>
-                  <td>{client.risk_tier === "high" ? "Revue recouvrement" : "Rappel paiement"}</td>
-                  <td><Badge tone={client.risk_tier === "high" ? "high" : "medium"}>{client.risk_tier === "high" ? "Priorite 1" : "Priorite 2"}</Badge></td>
-                  <td><Badge tone="blue">A suivre</Badge></td>
-                  <td>-</td>
-                  <td><div className="bdx-row-actions"><button onClick={() => navigate(`/dashboard/bad-debts/client/${client.msisdn}`)}><Eye size={15} />Voir detail</button><button onClick={() => runAgent(client.msisdn)} disabled={agentLoadingMsisdn === client.msisdn}>{agentLoadingMsisdn === client.msisdn ? <Loader2 className="spin" size={15} /> : <Bot size={15} />}Lancer agent</button></div></td>
-                </tr>
-              ))}</tbody>
-            </table>
-          </div>
-        )}
-      </Panel>
-    </div>
-  );
-}
-
-function AgenticAnalysisPage({ actions, refreshDashboard }) {
-  const [tier, setTier] = useState("high");
-  const [limit, setLimit] = useState(5);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null);
-  const [error, setError] = useState("");
-
-  async function runBatch() {
-    setLoading(true);
-    setError("");
-    try {
-      const response = await runBadDebtsAgentBatch({ tier, limit });
-      setResult(response.data);
-      await refreshDashboard();
-    } catch (err) {
-      setError(getApiError(err, "Impossible de lancer l'analyse agentic globale."));
-    } finally {
-      setLoading(false);
+  function clearSearchDebounce() {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+      searchDebounceRef.current = null;
     }
   }
 
-  return (
-    <div className="bdx-view">
-      {error && <div className="bdx-alert"><AlertTriangle size={18} />{error}</div>}
-      <Panel title="Analyse agentic globale" meta="Traitement batch avec rapport PostgreSQL">
-        <div className="bdx-agentic-hero">
-          <div><Sparkles size={32} /><h2>Lancer une analyse des clients les plus a risque</h2><p>Le moteur agentic genere les actions recommandees, reutilise les actions recentes et cree un rapport metier.</p></div>
-          <div className="bdx-agentic-controls">
-            <label>Niveau de risque<select value={tier} onChange={(event) => setTier(event.target.value)}><option value="high">Eleve</option><option value="medium">Moyen</option></select></label>
-            <label>Nombre de clients<select value={limit} onChange={(event) => setLimit(Number(event.target.value))}><option value={5}>5</option><option value={10}>10</option><option value={50}>50</option></select></label>
-            <button className="bdx-button primary big" type="button" onClick={runBatch} disabled={loading}>{loading ? <Loader2 className="spin" size={18} /> : <Play size={18} />}Lancer l'analyse</button>
-          </div>
-        </div>
-      </Panel>
+  function updateFilter(key, value) {
+    const next = { ...filters, [key]: value };
+    setFilters(next);
+    if (key === "search") {
+      clearSearchDebounce();
+      searchDebounceRef.current = setTimeout(() => {
+        apply(next, 1);
+        searchDebounceRef.current = null;
+      }, 400);
+      return;
+    }
+    clearSearchDebounce();
+    apply(next, 1);
+  }
 
-      {result && <BatchBusinessResult result={result} />}
-      {!result && <PreviewList title="Dernieres actions recommandees" items={actions.slice(0, 5).map((action) => ({ title: actionLabel(action.action_type), meta: `${action.msisdn} - ${formatDate(action.created_at)}` }))} />}
-    </div>
-  );
-}
+  function goToPage(nextPage) {
+    apply(filters, nextPage);
+  }
 
-function BatchBusinessResult({ result }) {
-  const stats = [["Clients analyses", result.clients_analyzed], ["Actions creees", result.actions_created], ["Actions reutilisees", result.actions_reused], ["Erreurs", result.errors_count], ["Rapport genere", result.report_id ? "Oui" : "Non"]];
+  function resetFilters() {
+    const reset = DEFAULT_CLIENT_FILTERS;
+    clearSearchDebounce();
+    setFilters(reset);
+    apply(reset, 1);
+  }
+
+  async function launchAgent(msisdn) {
+    await runAgent(msisdn);
+  }
+
+  async function handleGenerateGlobalReport() {
+    setShowGlobalReport(true);
+    await generateGlobalReport(filters);
+    setTimeout(() => {
+      globalReportRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  }
+
+  function handlePrintGlobalReport() {
+    window.print();
+  }
+
+  function handleDownloadGlobalReportPdf() {
+    window.print();
+  }
+
   return (
-    <Panel title="Resultats de l'analyse" meta={result.status}>
-      <div className="bdx-result-cards">{stats.map(([label, value]) => <div className="bdx-result-card" key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
-      {result.report_id && <div className="bdx-report-success"><CheckCircle2 size={18} /><div><strong>Rapport agentic genere avec succes</strong><p>{result.report_summary}</p></div></div>}
-      <div className="bdx-table-wrap">
-        <table className="bdx-table">
-          <thead><tr><th>Client</th><th>Priorite</th><th>Decision recommandee</th><th>Traitement</th><th>Commentaire</th></tr></thead>
-          <tbody>{(result.items || []).map((item, index) => <tr key={`${item.msisdn}-${index}`}><td><ClientCell value={item.client_label || item.msisdn} /></td><td>{item.priority_label || "Priorite standard"}</td><td>{item.action_label || actionLabel(item.action_type)}</td><td><Badge tone={item.status === "failed" ? "high" : item.status === "reused" ? "medium" : "low"}>{item.processing_label || item.status}</Badge></td><td>{item.business_comment || "-"}{item.error && <small className="bdx-error-note">{item.error}</small>}</td></tr>)}</tbody>
-        </table>
+    <div className="bdx-view bad-debts-page">
+      <h2 className="bad-debts-page-title">Clients à risque</h2>
+      <BadDebtsFiltersCard filters={filters} actionOptions={clientActionFilterOptions(clients)} onChange={updateFilter} onReset={resetFilters} />
+      <div className="bad-debts-global-report-bar no-print">
+        <button
+          className="bad-debts-btn primary global-report-btn"
+          type="button"
+          onClick={handleGenerateGlobalReport}
+          disabled={globalReportLoading}
+        >
+          {globalReportLoading ? <Loader2 className="spin" size={16} /> : <FileText size={16} />}
+          {globalReportLoading ? "Génération en cours..." : "Générer rapport global"}
+        </button>
+        {activeFilters && <span className="bad-debts-filter-scope-hint">{activeFilters}</span>}
       </div>
-    </Panel>
-  );
-}
-
-function RecommendedActionsPage({ actions }) {
-  const [search, setSearch] = useState("");
-  const navigate = useNavigate();
-  const rows = actions.filter((action) => String(action.msisdn || "").includes(search));
-  return (
-    <div className="bdx-view">
-      <Panel title="Filtres actions" meta="Traitement operationnel">
-        <div className="bdx-filter-grid compact"><select><option>Type d'action</option></select><select><option>Priorite</option></select><select><option>Statut</option></select><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Recherche client" /><input type="date" /><button className="bdx-button ghost"><Download size={16} />Exporter CSV</button></div>
-      </Panel>
-      <Panel title="Actions recommandees" meta={`${rows.length} actions recentes`}>
-        <div className="bdx-table-wrap"><table className="bdx-table"><thead><tr><th>Client</th><th>Action recommandee</th><th>Priorite</th><th>Statut</th><th>Date creation</th><th>Commentaire</th><th>Actions</th></tr></thead><tbody>{rows.map((action) => <tr key={`${action.id}-${action.msisdn}`}><td><ClientCell value={action.msisdn} /></td><td>{actionLabel(action.action_type)}</td><td><Badge tone={Number(action.priority) === 1 ? "high" : "medium"}>Priorite {action.priority}</Badge></td><td><Badge tone="blue">{STATUS_LABELS[action.status] || action.status}</Badge></td><td>{formatDate(action.created_at)}</td><td>{action.recommendation || "Action agentic recommandee."}</td><td><div className="bdx-row-actions"><button onClick={() => navigate(`/dashboard/bad-debts/client/${action.msisdn}`)}>Voir client</button><button>Traitee</button><button>Ignorer</button></div></td></tr>)}</tbody></table></div>
-      </Panel>
+      <BadDebtsClientsKpis summary={clientsSummaryValue(clients)} />
+      <BadDebtsClientsTable
+        rows={visibleRows}
+        loading={clientsLoading}
+        title={tableTitle}
+        meta={clientsTotalText(clients.total)}
+        activeFilters={activeFilters}
+        page={page}
+        totalPages={totalPages}
+        onPrev={() => goToPage(page - 1)}
+        onNext={() => goToPage(page + 1)}
+        onReset={resetFilters}
+        onRunAgent={launchAgent}
+        loadingMsisdn={agentLoadingMsisdn}
+      />
+      {showGlobalReport && (
+        <div ref={globalReportRef} className="bad-debts-global-report-section">
+          {globalReportError && (
+            <div className="bdx-alert no-print"><AlertTriangle size={18} />{globalReportError}</div>
+          )}
+          {globalReportLoading && (
+            <div className="bad-debts-global-report-loading">
+              <Loader2 className="spin" size={24} />
+              <div>
+                <strong>Génération du rapport métier en cours</strong>
+                <span>Le système analyse les indicateurs calculés et rédige une synthèse opérationnelle. Les priorités et recommandations sont validées avant affichage.</span>
+                <ol className="global-report-loading-steps">
+                  <li className={globalReportLoadingStage ? "active" : ""}>Analyse des indicateurs</li>
+                  <li>Rédaction de la synthèse métier</li>
+                  <li>Contrôle de cohérence</li>
+                </ol>
+              </div>
+            </div>
+          )}
+          {!globalReportLoading && globalReport && (
+            <GlobalReportPanel
+              data={globalReport}
+              onPrint={handlePrintGlobalReport}
+              onDownloadPdf={handleDownloadGlobalReportPdf}
+              onClose={() => setShowGlobalReport(false)}
+            />
+          )}
+        </div>
+      )}
+      <BadDebtsAgentDrawer
+        feedback={agentFeedback}
+        open={isDrawerOpen && Boolean(agentFeedback)}
+        report={clientReport}
+        reportLoading={clientReportLoading}
+        reportError={clientReportError}
+        onGenerateReport={generateClientReport}
+        onClose={() => setIsDrawerOpen(false)}
+      />
     </div>
   );
 }
 
-function AgenticReportsPage({ reports }) {
-  const [selected, setSelected] = useState(reports[0] || null);
-  useEffect(() => { if (!selected && reports[0]) setSelected(reports[0]); }, [reports, selected]);
+function BadDebtsFiltersCard({ filters, actionOptions, onChange, onReset }) {
   return (
-    <div className="bdx-view bdx-reports-layout">
-      <Panel title="Rapports agentic" meta={`${reports.length} rapports`}>
-        <div className="bdx-report-list">{reports.map((report) => <button className={`bdx-report-item ${selected?.id === report.id ? "active" : ""}`} key={report.id} type="button" onClick={() => setSelected(report)}><FileText size={18} /><div><strong>{report.summary || "Rapport Bad Debts"}</strong><span>{formatDate(report.generated_at)}</span></div><MoreHorizontal size={16} /></button>)}</div>
-      </Panel>
-      <Panel title="Detail rapport" meta={selected ? formatDate(selected.generated_at) : "Selection"}>
-        {selected ? <ReportDetail report={selected} /> : <p className="bdx-empty">Aucun rapport disponible.</p>}
-      </Panel>
+    <section className="bad-debts-filters-card">
+      <div className="bad-debts-card-head">
+        <div><h3>Filtres avancés</h3></div>
+      </div>
+      <div className="bad-debts-filter-grid">
+        <label>Niveau de risque<select value={filters.risk_tier} onChange={(event) => onChange("risk_tier", event.target.value)}><option value="">Tous les niveaux</option><option value="low">Faible</option><option value="medium">Moyen</option><option value="high">Élevé</option></select></label>
+        <label>Segment client<select value={filters.cluster_name} onChange={(event) => onChange("cluster_name", event.target.value)}>{SEGMENT_OPTIONS.map(([value, label]) => <option key={value || "all"} value={value}>{label}</option>)}</select></label>
+        <label>Situation<select value={filters.is_anomaly} onChange={(event) => onChange("is_anomaly", event.target.value)}><option value="">Toutes les situations</option><option value="true">Avec anomalie</option><option value="false">Sans anomalie</option></select></label>
+        <label>Action recommandée<select value={filters.action_type} onChange={(event) => onChange("action_type", event.target.value)}><option value="">Toutes les actions</option>{actionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+        <label>Recherche MSISDN<span className="bad-debts-search"><Search size={16} /><input value={filters.search} onChange={(event) => onChange("search", event.target.value)} placeholder="2169..." /></span></label>
+      </div>
+      <div className="bad-debts-filter-actions">
+        <button className="bad-debts-btn secondary" type="button" onClick={onReset}><RotateCcw size={16} />Réinitialiser</button>
+      </div>
+    </section>
+  );
+}
+
+function BadDebtsClientsKpis({ summary }) {
+  const cards = [
+    ["Clients", formatNumber(summary.total_clients), Users, "clients", "Résultats filtrés"],
+    ["Risque élevé", formatNumber(summary.high_risk_count), ShieldAlert, "high", "Niveau effectif élevé"],
+    ["Score moyen", formatScore(summary.average_score), Gauge, "score", "Score ML filtré"],
+    ["Remboursement moyen", formatRatioPercent(summary.average_reimburse_ratio), TrendingDown, "repay", "Ratio moyen"],
+    ["Actions prioritaires", formatNumber(summary.priority_actions_count), Zap, "priority", "Appels prioritaires"],
+  ];
+  return (
+    <section className="bad-debts-stats">
+      {cards.map(([label, value, Icon, tone, hint]) => (
+        <article className={`bad-debts-stat-card ${tone}`} key={label}>
+          <span className="bad-debts-stat-icon"><Icon size={19} /></span>
+          <div><p>{label}</p><strong>{value}</strong><small>{hint}</small></div>
+        </article>
+      ))}
+    </section>
+  );
+}
+
+function BadDebtsClientsTable({ rows, loading, title, meta, activeFilters, page, totalPages, onPrev, onNext, onReset, onRunAgent, loadingMsisdn }) {
+  return (
+    <section className="bad-debts-table-card">
+      <div className="bad-debts-card-head table-head">
+        <div><h3>{title}</h3><p>{meta}</p>{activeFilters && <small>{activeFilters}</small>}</div>
+      </div>
+      {loading ? <InlineLoading /> : (
+        rows.length ? (
+          <>
+            <div className="bad-debts-table-wrap">
+              <table className="bad-debts-table">
+                <thead><tr><th>Client</th><th>Segment client</th><th>Risque</th><th>Score</th><th>Dette (TND)</th><th>Remboursement</th><th>Anomalie</th><th>Action recommandée</th><th>Priorité</th><th>Actions</th></tr></thead>
+                <tbody>{rows.map((client) => {
+                  const actionType = recommendedActionForClient(client);
+                  const priority = priorityForClient(client);
+                  const isLoading = loadingMsisdn === client.msisdn;
+                  return (
+                    <tr key={client.msisdn}>
+                      <td><ClientCell value={client.msisdn} /></td>
+                      <td>{segmentLabel(client.cluster_name)}</td>
+                      <td><RiskBadge tier={client.effective_tier || client.risk_tier} /></td>
+                      <td><ScoreBar score={client.final_risk_score} tone={client.effective_tier || client.risk_tier} /></td>
+                      <td>{formatNumber(client.total_outstanding_amount)}</td>
+                      <td>{formatPercent(client.avg_reimburse_ratio)}</td>
+                      <td><AnomalyBadge value={client.is_anomaly} /></td>
+                      <td>{client.recommended_action_label || actionLabel(actionType)}</td>
+                      <td><PriorityBadge priority={priority} label={client.priority_label} /></td>
+                      <td><div className="bad-debts-row-actions"><button className="bad-debts-btn primary small" type="button" onClick={() => onRunAgent(client.msisdn)} disabled={isLoading}>{isLoading ? <Loader2 className="spin" size={15} /> : <Bot size={15} />}{isLoading ? "Analyse en cours..." : "Analyser"}</button></div></td>
+                    </tr>
+                  );
+                })}</tbody>
+              </table>
+            </div>
+            <div className="bad-debts-pagination"><button className="bad-debts-btn secondary" type="button" onClick={onPrev} disabled={page <= 1}>Précédent</button><span>Page {formatNumber(page)} / {formatNumber(totalPages)}</span><button className="bad-debts-btn secondary" type="button" onClick={onNext} disabled={page >= totalPages}>Suivant</button></div>
+          </>
+        ) : <div className="bad-debts-empty-state"><h3>Aucun client ne correspond aux filtres sélectionnés.</h3><button className="bad-debts-btn secondary" type="button" onClick={onReset}>Réinitialiser les filtres</button></div>
+      )}
+    </section>
+  );
+}
+
+function BadDebtsAgentDrawer({ feedback, open, report, reportLoading, reportError, onGenerateReport, onClose }) {
+  if (!open || !feedback) return null;
+  return (
+    <div className="bad-debts-agent-overlay" role="presentation" onMouseDown={onClose}>
+      <aside className="bad-debts-agent-drawer" role="dialog" aria-modal="true" aria-label="Analyse métier assistée client" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="bad-debts-drawer-head">
+          <div>
+            <span className={`bad-debts-soft-badge ${feedback.reused ? "reused" : "new"}`}>{feedback.reused ? "Analyse réutilisée" : "Nouvelle analyse"}</span>
+            <h3>Analyse métier assistée client</h3>
+            <p>{feedback.msisdn}</p>
+          </div>
+          <button className="bad-debts-icon-btn" type="button" onClick={onClose} aria-label="Fermer">×</button>
+        </div>
+        <div className="bad-debts-drawer-body">
+          {feedback.reused && <div className="bad-debts-drawer-note"><CheckCircle2 size={17} />Analyse récente réutilisée car les données ML n'ont pas changé.</div>}
+          <div className="bad-debts-drawer-grid">
+            <div><span>Client / MSISDN</span><strong>{feedback.msisdn}</strong></div>
+            <div><span>Segment</span><strong>{cleanBusinessText(feedback.segment || "-")}</strong></div>
+            <div><span>Niveau de risque</span><strong>{feedback.effectiveTier ? tierLabel(feedback.effectiveTier) : feedback.risk ? tierLabel(feedback.risk) : "Non classé"}</strong></div>
+            <div><span>Score ML</span><strong>{formatScore(feedback.score)}</strong></div>
+            <div><span>Dette</span><strong>{feedback.debt != null ? `${formatNumber(feedback.debt)} TND` : "-"}</strong></div>
+            <div><span>Remboursement</span><strong>{formatRatioPercent(feedback.reimbursement)}</strong></div>
+            <div><span>Anomalie</span><strong>{feedback.anomaly ? "Oui" : "Non"}</strong></div>
+            <div><span>Priorité</span><strong>{feedback.priority}</strong></div>
+          </div>
+          {feedback.anomalyEscalated && <div className="bad-debts-drawer-note"><AlertTriangle size={17} />Le niveau de risque a été renforcé car une anomalie ML a été détectée.</div>}
+          <section><h4>Recommandation principale</h4><p>{feedback.action}</p></section>
+          {!!feedback.factors.length && <section><h4>Facteurs principaux</h4><ul>{feedback.factors.map((item, index) => <li key={`${item}-${index}`}>{cleanBusinessText(item)}</li>)}</ul></section>}
+          <section>
+            <h4>Rapport métier client</h4>
+            <button className="bad-debts-btn secondary" type="button" onClick={() => onGenerateReport(feedback.msisdn)} disabled={reportLoading}>
+              {reportLoading ? <Loader2 className="spin" size={15} /> : <FileText size={15} />}
+              {reportLoading ? "Génération en cours..." : "Générer rapport client"}
+            </button>
+            {reportError && <p className="bad-debts-report-error">{reportError}</p>}
+            {report && <ClientReportBlock report={report} />}
+          </section>
+        </div>
+        <div className="bad-debts-drawer-actions">
+          <button className="bad-debts-btn secondary" type="button" onClick={onClose}>Fermer</button>
+        </div>
+      </aside>
     </div>
   );
 }
 
-function ReportDetail({ report }) {
-  const kpis = report.kpis_json || {};
+function ClientReportBlock({ report }) {
+  const verificationPoints = Array.isArray(report.verification_points) ? report.verification_points : [];
+  const showSms = Boolean(report.sms_proposal);
   return (
-    <div className="bdx-report-detail">
-      <InfoGrid rows={[["Type", report.report_type], ["Date", formatDate(report.generated_at)], ["Clients analyses", kpis.clients_analyzed], ["Actions creees", kpis.actions_created], ["Statut", kpis.status]]} />
-      <div className="bdx-text-block"><h3>Resume</h3><p>{report.summary || "-"}</p></div>
-      <div className="bdx-text-block"><h3>Recommandations</h3><p>{report.recommendations || "-"}</p></div>
-      <div className="bdx-row-actions"><button><Eye size={15} />Voir detail</button><button><FileDown size={15} />PDF</button><button><Download size={15} />CSV</button><button><Printer size={15} />Imprimer</button></div>
+    <div className="bad-debts-client-report">
+      <h5>{cleanBusinessText(report.title, "Rapport métier client")}</h5>
+      <div>
+        <strong>Lecture métier du cas</strong>
+        <p>{cleanBusinessText(report.case_reading)}</p>
+      </div>
+      <div>
+        <strong>Interprétation des signaux</strong>
+        <p>{cleanBusinessText(report.signals_interpretation)}</p>
+      </div>
+      <div>
+        <strong>Risque opérationnel</strong>
+        <p>{cleanBusinessText(report.operational_risk)}</p>
+      </div>
+      {!!verificationPoints.length && (
+        <div>
+          <strong>Points à vérifier</strong>
+          <ul>{verificationPoints.map((item, index) => <li key={`report-check-${index}`}>{cleanBusinessText(item)}</li>)}</ul>
+        </div>
+      )}
+      <div>
+        <strong>Recommandation argumentée</strong>
+        <p>{cleanBusinessText(report.argued_recommendation)}</p>
+      </div>
+      {showSms && (
+        <div>
+          <strong>SMS proposé</strong>
+          <p>{cleanBusinessText(report.sms_proposal)}</p>
+        </div>
+      )}
+      <div>
+        <strong>Synthèse responsable</strong>
+        <p>{cleanBusinessText(report.manager_summary)}</p>
+      </div>
+      <span className="bad-debts-soft-badge">Confiance : {cleanBusinessText(report.confidence, "moyenne")}</span>
     </div>
   );
+}
+
+function formatFiltersDisplay(filters = {}) {
+  const TIER = { high: "Élevé", medium: "Moyen", low: "Faible" };
+  const SEG = {
+    DISCONNECTED: "Déconnecté", SUSPENDED: "Suspendu", "ON-HOLD": "En attente",
+    "Bon-payeur": "Bon payeur", Standard: "Standard",
+  };
+  const ACT = {
+    call_center_priority: "Appel prioritaire centre de relation client",
+    sms_retention_offer: "SMS personnalisé",
+    monitor_only: "Suivi routine",
+  };
+  const parts = [];
+  if (filters.risk_tier) parts.push(`Risque : ${TIER[filters.risk_tier] || filters.risk_tier}`);
+  if (filters.cluster_name) parts.push(`Segment : ${SEG[filters.cluster_name] || filters.cluster_name}`);
+  if (filters.is_anomaly === true || filters.is_anomaly === "true") parts.push("Anomalie : Oui");
+  if (filters.is_anomaly === false || filters.is_anomaly === "false") parts.push("Anomalie : Non");
+  if (filters.recommended_action) parts.push(`Action : ${ACT[filters.recommended_action] || filters.recommended_action}`);
+  if (filters.search) parts.push("Recherche MSISDN");
+  return parts.length ? `Filtres actifs : ${parts.join(", ")}` : "";
+}
+
+function GlobalReportPanel({ data, onPrint, onDownloadPdf, onClose }) {
+  const report = data.report || {};
+  const kpis = data.kpis || {};
+  const filters = data.filters || {};
+  const scope = data.scope === "filtered" ? "Clients filtrés" : "Tous les clients";
+  const filterDisplay = formatFiltersDisplay(filters);
+  const reportTitle = report.report_title === "Rapport sur le portefeuille Bad Debts"
+    ? "Rapport de pilotage Bad Debts — Portefeuille global"
+    : report.report_title || "Rapport global Bad Debts";
+  const generatedAt = data.generated_at
+    ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "long", timeStyle: "short" }).format(new Date(data.generated_at))
+    : "-";
+
+  const total = kpis.total_clients ?? 0;
+  const high = kpis.clients_high ?? 0;
+  const medium = kpis.clients_medium ?? 0;
+  const low = kpis.clients_low ?? 0;
+  const anomalies = kpis.clients_with_anomaly ?? 0;
+  const noAnomalies = total - anomalies;
+
+  const kpiItems = Array.isArray(report.key_kpis) && report.key_kpis.length
+    ? report.key_kpis
+    : [
+        { label: "Clients scorés", value: formatNumber(total), comment: kpis.filter_summary || "" },
+        { label: "Anomalies détectées", value: formatNumber(anomalies), comment: "" },
+        { label: "Score de risque moyen", value: kpis.average_risk_score != null ? String(Math.round(kpis.average_risk_score * 1000) / 1000) : "-", comment: "Score agrégé" },
+        { label: "Dette moyenne", value: kpis.average_debt != null ? `${formatNumber(Math.round(kpis.average_debt))} TND` : "-", comment: "Encours moyen" },
+        { label: "Taux de remboursement moyen", value: kpis.average_reimbursement_ratio != null ? `${Math.round(kpis.average_reimbursement_ratio * 100)} %` : "-", comment: "" },
+      ];
+  const businessRecommendations = Array.isArray(report.business_recommendations)
+    ? report.business_recommendations.slice(0, 4).map((item) => {
+        if (typeof item === "string") {
+          return {
+            title: cleanBusinessText(item),
+            why: "",
+            example: "",
+            expected_impact: "",
+            legacy: true,
+          };
+        }
+        return {
+          title: cleanBusinessText(item.title),
+          why: cleanBusinessText(item.why),
+          example: cleanBusinessText(item.example),
+          expected_impact: cleanBusinessText(item.expected_impact),
+          legacy: false,
+        };
+      }).filter((item) => item.title || item.why || item.example || item.expected_impact)
+    : [];
+
+  // Helper arrays for simple graphs
+  const riskRows = [
+    { label: "Élevé", value: high, tone: "high", percent: total ? (high / total) * 100 : 0 },
+    { label: "Moyen", value: medium, tone: "medium", percent: total ? (medium / total) * 100 : 0 },
+    { label: "Faible", value: low, tone: "low", percent: total ? (low / total) * 100 : 0 },
+  ];
+
+  const anomalyRows = [
+    { label: "Avec anomalie", value: anomalies, percent: total ? (anomalies / total) * 100 : 0 },
+    { label: "Sans anomalie", value: noAnomalies, percent: total ? (noAnomalies / total) * 100 : 0 },
+  ];
+
+  const actionMap = {
+    call_center_priority: "Appel prioritaire",
+    sms_retention_offer: "SMS personnalisé",
+    monitor_only: "Suivi routine"
+  };
+  const actionDistribution = kpis.distribution_by_action || {};
+  const actionRows = Object.entries(actionDistribution)
+    .sort((a, b) => b[1] - a[1])
+    .map(([key, value]) => ({
+      label: actionMap[key] || key,
+      value,
+      percent: total ? (value / total) * 100 : 0
+    }));
+
+  const segmentDistribution = kpis.distribution_by_segment || {};
+  const segmentRows = Object.entries(segmentDistribution)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([key, value]) => ({
+      label: segmentLabel(key),
+      value,
+      percent: total ? (value / total) * 100 : 0
+    }));
+
+  return (
+    <div className="global-report-panel print-zone">
+      <div className="global-report-header no-print">
+        <h3>{reportTitle}</h3>
+        <div className="global-report-header-actions">
+          <button className="bad-debts-btn secondary small" type="button" onClick={onPrint}><Printer size={15} />Imprimer</button>
+          <button className="bad-debts-btn secondary small" type="button" onClick={onDownloadPdf}><FileDown size={15} />Télécharger PDF</button>
+          <button className="bad-debts-btn secondary small" type="button" onClick={onClose}>Fermer</button>
+        </div>
+      </div>
+
+      <div className="global-report-print-header print-only">
+        <h2>{reportTitle}</h2>
+      </div>
+
+      <div className="global-report-meta">
+        <span><strong>Date de génération :</strong> {generatedAt}</span>
+        <span><strong>Périmètre :</strong> {scope}</span>
+        {filterDisplay && <span><strong>Filtre :</strong> {filterDisplay}</span>}
+      </div>
+
+      {report.executive_summary && (
+        <section className="global-report-section global-report-summary">
+          <h4>Résumé décisionnel</h4>
+          <p>{cleanBusinessText(report.executive_summary)}</p>
+        </section>
+      )}
+
+      <section className="global-report-kpis">
+        <div className="global-report-kpi-grid">
+          {kpiItems.map((item, index) => (
+            <div className="global-report-kpi-card" key={`kpi-${index}`}>
+              <strong>{item.value}</strong>
+              <span>{item.label}</span>
+              {item.comment && <small>{item.comment}</small>}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Visual Graphs Section */}
+      <section className="global-report-section global-report-graphs">
+        <h4>Graphes de pilotage</h4>
+        {total <= 0 ? (
+          <p className="bdx-empty">Aucune donnée disponible pour les graphiques.</p>
+        ) : (
+        <div className="bdx-mini-charts-grid">
+          <div className="bdx-mini-chart-card">
+            <h5>Répartition du risque</h5>
+            <div className="bdx-mini-bars">
+              {riskRows.map(row => (
+                <div key={row.label} className="bdx-mini-bar-row">
+                  <div className="bdx-mini-bar-header">
+                    <span>{row.label}</span>
+                    <strong>{formatNumber(row.value)} ({Math.round(row.percent)}%)</strong>
+                  </div>
+                  <div className="bdx-mini-bar-track">
+                    <div className={`bdx-mini-bar-fill ${row.tone}`} style={{ width: `${row.percent}%` }}></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="bdx-mini-chart-card">
+            <h5>Anomalies détectées</h5>
+            <div className="bdx-mini-bars">
+              {anomalyRows.map(row => (
+                <div key={row.label} className="bdx-mini-bar-row">
+                  <div className="bdx-mini-bar-header">
+                    <span>{row.label}</span>
+                    <strong>{formatNumber(row.value)} ({Math.round(row.percent)}%)</strong>
+                  </div>
+                  <div className="bdx-mini-bar-track">
+                    <div className="bdx-mini-bar-fill neutral" style={{ width: `${row.percent}%` }}></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {actionRows.length > 0 && (
+            <div className="bdx-mini-chart-card">
+              <h5>Actions recommandées</h5>
+              <div className="bdx-mini-bars">
+                {actionRows.map(row => (
+                  <div key={row.label} className="bdx-mini-bar-row">
+                    <div className="bdx-mini-bar-header">
+                      <span>{row.label}</span>
+                      <strong>{formatNumber(row.value)} ({Math.round(row.percent)}%)</strong>
+                    </div>
+                    <div className="bdx-mini-bar-track">
+                      <div className="bdx-mini-bar-fill blue" style={{ width: `${row.percent}%` }}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {segmentRows.length > 0 && (
+            <div className="bdx-mini-chart-card">
+              <h5>Top Segments</h5>
+              <div className="bdx-mini-bars">
+                {segmentRows.map(row => (
+                  <div key={row.label} className="bdx-mini-bar-row">
+                    <div className="bdx-mini-bar-header">
+                      <span>{row.label}</span>
+                      <strong>{formatNumber(row.value)} ({Math.round(row.percent)}%)</strong>
+                    </div>
+                    <div className="bdx-mini-bar-track">
+                      <div className="bdx-mini-bar-fill cyan" style={{ width: `${row.percent}%` }}></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        )}
+      </section>
+
+      {Array.isArray(report.decision_support) && report.decision_support.length > 0 && (
+        <section className="global-report-section">
+          <h4>Aide à la décision</h4>
+          <div className="global-report-decision-grid new-layout">
+            {report.decision_support.map((item, index) => (
+              <div className="global-report-decision-card" key={`ds-${index}`}>
+                <div className="global-report-decision-priority">{item.priority}</div>
+                <div className="global-report-decision-body">
+                  <h5>{cleanBusinessText(item.target)}</h5>
+                  <p className="global-report-decision-goal">
+                    <strong>Objectif métier :</strong> {cleanBusinessText(item.business_goal)}
+                  </p>
+                  <p className="global-report-decision-focus">
+                    <strong>Orientation métier :</strong> {cleanBusinessText(item.recommended_focus)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {Array.isArray(report.profile_recommendations) && report.profile_recommendations.length > 0 && (
+        <section className="global-report-section">
+          <h4>Recommandations par profil</h4>
+          <ul>{report.profile_recommendations.map((item, index) => {
+            const parts = cleanBusinessText(item).split(" : ");
+            if (parts.length > 1) {
+              return <li key={`profile-${index}`}><strong>{parts[0]} : </strong>{parts.slice(1).join(" : ")}</li>;
+            }
+            return <li key={`profile-${index}`}>{cleanBusinessText(item)}</li>;
+          })}</ul>
+        </section>
+      )}
+
+      {businessRecommendations.length > 0 && (
+        <section className="global-report-section">
+          <h4>Recommandations opérationnelles</h4>
+          <div className="global-report-recommendation-grid">
+            {businessRecommendations.map((item, index) => (
+                <div className={`global-report-rec-card${item.legacy ? " legacy" : ""}`} key={`rec-card-${index}`}>
+                  <div className="global-report-rec-header">
+                    <span className="global-report-rec-number">{index + 1}</span>
+                    <h5>{item.title || "Recommandation"}</h5>
+                  </div>
+                  <div className="global-report-rec-body">
+                    {item.why && (
+                      <p className="global-report-rec-why">
+                        <strong>Pourquoi :</strong> {item.why}
+                      </p>
+                    )}
+                    {item.example && (
+                      <p className="global-report-rec-example">
+                        <strong>Exemple métier :</strong> {item.example}
+                      </p>
+                    )}
+                    {item.expected_impact && (
+                      <p className="global-report-rec-impact">
+                        <strong>Impact attendu :</strong> {item.expected_impact}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
+
+      <div className="global-report-footer no-print">
+        <button className="bad-debts-btn secondary" type="button" onClick={onPrint}><Printer size={15} />Imprimer</button>
+        <button className="bad-debts-btn secondary" type="button" onClick={onDownloadPdf}><FileDown size={15} />Télécharger PDF</button>
+        <button className="bad-debts-btn secondary" type="button" onClick={onClose}>Fermer le rapport</button>
+      </div>
+    </div>
+  );
+}
+
+function RiskBadge({ tier }) {
+  const normalized = normalizeTier(tier);
+  return <span className={`bad-debts-badge risk-${normalized || "unknown"}`}>{tierLabel(tier)}</span>;
+}
+
+function PriorityBadge({ priority, label }) {
+  const numeric = Number(priority);
+  const tone = numeric === 1 ? "critical" : numeric === 2 ? "warning" : "normal";
+  return <span className={`bad-debts-badge priority-${tone}`}>{label || priorityLabel(priority)}</span>;
+}
+
+function AnomalyBadge({ value }) {
+  return <span className={`bad-debts-badge anomaly-${value ? "yes" : "no"}`}>{value ? "Oui" : "Non"}</span>;
 }
 
 function ImportHistoryPage({ imports }) {
+  const rows = imports || [];
   return (
     <div className="bdx-view">
-      <Panel title="Historique imports ML" meta={`${imports.length} derniers imports`}>
-        <div className="bdx-table-wrap"><table className="bdx-table"><thead><tr><th>Fichier importe</th><th>Lignes importees</th><th>Statut</th><th>Date</th><th>Message</th></tr></thead><tbody>{imports.map((item) => <tr key={item.id}><td>{item.file_name}</td><td>{formatNumber(item.rows_imported)}</td><td><Badge tone={item.status === "success" ? "low" : "medium"}>{item.status}</Badge></td><td>{formatDate(item.imported_at)}</td><td>{item.error_message || "-"}</td></tr>)}</tbody></table></div>
+      <Panel title="Historique des imports" meta={`${rows.length} derniers imports`}>
+        <div className="bdx-table-wrap"><table className="bdx-table"><thead><tr><th>Date d'import</th><th>Fichier source</th><th>Nombre de clients</th><th>Statut</th><th>Message</th></tr></thead><tbody>{rows.length ? rows.map((item) => <tr key={item.id}><td>{formatDate(item.imported_at)}</td><td>{displayValue(item.file_name)}</td><td>{formatNumber(item.rows_imported)}</td><td><Badge tone={item.status === "success" ? "low" : "medium"}>{importStatusLabel(item.status)}</Badge></td><td>{item.error_message || "-"}</td></tr>) : <tr><td colSpan={5}><p className="bdx-empty">Aucun import disponible pour le moment.</p></td></tr>}</tbody></table></div>
       </Panel>
-    </div>
-  );
-}
-
-function BadDebtsClientDetailPage({ msisdn }) {
-  const navigate = useNavigate();
-  const [theme, setTheme] = useState(() => localStorage.getItem(BAD_DEBTS_THEME_KEY) || "dark");
-  const [client, setClient] = useState(null);
-  const [agentResult, setAgentResult] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [agentLoading, setAgentLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => { localStorage.setItem(BAD_DEBTS_THEME_KEY, theme); }, [theme]);
-  useEffect(() => { loadDetail(); }, [msisdn]);
-
-  async function loadDetail() {
-    setLoading(true);
-    try {
-      const response = await getBadDebtsClientDetail(msisdn);
-      setClient(response.data);
-    } catch (err) {
-      setError(getApiError(err, "Impossible de charger le detail client."));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function runAgentForClient() {
-    setAgentLoading(true);
-    try {
-      const response = await runBadDebtsAgent(msisdn);
-      setAgentResult(response.data);
-      await loadDetail();
-    } catch (err) {
-      setError(getApiError(err, "Impossible de lancer l'agent."));
-    } finally {
-      setAgentLoading(false);
-    }
-  }
-
-  return (
-    <div className={`bdx-shell ${theme === "light" ? "is-light" : "is-dark"}`}>
-      <BadDebtsSidebar theme={theme} onThemeToggle={() => setTheme((current) => (current === "dark" ? "light" : "dark"))} />
-      <main className="bdx-main">
-        <BadDebtsHeader view="clients" />
-        {error && <div className="bdx-alert"><AlertTriangle size={18} />{error}</div>}
-        {loading ? <InlineLoading /> : <ClientDetailContent client={client} agentResult={agentResult} onBack={() => navigate("/dashboard/bad-debts/clients")} onRunAgent={runAgentForClient} agentLoading={agentLoading} />}
-      </main>
-    </div>
-  );
-}
-
-function ClientDetailContent({ client, agentResult, onBack, onRunAgent, agentLoading }) {
-  if (!client) return <p className="bdx-empty">Client introuvable.</p>;
-  const drivers = Array.isArray(client.top_drivers) ? client.top_drivers : client.top_drivers ? [client.top_drivers] : [];
-  const latestAction = agentResult?.decision || client.actions?.[0] || {};
-  return (
-    <div className="bdx-view">
-      <div className="bdx-detail-actions"><button className="bdx-button ghost" onClick={onBack}><ArrowLeft size={16} />Retour</button><button className="bdx-button primary" onClick={onRunAgent} disabled={agentLoading}>{agentLoading ? <Loader2 className="spin" size={16} /> : <Bot size={16} />}Lancer agent</button><button className="bdx-button ghost"><Printer size={16} />Imprimer</button><button className="bdx-button ghost"><FileDown size={16} />PDF</button></div>
-      <section className="bdx-detail-grid">
-        <Panel title="Profil client" meta={client.msisdn}><InfoGrid rows={[["MSISDN", client.msisdn], ["Etat", client.state], ["Cluster", client.cluster_name], ["Risque", tierLabel(client.risk_tier)], ["Score", formatScore(client.final_risk_score)], ["Label", client.risk_label], ["Anomalie", client.is_anomaly ? "Oui" : "Non"]]} /></Panel>
-        <Panel title="Indicateurs comportementaux" meta="Usage SOS"><InfoGrid rows={[["Nombre SOS", client.nb_sos], ["Credit moyen", formatNumber(client.avg_credit_amount)], ["Encours restant", formatNumber(client.total_outstanding_amount)], ["Ratio remboursement", formatPercent(client.avg_reimburse_ratio)], ["Dette / credit", formatScore(client.debt_to_credit)], ["Anciennete", formatNumber(client.tenure_days)], ["Jamais rembourse", client.never_repaid ? "Oui" : "Non"], ["Bon rembourseur", client.full_repayer ? "Oui" : "Non"], ["Dormant", client.is_dormant_like ? "Oui" : "Non"]]} /></Panel>
-      </section>
-      <Panel title="Facteurs explicatifs" meta="Top drivers">{drivers.length ? <div className="bdx-driver-list">{drivers.slice(0, 8).map((driver, index) => <div className="bdx-driver-row" key={`${driver?.feature || driver}-${index}`}><div><strong>{driver?.feature || driver?.name || String(driver)}</strong><span>{driver?.z_score !== undefined ? `z=${formatScore(driver.z_score)}` : "Signal ML"}</span></div><i><b style={{ width: `${Math.max(22, 92 - index * 9)}%` }} /></i></div>)}</div> : <p className="bdx-empty">Aucun facteur structure disponible.</p>}</Panel>
-      <section className="bdx-detail-grid"><Panel title="Recommandation agentic" meta="Decision"><InfoGrid rows={[["Decision", actionLabel(latestAction.action_type || latestAction.recommended_action)], ["Priorite", latestAction.priority ? `Priorite ${latestAction.priority}` : "-"], ["Commentaire", latestAction.reason || latestAction.recommendation || "Lancer l'agent pour generer une recommandation actualisee."]]} /></Panel><Panel title="Historique client" meta="Dernieres actions"><RecentActionMini actions={client.actions || []} /></Panel></section>
     </div>
   );
 }
 
 function SettingsPage() {
   return (
-    <div className="bdx-view"><Panel title="Parametres Bad Debts" meta="Preferences locales"><p className="bdx-empty">Le mode clair / sombre est sauvegarde dans localStorage. Les autres parametres operationnels seront branches plus tard.</p></Panel></div>
+    <div className="bdx-view"><Panel title="Paramètres Bad Debts" meta="Préférences locales"><p className="bdx-empty">Module en cours de préparation.</p></Panel></div>
   );
 }
 
@@ -786,29 +1520,17 @@ function RadialDebt({ active, onActiveChange }) {
   );
 }
 
-function PreviewList({ title, items = [], to }) {
-  const content = <div className="bdx-preview-list"><h3>{title}</h3>{items.length ? items.map((item, index) => <div className="bdx-preview-row" key={`${item.title}-${index}`}><span>{index + 1}</span><div><strong>{item.title}</strong><small>{item.meta}</small></div></div>) : <p className="bdx-empty">Aucune donnee disponible.</p>}{to && <span className="bdx-linkish">Voir tout</span>}</div>;
-  return to ? <NavLink className="bdx-preview-link" to={to}>{content}</NavLink> : content;
-}
-
 function ClientCell({ value }) {
-  return <div className="bdx-client-cell"><span>{initials(value)}</span><strong>{value}</strong></div>;
+  return <div className="bdx-client-cell"><strong>{value}</strong><small>MSISDN</small></div>;
 }
 
 function Badge({ tone = "neutral", children }) {
   return <span className={`bdx-badge ${tone}`}>{children}</span>;
 }
 
-function ScoreBar({ score }) {
-  return <div className="bdx-score"><strong>{formatScore(score)}</strong><i><b style={{ width: `${toPercent(score)}%` }} /></i></div>;
-}
-
-function InfoGrid({ rows }) {
-  return <div className="bdx-info-grid">{rows.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value ?? "-"}</strong></div>)}</div>;
-}
-
-function RecentActionMini({ actions }) {
-  return actions.length ? <div className="bdx-action-mini">{actions.map((action) => <div key={`${action.id}-${action.created_at}`}><strong>{actionLabel(action.action_type)}</strong><span>{formatDate(action.created_at)} - {STATUS_LABELS[action.status] || action.status}</span></div>)}</div> : <p className="bdx-empty">Aucune action recente.</p>;
+function ScoreBar({ score, tone = "" }) {
+  const normalizedTone = normalizeTier(tone) || "low";
+  return <div className={`bdx-score score-${normalizedTone}`}><strong>{formatScore(score)}</strong><i><b style={{ width: `${toPercent(score)}%` }} /></i></div>;
 }
 
 function InlineLoading() {
@@ -816,31 +1538,31 @@ function InlineLoading() {
 }
 
 function buildTierRows(summary) {
-  const byTier = summary?.by_tier || {};
-  const fallback = { low: 6318, medium: 2197, high: 1233 };
-  const total = Math.max(summary?.total_clients || 9748, 1);
+  const byTier = summary.by_tier || {};
+  const fallback = { low: 0, medium: 0, high: 0 };
+  const total = Math.max(summary.total_clients || 0, 1);
   return ["low", "medium", "high"].map((tier) => {
     const value = byTier[tier] ?? fallback[tier];
     return { tier, label: TIER_LABELS[tier], value, percent: (Number(value) / total) * 100 };
   });
 }
 
-function buildClusterRows(summary) {
-  const source = Object.keys(summary?.by_cluster_name || {}).length
+function buildSegmentRows(summary) {
+  const source = Object.keys(summary.by_cluster_name || {}).length
     ? summary.by_cluster_name
-    : { Standard: 6602, "Bon-payeur": 2606, SUSPENDED: 497, DISCONNECTED: 28, "ON-HOLD": 15 };
+    : {};
   const entries = Object.entries(source).slice(0, 5);
   const max = Math.max(...entries.map(([, value]) => Number(value)), 1);
-  return entries.map(([label, value]) => ({ label, value, percent: (Number(value) / max) * 100 }));
+  return entries.map(([label, value]) => ({ label: segmentLabel(label), value, percent: (Number(value) / max) * 100 }));
 }
 
 function buildScoreRows() {
   const rows = [
-    ["DISCONNECTED", 0.812],
-    ["SUSPENDED", 0.674],
-    ["ON-HOLD", 0.523],
+    ["Déconnecté", 0.812],
+    ["Suspendu", 0.674],
+    ["En attente", 0.523],
     ["Standard", 0.312],
-    ["Bon-payeur", 0.156],
+    ["Bon payeur", 0.156],
   ];
   return rows.map(([label, value]) => ({ label, value, percent: value * 100 }));
 }

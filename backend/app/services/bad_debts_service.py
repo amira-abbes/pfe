@@ -9,6 +9,40 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.services.bad_debts_decision import ACTION_BUSINESS_LABELS, compute_client_decision
+
+
+_FILTER_TIER_FR = {"high": "Élevé", "medium": "Moyen", "low": "Faible"}
+_FILTER_SEG_FR = {
+    "DISCONNECTED": "Déconnecté",
+    "SUSPENDED": "Suspendu",
+    "ON-HOLD": "En attente",
+    "Bon-payeur": "Bon payeur",
+    "Standard": "Standard",
+}
+_FILTER_ACTION_FR = {
+    "call_center_priority": "Appel prioritaire centre de relation client",
+    "sms_retention_offer": "SMS personnalisé",
+    "monitor_only": "Suivi routine",
+}
+
+
+def _build_filter_summary_fr(active_filters: dict[str, Any]) -> str:
+    if not active_filters:
+        return "Tous les clients du portefeuille"
+    parts: list[str] = []
+    if "risk_tier" in active_filters:
+        parts.append(f"Risque : {_FILTER_TIER_FR.get(str(active_filters['risk_tier']), str(active_filters['risk_tier']))}")
+    if "cluster_name" in active_filters:
+        parts.append(f"Segment : {_FILTER_SEG_FR.get(str(active_filters['cluster_name']), str(active_filters['cluster_name']))}")
+    if "is_anomaly" in active_filters:
+        parts.append(f"Anomalie : {'Oui' if active_filters['is_anomaly'] else 'Non'}")
+    if "recommended_action" in active_filters:
+        parts.append(f"Action : {_FILTER_ACTION_FR.get(str(active_filters['recommended_action']), str(active_filters['recommended_action']))}")
+    if "search" in active_filters:
+        parts.append(f"Recherche MSISDN")
+    return f"Filtres actifs : {', '.join(parts)}"
+
 
 CLIENT_COLUMNS = [
     "msisdn",
@@ -105,6 +139,7 @@ class BadDebtsService:
         risk_tier: str | None = None,
         cluster_name: str | None = None,
         is_anomaly: bool | None = None,
+        recommended_action: str | None = None,
         search: str | None = None,
     ) -> dict[str, Any]:
         page = max(page, 1)
@@ -113,6 +148,7 @@ class BadDebtsService:
             risk_tier=risk_tier,
             cluster_name=cluster_name,
             is_anomaly=is_anomaly,
+            recommended_action=recommended_action,
             search=search,
         )
         return self._paginated_clients(filters=filters, params=params, page=page, page_size=page_size)
@@ -157,37 +193,6 @@ class BadDebtsService:
         ).mappings().all()
         return [self._json_row(row) for row in rows]
 
-    def get_n8n_summary(self) -> dict[str, Any]:
-        summary = self.get_summary()
-        return {
-            "date": summary["date"],
-            "at_risk_count": summary["at_risk_count"],
-            "messages_sent": self._messages_sent_count(),
-            "anomaly_count": summary["anomaly_count"],
-            "total_clients_scored": summary["total_clients"],
-            "by_tier": summary["by_tier"],
-            "by_cluster_name": summary["by_cluster_name"],
-        }
-
-    def get_n8n_at_risk_clients(self, *, tier: str = "high", page: int = 1, page_size: int = 50) -> dict[str, Any]:
-        page_data = self.list_at_risk_clients(tier=tier, page=page, page_size=page_size)
-        return {
-            "items": [
-                {
-                    "msisdn": item["msisdn"],
-                    "risk_tier": item.get("risk_tier"),
-                    "final_risk_score": item.get("final_risk_score"),
-                    "risk_label": item.get("risk_label"),
-                    "cluster_name": item.get("cluster_name"),
-                    "is_anomaly": item.get("is_anomaly"),
-                }
-                for item in page_data["items"]
-            ],
-            "total": page_data["total"],
-            "page": page_data["page"],
-            "page_size": page_data["page_size"],
-        }
-
     def _paginated_clients(
         self,
         *,
@@ -201,6 +206,7 @@ class BadDebtsService:
             text(f"SELECT COUNT(*)::int FROM ml.bad_debts_clients {where_sql}"),
             params,
         ).scalar_one()
+        summary = self._clients_summary(where_sql, params)
 
         query_params = {**params, "limit": page_size, "offset": (page - 1) * page_size}
         rows = self.db.execute(
@@ -222,6 +228,34 @@ class BadDebtsService:
             "page": page,
             "page_size": page_size,
             "total_pages": math.ceil((total or 0) / page_size) if total else 0,
+            "filter_options": self._filter_options(),
+            "summary": summary,
+        }
+
+    def _clients_summary(self, where_sql: str, params: dict[str, Any]) -> dict[str, Any]:
+        effective_tier_sql = self._effective_tier_case_sql()
+        recommended_action_sql = self._recommended_action_case_sql()
+        row = self.db.execute(
+            text(
+                f"""
+                SELECT
+                    COUNT(*)::int AS total_clients,
+                    COUNT(*) FILTER (WHERE ({effective_tier_sql}) = 'high')::int AS high_risk_count,
+                    AVG(final_risk_score) AS average_score,
+                    AVG(avg_reimburse_ratio) AS average_reimburse_ratio,
+                    COUNT(*) FILTER (WHERE ({recommended_action_sql}) = 'call_center_priority')::int AS priority_actions_count
+                FROM ml.bad_debts_clients
+                {where_sql}
+                """
+            ),
+            params,
+        ).mappings().one()
+        return {
+            "total_clients": int(row["total_clients"] or 0),
+            "high_risk_count": int(row["high_risk_count"] or 0),
+            "average_score": self._json_value(row["average_score"]),
+            "average_reimburse_ratio": self._json_value(row["average_reimburse_ratio"]),
+            "priority_actions_count": int(row["priority_actions_count"] or 0),
         }
 
     def _client_filters(
@@ -230,13 +264,14 @@ class BadDebtsService:
         risk_tier: str | None = None,
         cluster_name: str | None = None,
         is_anomaly: bool | None = None,
+        recommended_action: str | None = None,
         search: str | None = None,
     ) -> tuple[list[str], dict[str, Any]]:
         filters: list[str] = []
         params: dict[str, Any] = {}
 
         if risk_tier:
-            filters.append("LOWER(COALESCE(risk_tier, '')) = LOWER(:risk_tier)")
+            filters.append(f"({self._effective_tier_case_sql()}) = LOWER(:risk_tier)")
             params["risk_tier"] = risk_tier.strip()
         if cluster_name:
             filters.append("cluster_name = :cluster_name")
@@ -244,11 +279,160 @@ class BadDebtsService:
         if is_anomaly is not None:
             filters.append("is_anomaly = :is_anomaly")
             params["is_anomaly"] = bool(is_anomaly)
+        if recommended_action:
+            filters.append(f"{self._recommended_action_case_sql()} = :recommended_action")
+            params["recommended_action"] = recommended_action.strip()
         if search:
             filters.append("msisdn ILIKE :search")
             params["search"] = f"%{search.strip()}%"
 
         return filters, params
+
+    def _filter_options(self) -> dict[str, Any]:
+        rows = self.db.execute(
+            text(
+                f"""
+                SELECT {self._recommended_action_case_sql()} AS recommended_action, COUNT(*)::int AS total
+                FROM ml.bad_debts_clients
+                GROUP BY {self._recommended_action_case_sql()}
+                """
+            )
+        ).mappings().all()
+        counts = {str(row["recommended_action"]): int(row["total"] or 0) for row in rows}
+        order = ("call_center_priority", "sms_retention_offer", "monitor_only")
+        return {
+            "recommended_actions": [
+                {
+                    "value": value,
+                    "label": ACTION_BUSINESS_LABELS[value],
+                    "count": counts.get(value, 0),
+                }
+                for value in order
+            ]
+        }
+
+    @staticmethod
+    def _effective_tier_case_sql() -> str:
+        return """
+            CASE
+                WHEN is_anomaly IS TRUE AND LOWER(COALESCE(risk_tier, 'low')) = 'medium' THEN 'high'
+                WHEN is_anomaly IS TRUE AND LOWER(COALESCE(risk_tier, 'low')) = 'low' THEN 'medium'
+                WHEN LOWER(COALESCE(risk_tier, 'low')) IN ('low', 'medium', 'high') THEN LOWER(COALESCE(risk_tier, 'low'))
+                ELSE 'low'
+            END
+        """
+
+    def _recommended_action_case_sql(self) -> str:
+        effective_tier_sql = self._effective_tier_case_sql()
+        return f"""
+            CASE
+                WHEN ({effective_tier_sql}) = 'high' THEN 'call_center_priority'
+                WHEN ({effective_tier_sql}) = 'medium' THEN 'sms_retention_offer'
+                ELSE 'monitor_only'
+            END
+        """
+
+    def compute_global_kpis(
+        self,
+        *,
+        risk_tier: str | None = None,
+        cluster_name: str | None = None,
+        is_anomaly: bool | None = None,
+        recommended_action: str | None = None,
+        search: str | None = None,
+    ) -> dict[str, Any]:
+        filters, params = self._client_filters(
+            risk_tier=risk_tier,
+            cluster_name=cluster_name,
+            is_anomaly=is_anomaly,
+            recommended_action=recommended_action,
+            search=search,
+        )
+        where_sql = f"WHERE {' AND '.join(filters)}" if filters else ""
+        effective_tier_sql = self._effective_tier_case_sql()
+        recommended_action_sql = self._recommended_action_case_sql()
+
+        row = self.db.execute(
+            text(
+                f"""
+                SELECT
+                    COUNT(*)::int AS total_clients,
+                    COUNT(*) FILTER (WHERE ({effective_tier_sql}) = 'high')::int AS clients_high,
+                    COUNT(*) FILTER (WHERE ({effective_tier_sql}) = 'medium')::int AS clients_medium,
+                    COUNT(*) FILTER (WHERE ({effective_tier_sql}) = 'low')::int AS clients_low,
+                    COUNT(*) FILTER (WHERE is_anomaly IS TRUE)::int AS clients_with_anomaly,
+                    AVG(final_risk_score) AS average_risk_score,
+                    AVG(total_outstanding_amount) AS average_debt,
+                    AVG(avg_reimburse_ratio) AS average_reimbursement_ratio
+                FROM ml.bad_debts_clients {where_sql}
+                """
+            ),
+            params,
+        ).mappings().one()
+
+        seg_rows = self.db.execute(
+            text(
+                f"""
+                SELECT COALESCE(cluster_name, 'unknown') AS seg, COUNT(*)::int AS cnt
+                FROM ml.bad_debts_clients {where_sql}
+                GROUP BY COALESCE(cluster_name, 'unknown') ORDER BY cnt DESC
+                """
+            ),
+            params,
+        ).mappings().all()
+
+        risk_rows = self.db.execute(
+            text(
+                f"""
+                SELECT ({effective_tier_sql}) AS tier, COUNT(*)::int AS cnt
+                FROM ml.bad_debts_clients {where_sql}
+                GROUP BY ({effective_tier_sql}) ORDER BY cnt DESC
+                """
+            ),
+            params,
+        ).mappings().all()
+
+        action_rows = self.db.execute(
+            text(
+                f"""
+                SELECT ({recommended_action_sql}) AS action, COUNT(*)::int AS cnt
+                FROM ml.bad_debts_clients {where_sql}
+                GROUP BY ({recommended_action_sql}) ORDER BY cnt DESC
+                """
+            ),
+            params,
+        ).mappings().all()
+
+        dominant_segment = str(seg_rows[0]["seg"]) if seg_rows else None
+        dominant_action = str(action_rows[0]["action"]) if action_rows else None
+
+        active_filters = {
+            k: v for k, v in {
+                "risk_tier": risk_tier,
+                "cluster_name": cluster_name,
+                "is_anomaly": is_anomaly,
+                "recommended_action": recommended_action,
+                "search": search,
+            }.items() if v is not None
+        }
+        filter_summary = _build_filter_summary_fr(active_filters)
+
+        return {
+            "total_clients": int(row["total_clients"] or 0),
+            "clients_high": int(row["clients_high"] or 0),
+            "clients_medium": int(row["clients_medium"] or 0),
+            "clients_low": int(row["clients_low"] or 0),
+            "clients_with_anomaly": int(row["clients_with_anomaly"] or 0),
+            "average_risk_score": self._json_value(row["average_risk_score"]),
+            "average_debt": self._json_value(row["average_debt"]),
+            "average_reimbursement_ratio": self._json_value(row["average_reimbursement_ratio"]),
+            "dominant_segment": dominant_segment,
+            "dominant_recommended_action": dominant_action,
+            "distribution_by_segment": {str(r["seg"]): int(r["cnt"]) for r in seg_rows},
+            "distribution_by_risk": {str(r["tier"]): int(r["cnt"]) for r in risk_rows},
+            "distribution_by_action": {str(r["action"]): int(r["cnt"]) for r in action_rows},
+            "filter_summary": filter_summary,
+        }
 
     def _count_by(self, column_name: str) -> dict[str, int]:
         rows = self.db.execute(
@@ -265,59 +449,47 @@ class BadDebtsService:
 
     def _get_agent_actions(self, msisdn: str) -> list[dict[str, Any]]:
         try:
-            columns = self._table_columns("agent_actions")
-            if "msisdn" not in columns:
+            columns = self._table_columns("agent_runs")
+            if "msisdn" not in columns or "payload" not in columns:
                 return []
 
-            order_column = next((col for col in ("created_at", "imported_at", "executed_at", "action_at") if col in columns), None)
-            order_sql = f"ORDER BY a.{order_column} DESC" if order_column else ""
             rows = self.db.execute(
                 text(
-                    f"""
-                    SELECT to_jsonb(a) AS action
-                    FROM ml.agent_actions AS a
-                    WHERE a.msisdn = :msisdn
-                    {order_sql}
-                    LIMIT 50
+                    """
+                    SELECT
+                        id,
+                        COALESCE(finished_at, started_at) AS created_at,
+                        payload->'decision' AS decision,
+                        payload->'ai_analysis' AS ai_analysis
+                    FROM ml.agent_runs
+                    WHERE msisdn = :msisdn
+                      AND payload ? 'decision'
+                      AND payload ? 'ai_analysis'
+                    ORDER BY COALESCE(finished_at, started_at) DESC NULLS LAST, id DESC
+                    LIMIT 5
                     """
                 ),
                 {"msisdn": msisdn},
             ).mappings().all()
-            return [self._json_value(row["action"]) for row in rows]
+            actions = []
+            for row in rows:
+                decision = self._json_value(row["decision"]) or {}
+                if not isinstance(decision, dict):
+                    decision = {}
+                actions.append(
+                    {
+                        "id": row["id"],
+                        "action_type": decision.get("action_type") or decision.get("recommended_action"),
+                        "priority": decision.get("priority"),
+                        "recommendation": decision.get("recommendation") or decision.get("next_best_action") or decision.get("reason"),
+                        "created_at": self._json_value(row["created_at"]),
+                        "ai_analysis": self._json_value(row["ai_analysis"]) or {},
+                    }
+                )
+            return actions
         except SQLAlchemyError:
             self.db.rollback()
             return []
-
-    def _messages_sent_count(self) -> int:
-        try:
-            columns = self._table_columns("agent_actions")
-            if not columns:
-                return 0
-
-            predicates = []
-            for column in ("action_type", "action_name", "type"):
-                if column in columns:
-                    predicates.append(f"LOWER(COALESCE({column}, '')) LIKE '%message%'")
-            if "status" in columns:
-                predicates.append("LOWER(COALESCE(status, '')) IN ('sent', 'success', 'completed')")
-            if not predicates:
-                return 0
-
-            return int(
-                self.db.execute(
-                    text(
-                        f"""
-                        SELECT COUNT(*)::int
-                        FROM ml.agent_actions
-                        WHERE {" OR ".join(predicates)}
-                        """
-                    )
-                ).scalar()
-                or 0
-            )
-        except SQLAlchemyError:
-            self.db.rollback()
-            return 0
 
     def _table_columns(self, table_name: str) -> set[str]:
         rows = self.db.execute(
@@ -336,6 +508,7 @@ class BadDebtsService:
     def _normalize_client(self, row: Any) -> dict[str, Any]:
         item = self._json_row(row)
         item["top_drivers"] = self._parse_top_drivers(item.get("top_drivers"))
+        item.update(compute_client_decision(item))
         return item
 
     def _parse_top_drivers(self, value: Any) -> Any:

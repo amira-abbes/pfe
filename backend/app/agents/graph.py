@@ -8,11 +8,17 @@ from langgraph.graph import END, StateGraph
 
 from app.agents.state import AgentState
 from app.agents.nodes import (
+    ai_analysis_node,
     decision_node,
     explainability_node,
     message_generation_node,
     monitoring_node,
     profiling_node,
+)
+from app.services.bad_debts_agent_service import (
+    DECISION_POLICY_VERSION,
+    build_client_ml_signature,
+    get_reusable_agent_run_response,
 )
 from app.services.bad_debts_service import BadDebtsService
 
@@ -23,14 +29,16 @@ def build_agent_graph():
     graph.add_node("profiling", profiling_node)
     graph.add_node("explainability", explainability_node)
     graph.add_node("decision", decision_node)
+    graph.add_node("ai_analysis", ai_analysis_node)
     graph.add_node("message_generation", message_generation_node)
     graph.add_node("monitoring", monitoring_node)
 
     graph.set_entry_point("profiling")
     graph.add_edge("profiling", "explainability")
     graph.add_edge("explainability", "decision")
+    graph.add_edge("decision", "ai_analysis")
     graph.add_conditional_edges(
-        "decision",
+        "ai_analysis",
         _route_after_decision,
         {
             "monitoring": "monitoring",
@@ -67,6 +75,16 @@ def run_agent_graph(
         except Exception as exc:
             errors.append(f"Chargement client impossible : {exc}")
 
+    signature_data: dict[str, Any] = {}
+    if db is not None and resolved_client is not None and not errors:
+        try:
+            signature_data = build_client_ml_signature(_as_dict(resolved_client))
+            reusable = get_reusable_agent_run_response(db, msisdn, signature_data["ml_signature"])
+            if reusable is not None:
+                return reusable
+        except Exception as exc:
+            errors.append(f"Vérification analyse existante impossible : {exc}")
+
     initial_state: AgentState = {
         "msisdn": msisdn,
         "features": features or {},
@@ -78,6 +96,9 @@ def run_agent_graph(
         "run_id": run_id,
         "started_at": datetime.utcnow(),
         "errors": errors,
+        "ml_signature": signature_data.get("ml_signature", ""),
+        "ml_signature_fields": signature_data.get("ml_signature_fields", {}),
+        "decision_policy_version": DECISION_POLICY_VERSION,
     }
 
     result = get_graph().invoke(initial_state)
@@ -88,9 +109,11 @@ def run_agent_graph(
         "explanations": result.get("explanations", {}),
         "decision": result.get("decision", {}),
         "message": result.get("message"),
+        "ai_analysis": result.get("ai_analysis", {}),
         "action_id": result.get("action_id"),
         "agent_run_id": result.get("agent_run_id"),
         "errors": result.get("errors", []),
+        "reused_existing_analysis": bool(result.get("reused_existing_analysis")),
     }
 
 

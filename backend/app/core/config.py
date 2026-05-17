@@ -53,6 +53,19 @@ class Settings(BaseSettings):
     OPENAI_MODEL: str = "gpt-4o-mini"
     LLM_TIMEOUT_SECONDS: int = 12
     LLM_MAX_TOKENS: int = 220
+    N8N_API_KEY: str | None = None
+
+    BAD_DEBTS_LLM_PROVIDER: str = "ollama"
+    BAD_DEBTS_OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
+    BAD_DEBTS_OLLAMA_MODEL: str = "qwen2.5:3b"
+    BAD_DEBTS_OLLAMA_BACKUP_MODEL: str | None = "qwen2.5:7b"
+    BAD_DEBTS_OLLAMA_TIMEOUT_SECONDS: int = 60
+    BAD_DEBTS_OLLAMA_TEMPERATURE: float = 0.1
+    BAD_DEBTS_OLLAMA_NUM_PREDICT: int = 260
+    BAD_DEBTS_OLLAMA_KEEP_ALIVE: str = "10m"
+    BAD_DEBTS_OLLAMA_NUM_CTX: int = 2048
+    BAD_DEBTS_OLLAMA_ENABLED: bool = True
+    BAD_DEBTS_ENABLE_CLIENT_REPORT: bool = True
 
     model_config = SettingsConfigDict(
         env_file=".env",

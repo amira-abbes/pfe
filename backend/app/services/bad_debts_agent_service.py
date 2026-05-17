@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import datetime
 from decimal import Decimal
 from typing import Any
@@ -10,6 +12,13 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
+from app.services.bad_debts_decision import (
+    ACTION_BUSINESS_LABELS,
+    DECISION_POLICY_VERSION,
+    PRIORITY_BUSINESS_LABELS,
+    compute_client_decision,
+    effective_risk_tier,
+)
 from app.services.bad_debts_service import BadDebtsService, CLIENT_COLUMNS
 
 
@@ -23,21 +32,38 @@ DISCLAIMER = (
 )
 
 
-ACTION_BUSINESS_LABELS = {
-    "recovery_review": "Revue recouvrement",
-    "sms_reminder": "Rappel SMS",
-    "call_center_priority": "Appel prioritaire",
-    "monitor_only": "Surveillance simple",
-}
-
+ML_SIGNATURE_FIELDS = (
+    "msisdn",
+    "risk_tier",
+    "final_risk_score",
+    "cluster_name",
+    "state",
+    "risk_label",
+    "is_anomaly",
+    "total_outstanding_amount",
+    "top_drivers",
+    "anomaly_score",
+    "avg_credit_amount",
+    "avg_reimburse_ratio",
+    "debt_to_credit",
+    "nb_sos",
+    "has_debt",
+    "uses_sos",
+    "credit_intensity",
+    "tenure_days",
+    "never_repaid",
+    "full_repayer",
+    "is_dormant_like",
+)
 
 def build_client_profile(client: dict[str, Any]) -> dict[str, Any]:
     score = _round_float(client.get("final_risk_score"))
+    risk_tier = _normalize_tier(client.get("risk_tier"))
     profile = {
         "msisdn": client.get("msisdn"),
         "state": client.get("state"),
         "cluster_name": client.get("cluster_name"),
-        "risk_tier": _normalize_tier(client.get("risk_tier")),
+        "risk_tier": risk_tier,
         "risk_label": client.get("risk_label"),
         "final_risk_score": score,
         "is_anomaly": bool(client.get("is_anomaly")),
@@ -48,8 +74,8 @@ def build_client_profile(client: dict[str, Any]) -> dict[str, Any]:
         "tenure_days": _round_float(client.get("tenure_days")),
     }
     profile["summary"] = (
-        f"Client {profile['msisdn']} classé {profile['risk_tier']} risk, "
-        f"segment {profile.get('cluster_name') or '-'}, score {score}, "
+        f"Client {profile['msisdn']} classé en risque {_tier_business_label(risk_tier)}, "
+        f"segment {_segment_business_label(profile.get('cluster_name'))}, score {score}, "
         f"encours {profile.get('total_outstanding_amount')}, "
         f"ratio remboursement {profile.get('avg_reimburse_ratio')}."
     )
@@ -71,7 +97,7 @@ def build_explanations(client: dict[str, Any]) -> dict[str, Any]:
     if _normalize_tier(client.get("risk_tier")) == "high":
         business_rules.append("Niveau de risque élevé")
     if str(client.get("risk_label") or "").strip().lower() == "blacklist":
-        business_rules.append("Client classé Blacklist")
+        business_rules.append("Client à vérifier en priorité")
     if _as_int(client.get("full_repayer")) == 1:
         business_rules.append("Historique de remboursement complet détecté")
     if _as_int(client.get("has_debt")) == 1:
@@ -95,91 +121,227 @@ def build_explanations(client: dict[str, Any]) -> dict[str, Any]:
 
 
 def decide_next_action(client: dict[str, Any], explanations: dict[str, Any]) -> dict[str, Any]:
-    base_tier = _normalize_tier(client.get("risk_tier"))
-    effective_tier = base_tier
-    anomaly_escalated = False
-
-    if bool(client.get("is_anomaly")):
-        if base_tier == "low":
-            effective_tier = "medium"
-            anomaly_escalated = True
-        elif base_tier == "medium":
-            effective_tier = "high"
-            anomaly_escalated = True
-
-    action_by_tier = {
-        "high": ("call_center_priority", 1, "Contact prioritaire par le centre d'appel"),
-        "medium": ("sms_reminder", 2, "Rappel SMS de régularisation"),
-        "low": ("monitor_only", 4, "Suivi automatique sans action client agressive"),
-    }
-    action_type, priority, next_best_action = action_by_tier.get(effective_tier, action_by_tier["low"])
-
-    if anomaly_escalated:
-        priority = max(1, priority - 1)
-
-    state = str(client.get("state") or "").strip().upper()
-    risk_label = str(client.get("risk_label") or "").strip().lower()
-    if state == "DISCONNECTED" or risk_label == "blacklist":
-        action_type = "recovery_review"
-        priority = 1
-        next_best_action = "Vérification recouvrement et traitement prioritaire"
-
-    reason_parts = [f"Tier initial={base_tier}", f"tier effectif={effective_tier}"]
-    if anomaly_escalated:
+    decision = compute_client_decision(client)
+    reason_parts = [f"Tier initial={decision['raw_risk_tier']}", f"tier effectif={decision['effective_tier']}"]
+    if decision["anomaly_escalated"]:
         reason_parts.append("escalade anomalie appliquée")
     if explanations.get("business_rules"):
         reason_parts.append("; ".join(explanations["business_rules"][:3]))
-
     return {
-        "recommended_action": action_type,
-        "action_type": action_type,
-        "priority": priority,
-        "next_best_action": next_best_action,
-        "effective_tier": effective_tier,
-        "anomaly_escalated": anomaly_escalated,
+        **decision,
+        "action_type": decision["recommended_action"],
         "reason": " | ".join(reason_parts),
     }
 
 
 def generate_message(client: dict[str, Any], decision: dict[str, Any]) -> dict[str, Any]:
-    state = str(client.get("state") or "").strip().upper()
-    risk_label = str(client.get("risk_label") or "").strip().lower()
-    if state == "DISCONNECTED" or risk_label == "blacklist":
-        return {
-            "channel": "internal_review",
-            "message_text": "Traitement interne recommandé avant toute communication client.",
-            "language": "fr",
-            "safe_to_send": False,
-        }
-
     effective_tier = _normalize_tier(decision.get("effective_tier"))
     if effective_tier == "high":
+        content = "Qualifier la situation client via le centre de relation client avant toute action métier."
         return {
+            "contact_type": "call_script",
+            "title": "Script conseiller",
             "channel": "call",
-            "message_text": (
-                "Bonjour, votre ligne présente un solde à régulariser. "
-                "Merci de consulter votre espace client ou de contacter notre service "
-                "afin d’éviter toute restriction supplémentaire."
-            ),
+            "message_text": content,
+            "content": content,
             "language": "fr",
-            "safe_to_send": True,
+            "internal_notice": "Proposition interne non envoyée automatiquement.",
+            "safe_to_send": False,
+            "generated_by": "deterministic_template",
+            "llm_used": False,
         }
     if effective_tier == "medium":
+        content = "Bonjour, un suivi de votre ligne est recommandé. Merci de consulter vos canaux habituels si besoin."
         return {
+            "contact_type": "preventive_sms",
+            "title": "SMS préventif proposé",
             "channel": "sms",
-            "message_text": (
-                "Bonjour, un rappel concernant votre solde est disponible. "
-                "Vous pouvez le consulter et le régulariser via votre espace client."
-            ),
+            "message_text": content,
+            "content": content,
             "language": "fr",
+            "internal_notice": "Proposition interne non envoyée automatiquement.",
             "safe_to_send": True,
+            "generated_by": "deterministic_template",
+            "llm_used": False,
         }
+    content = "Suivi routine — aucune action immédiate."
     return {
+        "contact_type": "monitoring_note",
+        "title": "Note de suivi",
         "channel": "monitoring",
-        "message_text": "Aucune action client immédiate. Suivi automatique recommandé.",
+        "message_text": content,
+        "content": content,
         "language": "fr",
+        "internal_notice": "Proposition interne non envoyée automatiquement.",
         "safe_to_send": False,
+        "generated_by": "deterministic_template",
+        "llm_used": False,
     }
+
+
+def build_deterministic_client_analysis(
+    client: dict[str, Any],
+    profile: dict[str, Any],
+    explanations: dict[str, Any],
+    decision: dict[str, Any],
+) -> dict[str, Any]:
+    effective_tier_value = _normalize_tier(decision.get("effective_tier") or profile.get("risk_tier") or client.get("risk_tier"))
+    action_type = str(decision.get("action_type") or decision.get("recommended_action") or "monitor_only")
+    action_label = _action_business_label(action_type)
+    priority_label = _priority_label(decision.get("priority"))
+    score = _as_float(profile.get("final_risk_score") if profile else client.get("final_risk_score"))
+    anomaly_detected = bool(client.get("is_anomaly") or decision.get("anomaly_escalated"))
+    factors = _business_factor_labels(explanations.get("primary_factors") or client.get("top_drivers"))
+
+    if effective_tier_value == "high":
+        decision_reasoning = (
+            "Les signaux ML indiquent un niveau de risque élevé. "
+            "L’action recommandée est un appel prioritaire par le centre de relation client afin de vérifier "
+            "la situation avant toute décision métier."
+        )
+        next_steps = [
+            "Vérifier le profil client dans le contexte métier.",
+            "Prioriser le traitement par l’équipe concernée.",
+            "Utiliser cette recommandation comme aide à la décision.",
+        ]
+        confidence_level = "élevée" if score is not None and score >= 0.5 else "moyenne"
+    elif effective_tier_value == "medium":
+        decision_reasoning = (
+            "Les signaux ML indiquent un niveau de risque moyen. "
+            "L’action recommandée est un SMS personnalisé afin d’assurer un suivi adapté sans créer d’urgence artificielle."
+        )
+        next_steps = [
+            "Vérifier les signaux de remboursement disponibles.",
+            "Préparer un suivi client personnalisé si le contexte métier le confirme.",
+            "Utiliser cette recommandation comme aide à la décision.",
+        ]
+        confidence_level = "moyenne"
+    else:
+        decision_reasoning = (
+            "Les signaux ML indiquent un niveau de risque faible. "
+            "L’action recommandée est un suivi routine, sans action immédiate prioritaire."
+        )
+        next_steps = [
+            "Maintenir le suivi routine du client.",
+            "Réexaminer le profil si de nouveaux signaux ML apparaissent.",
+            "Utiliser cette recommandation comme aide à la décision.",
+        ]
+        confidence_level = "moyenne"
+
+    key_risk_factors = [f"Niveau de risque effectif {_tier_business_label(effective_tier_value)}"]
+    if score is not None:
+        key_risk_factors.append(f"Score ML {_format_optional(score)}")
+    if anomaly_detected:
+        key_risk_factors.append("Anomalie détectée")
+    key_risk_factors.extend(factors[:4])
+    if not factors:
+        key_risk_factors.extend([str(item) for item in (explanations.get("business_rules") or [])[:3]])
+
+    return {
+        "business_summary": (
+            f"Client classé en risque {_tier_business_label(effective_tier_value)}, "
+            f"segment {_segment_business_label(client.get('cluster_name') or client.get('state'))}, "
+            f"avec l’action recommandée « {action_label} » et une priorité « {priority_label} »."
+        ),
+        "decision_reasoning": decision_reasoning,
+        "key_risk_factors": _unique_non_empty(key_risk_factors),
+        "recommended_next_steps": next_steps,
+        "internal_note": (
+            "Cette analyse est générée à partir des signaux ML disponibles et ne constitue pas une décision automatique."
+        ),
+        "confidence_level": confidence_level,
+        "analysis_source": "deterministic_nodes",
+    }
+
+
+def build_client_ml_signature(client: dict[str, Any]) -> dict[str, Any]:
+    fields = {field: _normalize_signature_value(client.get(field)) for field in ML_SIGNATURE_FIELDS}
+    encoded = json.dumps(fields, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    return {
+        "ml_signature": hashlib.sha256(encoded.encode("utf-8")).hexdigest(),
+        "ml_signature_fields": fields,
+    }
+
+
+def get_reusable_agent_run_response(
+    db: Session,
+    msisdn: str,
+    ml_signature: str,
+) -> dict[str, Any] | None:
+    try:
+        row = db.execute(
+            text(
+                """
+                SELECT id, run_id, msisdn, action_id, payload, started_at, finished_at
+                FROM ml.agent_runs
+                WHERE msisdn = :msisdn
+                ORDER BY started_at DESC NULLS LAST, id DESC
+                LIMIT 1
+                """
+            ),
+            {"msisdn": msisdn},
+        ).mappings().first()
+    except SQLAlchemyError:
+        db.rollback()
+        return None
+
+    if not row:
+        return None
+
+    payload = _json_value(row["payload"])
+    if not isinstance(payload, dict):
+        return None
+    if payload.get("ml_signature") != ml_signature:
+        return None
+    if payload.get("decision_policy_version") != DECISION_POLICY_VERSION:
+        return None
+    if not _is_complete_agent_payload(payload):
+        return None
+
+    decision = dict(payload.get("decision") or {})
+    action_id = row.get("action_id") or payload.get("action_id") or decision.get("stored_action_id")
+    if action_id is not None:
+        decision.setdefault("stored_action_id", action_id)
+    client = _load_client(db, msisdn) or (payload.get("profile") or {})
+    message = payload.get("message") or {}
+    if _should_refresh_reused_message(message, decision):
+        message = generate_message(client, decision)
+
+    return {
+        "run_id": row.get("run_id") or payload.get("run_id"),
+        "msisdn": row.get("msisdn") or payload.get("msisdn") or msisdn,
+        "profile": payload.get("profile") or {},
+        "explanations": payload.get("explanations") or {},
+        "decision": decision,
+        "message": message,
+        "ai_analysis": payload.get("ai_analysis") or {},
+        "action_id": action_id,
+        "agent_run_id": row.get("id"),
+        "errors": [],
+        "reused_existing_analysis": True,
+    }
+
+
+def _should_refresh_reused_message(message: dict[str, Any], decision: dict[str, Any]) -> bool:
+    action = str(decision.get("action_type") or decision.get("recommended_action") or "")
+    text = str((message or {}).get("message_text") or (message or {}).get("content") or "").lower()
+    if action in {"call_center_priority", "monitor_only"}:
+        return True
+    forbidden_reused_terms = (
+        "plan d'apurement",
+        "plan d’apurement",
+        "offre de restructuration",
+        "remise",
+        "réduction",
+        "bonus",
+        "sanction",
+        "menace",
+        "contentieux",
+        "poursuite",
+        "recouvrement agressif",
+        "bonjour, je suis un conseiller",
+    )
+    return any(term in text for term in forbidden_reused_terms)
 
 
 def log_agent_action(db: Session, msisdn: str, decision: dict[str, Any]) -> dict[str, Any]:
@@ -189,11 +351,10 @@ def log_agent_action(db: Session, msisdn: str, decision: dict[str, Any]) -> dict
         existing_action = db.execute(
             text(
                 """
-                SELECT id, msisdn, action_type, priority, recommendation, status, created_at
+                SELECT id, msisdn, action_type, priority, recommendation, created_at
                 FROM ml.agent_actions
                 WHERE msisdn = :msisdn
                   AND action_type = :action_type
-                  AND status = 'generated'
                   AND created_at >= NOW() - INTERVAL '10 minutes'
                 ORDER BY created_at DESC, id DESC
                 LIMIT 1
@@ -301,40 +462,6 @@ def log_agent_run(
         return None
 
 
-def log_agent_report(
-    db: Session,
-    *,
-    period_label: str,
-    summary: str,
-    recommendations: str,
-    kpis: dict[str, Any],
-) -> int | None:
-    try:
-        statement = text(
-            """
-            INSERT INTO ml.agent_reports
-                (report_type, period_label, summary, recommendations, kpis_json)
-            VALUES
-                ('bad_debts_batch', :period_label, :summary, :recommendations, :kpis_json)
-            RETURNING id
-            """
-        ).bindparams(bindparam("kpis_json", type_=JSONB))
-        report_id = db.execute(
-            statement,
-            {
-                "period_label": period_label,
-                "summary": summary,
-                "recommendations": recommendations,
-                "kpis_json": _json_payload(kpis),
-            },
-        ).scalar_one_or_none()
-        db.commit()
-        return report_id
-    except Exception:
-        db.rollback()
-        return None
-
-
 def _run_bad_debts_agent_core(db: Session, msisdn: str) -> dict[str, Any] | None:
     client = _load_client(db, msisdn)
     if not client:
@@ -342,10 +469,12 @@ def _run_bad_debts_agent_core(db: Session, msisdn: str) -> dict[str, Any] | None
 
     errors: list[str] = []
     run_id = str(uuid4())
+    signature_data = build_client_ml_signature(client)
     profile = build_client_profile(client)
     explanations = build_explanations(client)
     decision = decide_next_action(client, explanations)
     message = generate_message(client, decision)
+    ai_analysis = _build_template_ai_analysis(client, decision, explanations)
     logging_result = log_agent_action(db, msisdn, decision)
 
     if not logging_result.get("action_logged") and not logging_result.get("action_reused"):
@@ -366,6 +495,10 @@ def _run_bad_debts_agent_core(db: Session, msisdn: str) -> dict[str, Any] | None
         "explanations": explanations,
         "decision": decision,
         "message": message,
+        "ai_analysis": ai_analysis,
+        "ml_signature": signature_data["ml_signature"],
+        "ml_signature_fields": signature_data["ml_signature_fields"],
+        "decision_policy_version": DECISION_POLICY_VERSION,
         "errors": errors,
     }
 
@@ -374,6 +507,13 @@ def run_bad_debts_agent(db: Session, msisdn: str) -> dict[str, Any] | None:
     started_at = datetime.utcnow()
     fallback_run_id = str(uuid4())
     try:
+        client = _load_client(db, msisdn)
+        if not client:
+            return None
+        signature_data = build_client_ml_signature(client)
+        reusable = get_reusable_agent_run_response(db, msisdn, signature_data["ml_signature"])
+        if reusable is not None:
+            return reusable
         response = _run_bad_debts_agent_core(db, msisdn)
         if not response:
             return None
@@ -419,247 +559,91 @@ def run_bad_debts_agent(db: Session, msisdn: str) -> dict[str, Any] | None:
         raise AgentRunError("Impossible d'executer l'agent Bad Debts.") from exc
 
 
-def run_bad_debts_agent_batch(db: Session, tier: str = "high", limit: int = 50) -> dict[str, Any]:
-    normalized_tier = _normalize_tier(tier)
-    safe_limit = min(max(int(limit or 50), 1), 200)
-    try:
-        msisdns = _load_batch_msisdns(db, normalized_tier, safe_limit)
-    except Exception:
-        db.rollback()
-        return {
-            "status": "failed",
-            "tier": normalized_tier,
-            "limit": safe_limit,
-            "clients_analyzed": 0,
-            "actions_created": 0,
-            "actions_reused": 0,
-            "errors_count": 1,
-            "items": [],
-            "message": "Impossible de charger les clients Bad Debts pour le batch.",
-        }
-    if not msisdns:
-        return {
-            "status": "empty",
-            "tier": normalized_tier,
-            "limit": safe_limit,
-            "clients_analyzed": 0,
-            "actions_created": 0,
-            "actions_reused": 0,
-            "errors_count": 0,
-            "items": [],
-            "message": f"Aucun client trouve pour risk_tier={normalized_tier}.",
-        }
-
-    items: list[dict[str, Any]] = []
-    actions_created = 0
-    actions_reused = 0
-    errors_count = 0
-
-    for msisdn in msisdns:
-        try:
-            response = run_bad_debts_agent(db, msisdn)
-            if not response:
-                errors_count += 1
-                items.append(
-                    _build_batch_item(
-                        msisdn,
-                        "failed",
-                        error="Client introuvable pendant le batch.",
-                    )
-                )
-                continue
-
-            decision = response.get("decision") or {}
-            response_errors = response.get("errors") or []
-            action_logged = bool(decision.get("action_logged"))
-            action_reused = bool(decision.get("action_reused"))
-            if action_logged:
-                actions_created += 1
-            if action_reused:
-                actions_reused += 1
-
-            item_status = "reused" if action_reused else "success"
-            item_error = None
-            if response_errors:
-                errors_count += 1
-                item_status = "failed"
-                item_error = "; ".join(str(error) for error in response_errors)
-
-            items.append(
-                _build_batch_item(
-                    msisdn,
-                    item_status,
-                    action_id=decision.get("stored_action_id"),
-                    action_type=decision.get("action_type") or decision.get("recommended_action"),
-                    priority=decision.get("priority"),
-                    agent_run_id=response.get("agent_run_id"),
-                    error=item_error,
-                )
-            )
-        except AgentRunError as exc:
-            errors_count += 1
-            items.append(
-                _build_batch_item(msisdn, "failed", error=str(exc))
-            )
-        except Exception:
-            errors_count += 1
-            items.append(
-                _build_batch_item(msisdn, "failed", error="Erreur inattendue pendant le batch Bad Debts.")
-            )
-
-    if errors_count == 0:
-        status_value = "success"
-    elif errors_count < len(msisdns):
-        status_value = "partial_success"
-    else:
-        status_value = "failed"
-
-    report_id = None
-    report_summary = None
-    if status_value in {"success", "partial_success"}:
-        generated_at = datetime.utcnow()
-        period_label = generated_at.strftime("%d/%m/%Y")
-        tier_label = _tier_business_label(normalized_tier)
-        error_word = "erreur" if errors_count == 1 else "erreurs"
-        report_summary = (
-            "Analyse agentic globale terminee : "
-            f"{len(msisdns)} clients a risque {tier_label} analyses, "
-            f"{actions_created} nouvelles actions generees, "
-            f"{actions_reused} actions reutilisees et {errors_count} {error_word}."
-        )
-        recommendations = (
-            "Prioriser les clients classes risque eleve, notamment les profils Blacklist ou DISCONNECTED. "
-            "Les actions deja recentes sont reutilisees afin d'eviter les doublons operationnels."
-        )
-        report_id = log_agent_report(
-            db,
-            period_label=period_label,
-            summary=report_summary,
-            recommendations=recommendations,
-            kpis={
-                "tier": normalized_tier,
-                "limit": safe_limit,
-                "clients_analyzed": len(msisdns),
-                "actions_created": actions_created,
-                "actions_reused": actions_reused,
-                "errors_count": errors_count,
-                "status": status_value,
-                "generated_at": generated_at.isoformat(),
-            },
-        )
-
-    return {
-        "status": status_value,
-        "tier": normalized_tier,
-        "limit": safe_limit,
-        "clients_analyzed": len(msisdns),
-        "actions_created": actions_created,
-        "actions_reused": actions_reused,
-        "errors_count": errors_count,
-        "items": items,
-        "report_id": report_id,
-        "report_summary": report_summary,
-    }
-
-
-def get_recent_agent_actions(db: Session, limit: int = 20) -> list[dict[str, Any]]:
-    limit = min(max(int(limit or 20), 1), 100)
-    rows = db.execute(
-        text(
-            """
-            SELECT id, msisdn, action_type, priority, recommendation, status, created_at
-            FROM ml.agent_actions
-            ORDER BY created_at DESC, id DESC
-            LIMIT :limit
-            """
-        ),
-        {"limit": limit},
-    ).mappings().all()
-    return [_json_row(row) for row in rows]
-
-
-def get_recent_agent_reports(db: Session, limit: int = 10) -> list[dict[str, Any]]:
-    limit = min(max(int(limit or 10), 1), 50)
-    rows = db.execute(
-        text(
-            """
-            SELECT id, report_type, period_label, summary, recommendations, kpis_json, generated_at
-            FROM ml.agent_reports
-            WHERE report_type = 'bad_debts_batch'
-            ORDER BY generated_at DESC, id DESC
-            LIMIT :limit
-            """
-        ),
-        {"limit": limit},
-    ).mappings().all()
-    return [_json_row(row) for row in rows]
-
-
-def _build_batch_item(
-    msisdn: str,
-    status: str,
-    *,
-    action_id: int | None = None,
-    action_type: str | None = None,
-    priority: int | None = None,
-    agent_run_id: int | None = None,
-    error: str | None = None,
-) -> dict[str, Any]:
-    action_label = ACTION_BUSINESS_LABELS.get(str(action_type or ""), action_type)
-    priority_label = _priority_label(priority)
-    return {
-        "msisdn": msisdn,
-        "client_label": f"Client {msisdn}" if msisdn else "Client",
-        "status": status,
-        "processing_label": _processing_label(status),
-        "action_id": action_id,
-        "action_type": action_type,
-        "action_label": action_label,
-        "priority": priority,
-        "priority_label": priority_label,
-        "agent_run_id": agent_run_id,
-        "business_comment": _business_comment(status, action_type, priority, error),
-        "error": error,
-    }
-
-
-def _processing_label(status: str) -> str:
-    if status == "success":
-        return "Nouvelle action generee"
-    if status == "reused":
-        return "Deja traite recemment"
-    if status == "failed":
-        return "Erreur de traitement"
-    return status or "-"
-
-
 def _priority_label(priority: Any) -> str:
     try:
         numeric = int(priority)
     except (TypeError, ValueError):
-        return "Priorite standard"
-    if numeric in {1, 2, 3}:
-        return f"Priorite {numeric}"
-    return "Priorite standard"
-
-
-def _business_comment(status: str, action_type: str | None, priority: Any, error: str | None) -> str:
-    if status == "reused":
-        return "Action recente reutilisee pour eviter un doublon."
-    if status == "failed":
-        return error or "Le traitement agentic n'a pas abouti pour ce client."
-    action_label = ACTION_BUSINESS_LABELS.get(str(action_type or ""), "action de suivi")
-    if _priority_label(priority) == "Priorite 1":
-        return f"Client a risque eleve necessitant une {action_label.lower()}."
-    return f"Client oriente vers {action_label.lower()} selon le scoring Bad Debts."
+        return "Normal"
+    return PRIORITY_BUSINESS_LABELS.get(numeric, "Normal")
 
 
 def _tier_business_label(tier: str) -> str:
     if tier == "high":
-        return "eleve"
+        return "élevé"
     if tier == "medium":
         return "moyen"
     return "faible"
+
+
+def _action_business_label(value: Any) -> str:
+    return ACTION_BUSINESS_LABELS.get(str(value or ""), "Suivi routine")
+
+
+def _build_template_ai_analysis(
+    client: dict[str, Any],
+    decision: dict[str, Any],
+    explanations: dict[str, Any],
+) -> dict[str, Any]:
+    return build_deterministic_client_analysis(
+        client,
+        build_client_profile(client),
+        explanations,
+        decision,
+    )
+
+
+def _business_factor_labels(value: Any) -> list[str]:
+    labels = {
+        "AVG_CREDIT_AMOUNT": "Montant moyen crédité",
+        "avg_credit_amount": "Montant moyen crédité",
+        "never_repaid": "Aucun remboursement détecté",
+        "reimburse_ratio": "Ratio de remboursement",
+        "TOTAL_OUTSTANDING_AMOUNT": "Encours restant",
+        "total_outstanding_amount": "Encours restant",
+        "credit_intensity": "Fréquence d'utilisation SOS",
+        "full_repayer": "Historique de remboursement complet",
+        "debt_to_credit": "Dette rapportée au crédit",
+        "NB_SOS": "Nombre d'usages SOS",
+    }
+    raw_items = value if isinstance(value, list) else [value] if value else []
+    factors = []
+    for item in raw_items:
+        key = str(item.get("feature") or item.get("name") or "") if isinstance(item, dict) else str(item or "")
+        if key:
+            factors.append(labels.get(key, "Facteur explicatif"))
+    return factors
+
+
+def _unique_non_empty(values: list[Any]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        text_value = str(value or "").strip()
+        if not text_value or text_value in seen:
+            continue
+        seen.add(text_value)
+        result.append(text_value)
+    return result
+
+
+def _format_optional(value: Any) -> str:
+    if value is None or value == "":
+        return "non disponible"
+    try:
+        return f"{float(value):.3f}".rstrip("0").rstrip(".")
+    except (TypeError, ValueError):
+        return str(value)
+
+
+def _segment_business_label(value: Any) -> str:
+    labels = {
+        "DISCONNECTED": "Déconnecté",
+        "SUSPENDED": "Suspendu",
+        "ON-HOLD": "En attente",
+        "Bon-payeur": "Bon payeur",
+        "Standard": "Standard",
+    }
+    return labels.get(str(value or ""), "Segment non défini")
 
 
 def _load_client(db: Session, msisdn: str) -> dict[str, Any] | None:
@@ -676,22 +660,6 @@ def _load_client(db: Session, msisdn: str) -> dict[str, Any] | None:
     if not row:
         return None
     return BadDebtsService(db)._normalize_client(row)
-
-
-def _load_batch_msisdns(db: Session, tier: str, limit: int) -> list[str]:
-    rows = db.execute(
-        text(
-            """
-            SELECT msisdn
-            FROM ml.bad_debts_clients
-            WHERE LOWER(COALESCE(risk_tier, '')) = :tier
-            ORDER BY final_risk_score DESC NULLS LAST, msisdn ASC
-            LIMIT :limit
-            """
-        ),
-        {"tier": tier, "limit": limit},
-    ).mappings().all()
-    return [str(row["msisdn"]) for row in rows if row.get("msisdn") is not None]
 
 
 def _primary_factors(top_drivers: Any) -> list[Any]:
@@ -730,6 +698,40 @@ def _as_int(value: Any) -> int | None:
 def _round_float(value: Any, digits: int = 3) -> float | None:
     numeric = _as_float(value)
     return round(numeric, digits) if numeric is not None else None
+
+
+def _normalize_signature_value(value: Any) -> Any:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return bool(value)
+    if isinstance(value, (int, float, Decimal)):
+        return round(float(value), 4)
+    if isinstance(value, str):
+        raw = value.strip()
+        lowered = raw.lower()
+        if lowered in {"true", "false"}:
+            return lowered == "true"
+        try:
+            return round(float(raw), 4)
+        except ValueError:
+            return lowered
+    return value
+
+
+def _is_complete_agent_payload(payload: dict[str, Any]) -> bool:
+    required_sections = ("profile", "explanations", "decision", "message", "ai_analysis")
+    if any(not isinstance(payload.get(section), dict) or not payload.get(section) for section in required_sections):
+        return False
+    analysis = payload.get("ai_analysis") or {}
+    required_text = ("business_summary", "decision_reasoning", "internal_note")
+    if any(not str(analysis.get(key) or "").strip() for key in required_text):
+        return False
+    for key in ("key_risk_factors", "recommended_next_steps"):
+        value = analysis.get(key)
+        if not isinstance(value, list) or not value:
+            return False
+    return bool(payload.get("ml_signature"))
 
 
 def _json_row(row: Any) -> dict[str, Any]:
