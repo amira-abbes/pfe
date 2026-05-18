@@ -99,7 +99,7 @@ def build_explanations(client: dict[str, Any]) -> dict[str, Any]:
     if str(client.get("risk_label") or "").strip().lower() == "blacklist":
         business_rules.append("Client à vérifier en priorité")
     if _as_int(client.get("full_repayer")) == 1:
-        business_rules.append("Historique de remboursement complet détecté")
+        business_rules.append("Remboursement intégral observé")
     if _as_int(client.get("has_debt")) == 1:
         business_rules.append("Client avec dette active")
     if _as_int(client.get("nb_sos")) and _as_int(client.get("nb_sos")) > 0:
@@ -137,7 +137,10 @@ def decide_next_action(client: dict[str, Any], explanations: dict[str, Any]) -> 
 def generate_message(client: dict[str, Any], decision: dict[str, Any]) -> dict[str, Any]:
     effective_tier = _normalize_tier(decision.get("effective_tier"))
     if effective_tier == "high":
-        content = "Qualifier la situation client via le centre de relation client avant toute action métier."
+        content = (
+            "Contacter le client via le centre de relation client afin de qualifier la situation, "
+            "vérifier les informations disponibles et orienter le suivi selon les règles métier internes."
+        )
         return {
             "contact_type": "call_script",
             "title": "Script conseiller",
@@ -151,20 +154,31 @@ def generate_message(client: dict[str, Any], decision: dict[str, Any]) -> dict[s
             "llm_used": False,
         }
     if effective_tier == "medium":
-        content = "Bonjour, un suivi de votre ligne est recommandé. Merci de consulter vos canaux habituels si besoin."
+        debt = _as_float(client.get("total_outstanding_amount"))
+        if debt and debt > 0:
+            debt_text = _format_amount(debt)
+            content = (
+                f"Bonjour, votre ligne présente un solde à suivre de {debt_text} TND. "
+                "Merci de vérifier votre situation ou de contacter le service client pour plus d’informations."
+            )
+        else:
+            content = (
+                "Bonjour, un suivi de votre ligne est recommandé. "
+                "Merci de vérifier votre situation ou de contacter le service client pour plus d’informations."
+            )
         return {
             "contact_type": "preventive_sms",
-            "title": "SMS préventif proposé",
+            "title": "SMS personnalisé proposé",
             "channel": "sms",
             "message_text": content,
             "content": content,
             "language": "fr",
-            "internal_notice": "Proposition interne non envoyée automatiquement.",
+            "internal_notice": "Proposition interne à valider avant envoi.",
             "safe_to_send": True,
             "generated_by": "deterministic_template",
             "llm_used": False,
         }
-    content = "Suivi routine — aucune action immédiate."
+    content = "Aucune action immédiate n’est recommandée. Conserver un suivi périodique lors des prochains imports."
     return {
         "contact_type": "monitoring_note",
         "title": "Note de suivi",
@@ -179,6 +193,71 @@ def generate_message(client: dict[str, Any], decision: dict[str, Any]) -> dict[s
     }
 
 
+def _build_kpi_factors(client: dict[str, Any], profile: dict[str, Any], decision: dict[str, Any], explanations: dict[str, Any]) -> list[str]:
+    factors = []
+    
+    effective_tier_value = _normalize_tier(decision.get("effective_tier") or profile.get("risk_tier") or client.get("risk_tier"))
+    factors.append(f"Niveau de risque effectif {_tier_business_label(effective_tier_value)}")
+    
+    score = _as_float(profile.get("final_risk_score") if profile else client.get("final_risk_score"))
+    if score is not None:
+        factors.append(f"Score de risque ML : {_format_optional(score)}")
+        
+    if bool(client.get("is_anomaly") or decision.get("anomaly_escalated")):
+        factors.append("Anomalie détectée")
+        
+    debt = _as_float(client.get("total_outstanding_amount"))
+    debt_str = _format_amount(debt).replace(".", ",") if debt is not None else "0"
+    
+    reimburse_ratio = _as_float(client.get("avg_reimburse_ratio"))
+    rate_pct = int(round(reimburse_ratio * 100)) if reimburse_ratio is not None else None
+    
+    avg_credit = _as_float(client.get("avg_credit_amount"))
+    avg_credit_str = _format_amount(avg_credit).replace(".", ",") if avg_credit is not None else None
+    
+    nb_sos = _as_int(client.get("nb_sos"))
+    
+    debt_to_credit = _as_float(client.get("debt_to_credit"))
+
+    raw_drivers = explanations.get("primary_factors") or client.get("top_drivers") or []
+    driver_keys = [str(item.get("feature") or item.get("name") or item).lower() if isinstance(item, dict) else str(item or "").lower() for item in raw_drivers]
+    bus_rules_lower = [r.lower() for r in (explanations.get("business_rules") or [])]
+
+    if debt is not None and debt > 0:
+        is_high_debt = (debt_to_credit is not None and debt_to_credit > 0.5) or any(k in ["debt_to_credit"] for k in driver_keys) or any("dette" in r for r in bus_rules_lower)
+        if is_high_debt:
+            factors.append(f"Encours restant significatif : {debt_str} TND")
+        else:
+            factors.append(f"Encours restant : {debt_str} TND")
+    elif debt is not None and debt == 0:
+        factors.append("Pas d’encours restant identifié")
+
+    if rate_pct is None or rate_pct == 0:
+        factors.append("Aucun remboursement détecté")
+    elif rate_pct >= 95:
+        factors.append(f"Remboursement complet observé : {rate_pct} %")
+    elif rate_pct >= 60:
+        factors.append(f"Remboursement partiel mais acceptable : {rate_pct} %")
+    elif rate_pct >= 30:
+        factors.append(f"Remboursement partiel observé : {rate_pct} %")
+    else:
+        factors.append(f"Remboursement faible observé : {rate_pct} %")
+
+    if any(k in ["avg_credit_amount"] for k in driver_keys) or any("montant moyen" in r for r in bus_rules_lower):
+        if avg_credit_str:
+            factors.append(f"Montant moyen crédité : {avg_credit_str} TND")
+        else:
+            factors.append("Montant moyen crédité")
+
+    if any(k in ["credit_intensity", "nb_sos"] for k in driver_keys) or any("sos" in r for r in bus_rules_lower):
+        if nb_sos is not None:
+            factors.append(f"Fréquence d’utilisation SOS : {nb_sos} opérations")
+        else:
+            factors.append("Fréquence d’utilisation SOS")
+
+    return _unique_non_empty(factors)
+
+
 def build_deterministic_client_analysis(
     client: dict[str, Any],
     profile: dict[str, Any],
@@ -190,8 +269,6 @@ def build_deterministic_client_analysis(
     action_label = _action_business_label(action_type)
     priority_label = _priority_label(decision.get("priority"))
     score = _as_float(profile.get("final_risk_score") if profile else client.get("final_risk_score"))
-    anomaly_detected = bool(client.get("is_anomaly") or decision.get("anomaly_escalated"))
-    factors = _business_factor_labels(explanations.get("primary_factors") or client.get("top_drivers"))
 
     if effective_tier_value == "high":
         decision_reasoning = (
@@ -228,14 +305,7 @@ def build_deterministic_client_analysis(
         ]
         confidence_level = "moyenne"
 
-    key_risk_factors = [f"Niveau de risque effectif {_tier_business_label(effective_tier_value)}"]
-    if score is not None:
-        key_risk_factors.append(f"Score ML {_format_optional(score)}")
-    if anomaly_detected:
-        key_risk_factors.append("Anomalie détectée")
-    key_risk_factors.extend(factors[:4])
-    if not factors:
-        key_risk_factors.extend([str(item) for item in (explanations.get("business_rules") or [])[:3]])
+    key_risk_factors = _build_kpi_factors(client, profile, decision, explanations)
 
     return {
         "business_summary": (
@@ -303,9 +373,23 @@ def get_reusable_agent_run_response(
     if action_id is not None:
         decision.setdefault("stored_action_id", action_id)
     client = _load_client(db, msisdn) or (payload.get("profile") or {})
+    if (
+        str(decision.get("action_type") or decision.get("recommended_action") or "") == "sms_retention_offer"
+        and bool(client.get("is_anomaly"))
+    ):
+        return None
     message = payload.get("message") or {}
     if _should_refresh_reused_message(message, decision):
         message = generate_message(client, decision)
+    try:
+        refreshed_analysis = build_deterministic_client_analysis(
+            client,
+            build_client_profile(client),
+            build_explanations(client),
+            decision,
+        )
+    except Exception:
+        refreshed_analysis = payload.get("ai_analysis") or {}
 
     return {
         "run_id": row.get("run_id") or payload.get("run_id"),
@@ -314,7 +398,7 @@ def get_reusable_agent_run_response(
         "explanations": payload.get("explanations") or {},
         "decision": decision,
         "message": message,
-        "ai_analysis": payload.get("ai_analysis") or {},
+        "ai_analysis": refreshed_analysis,
         "action_id": action_id,
         "agent_run_id": row.get("id"),
         "errors": [],
@@ -326,6 +410,8 @@ def _should_refresh_reused_message(message: dict[str, Any], decision: dict[str, 
     action = str(decision.get("action_type") or decision.get("recommended_action") or "")
     text = str((message or {}).get("message_text") or (message or {}).get("content") or "").lower()
     if action in {"call_center_priority", "monitor_only"}:
+        return True
+    if action == "sms_retention_offer" and bool(decision.get("anomaly_escalated")) and (message or {}).get("contact_type") != "preventive_sms_ai":
         return True
     forbidden_reused_terms = (
         "plan d'apurement",
@@ -601,7 +687,7 @@ def _business_factor_labels(value: Any) -> list[str]:
         "TOTAL_OUTSTANDING_AMOUNT": "Encours restant",
         "total_outstanding_amount": "Encours restant",
         "credit_intensity": "Fréquence d'utilisation SOS",
-        "full_repayer": "Historique de remboursement complet",
+        "full_repayer": "Remboursement intégral observé",
         "debt_to_credit": "Dette rapportée au crédit",
         "NB_SOS": "Nombre d'usages SOS",
     }
@@ -609,8 +695,9 @@ def _business_factor_labels(value: Any) -> list[str]:
     factors = []
     for item in raw_items:
         key = str(item.get("feature") or item.get("name") or "") if isinstance(item, dict) else str(item or "")
-        if key:
-            factors.append(labels.get(key, "Facteur explicatif"))
+        label = labels.get(key)
+        if label:
+            factors.append(label)
     return factors
 
 
@@ -633,6 +720,15 @@ def _format_optional(value: Any) -> str:
         return f"{float(value):.3f}".rstrip("0").rstrip(".")
     except (TypeError, ValueError):
         return str(value)
+
+
+def _format_amount(value: Any) -> str:
+    numeric = _as_float(value)
+    if numeric is None:
+        return "0"
+    if numeric.is_integer():
+        return str(int(numeric))
+    return f"{numeric:.2f}".rstrip("0").rstrip(".")
 
 
 def _segment_business_label(value: Any) -> str:

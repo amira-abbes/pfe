@@ -30,8 +30,8 @@ import {
   getBadDebtsClients,
   getBadDebtsImportRuns,
   getBadDebtsSummary,
-  generateBadDebtsClientReport,
   runBadDebtsAgent,
+  uploadBadDebtsRawImport,
 } from "../api/api";
 import { useAuth } from "../context/AuthContext";
 import "../styles/bad-debts-dashboard.css";
@@ -74,22 +74,13 @@ const PRIORITY_LABELS = {
   4: "Normal",
 };
 
-const DRIVER_LABELS = {
-  AVG_CREDIT_AMOUNT: "Montant moyen crédité",
-  avg_credit_amount: "Montant moyen crédité",
-  never_repaid: "Aucun remboursement détecté",
-  reimburse_ratio: "Ratio de remboursement",
-  TOTAL_OUTSTANDING_AMOUNT: "Encours restant",
-  total_outstanding_amount: "Encours restant",
-  credit_intensity: "Fréquence d'utilisation SOS",
-  full_repayer: "Historique de remboursement complet",
-  debt_to_credit: "Dette rapportée au crédit",
-};
-
 const IMPORT_STATUS_LABELS = {
   success: "Succès",
   failed: "Échec",
   error: "Erreur",
+  EN_COURS: "En cours",
+  SUCCES: "Succès",
+  ECHEC: "Échec",
 };
 
 const VIEW_META = {
@@ -156,28 +147,6 @@ function priorityLabel(value) {
   return PRIORITY_LABELS[Number(value)] || "Normal";
 }
 
-function contactTypeLabel(value) {
-  if (value === "call_script") return "Script conseiller";
-  if (value === "preventive_sms") return "SMS préventif proposé";
-  return "Note de suivi";
-}
-
-function driverLabel(value) {
-  return DRIVER_LABELS[String(value || "")] || "Facteur explicatif";
-}
-
-function hasCompleteAiAnalysis(analysis = {}) {
-  return Boolean(
-    analysis.business_summary &&
-    analysis.decision_reasoning &&
-    analysis.internal_note &&
-    Array.isArray(analysis.key_risk_factors) &&
-    analysis.key_risk_factors.length &&
-    Array.isArray(analysis.recommended_next_steps) &&
-    analysis.recommended_next_steps.length
-  );
-}
-
 function normalizeSummary(raw = {}) {
   const byTier = raw.by_tier || {};
   const high = raw.high_risk_count ?? byTier.high ?? 0;
@@ -233,6 +202,14 @@ function cleanBusinessText(value, fallback = "-") {
     .replace(/\b1 actions générées\b/gi, "1 action générée")
     .replace(/\b1 actions réutilisées\b/gi, "1 action réutilisée")
     .replace(/\b1 clients analysés\b/gi, "1 client analysé");
+}
+
+function usefulClientFactors(values = []) {
+  const blocked = new Set(["", "Signal ML disponible", "Signal client à vérifier"]);
+  return [...new Set((Array.isArray(values) ? values : [])
+    .map((item) => cleanBusinessText(item, ""))
+    .filter((item) => item && !blocked.has(item) && !item.toLowerCase().includes("historique de remboursement") && !item.toLowerCase().includes("facteur explicatif")))]
+    .slice(0, 5);
 }
 
 function displayValue(value, fallback = "Non disponible") {
@@ -355,9 +332,6 @@ function BadDebtsWorkspace({ view }) {
   const [clientsLoading, setClientsLoading] = useState(false);
   const [agentLoadingMsisdn, setAgentLoadingMsisdn] = useState("");
   const [agentFeedback, setAgentFeedback] = useState(null);
-  const [clientReport, setClientReport] = useState(null);
-  const [clientReportLoading, setClientReportLoading] = useState(false);
-  const [clientReportError, setClientReportError] = useState("");
   const [globalReport, setGlobalReport] = useState(null);
   const [globalReportLoading, setGlobalReportLoading] = useState(false);
   const [globalReportLoadingStage, setGlobalReportLoadingStage] = useState("");
@@ -408,8 +382,6 @@ function BadDebtsWorkspace({ view }) {
   async function runAgent(msisdn) {
     setAgentLoadingMsisdn(msisdn);
     setError("");
-    setClientReport(null);
-    setClientReportError("");
     try {
       const response = await runBadDebtsAgent(msisdn);
       const decision = response.data.decision || {};
@@ -429,7 +401,7 @@ function BadDebtsWorkspace({ view }) {
         debt: profile.total_outstanding_amount,
         reimbursement: profile.avg_reimburse_ratio,
         anomaly: Boolean(profile.is_anomaly),
-        factors: Array.isArray(analysis.key_risk_factors) ? analysis.key_risk_factors : [],
+        factors: usefulClientFactors(analysis.key_risk_factors),
         contact: {
           type: contactMessage.contact_type,
           title: contactMessage.title,
@@ -443,19 +415,6 @@ function BadDebtsWorkspace({ view }) {
       setError("L’analyse métier assistée n'a pas pu être lancée. Veuillez réessayer.");
     } finally {
       setAgentLoadingMsisdn("");
-    }
-  }
-
-  async function generateClientReport(msisdn) {
-    setClientReportLoading(true);
-    setClientReportError("");
-    try {
-      const response = await generateBadDebtsClientReport(msisdn);
-      setClientReport(response.data.report || null);
-    } catch (err) {
-      setClientReportError("Le rapport client n'a pas pu être généré. Une nouvelle tentative est possible.");
-    } finally {
-      setClientReportLoading(false);
     }
   }
 
@@ -524,9 +483,6 @@ function BadDebtsWorkspace({ view }) {
     clientsLoading,
     agentLoadingMsisdn,
     agentFeedback,
-    clientReport,
-    clientReportLoading,
-    clientReportError,
     globalReport,
     globalReportLoading,
     globalReportLoadingStage,
@@ -534,7 +490,6 @@ function BadDebtsWorkspace({ view }) {
     refreshDashboard,
     loadClients,
     runAgent,
-    generateClientReport,
     generateGlobalReport,
   };
   const headerNode = <BadDebtsHeader view={view} />;
@@ -607,7 +562,7 @@ function BadDebtsHeader({ view }) {
 function ViewRenderer({ view, context }) {
   if (view === "overview") return <OverviewPage {...context} />;
   if (view === "clients") return <RiskClientsPage {...context} />;
-  if (view === "imports") return <ImportHistoryPage imports={context.imports} />;
+  if (view === "imports") return <ImportHistoryPage imports={context.imports} refreshDashboard={context.refreshDashboard} />;
   return <SettingsPage />;
 }
 
@@ -665,10 +620,6 @@ function RiskClientsPage({
   runAgent,
   agentLoadingMsisdn,
   agentFeedback,
-  clientReport,
-  clientReportLoading,
-  clientReportError,
-  generateClientReport,
   globalReport,
   globalReportLoading,
   globalReportLoadingStage,
@@ -818,10 +769,6 @@ function RiskClientsPage({
       <BadDebtsAgentDrawer
         feedback={agentFeedback}
         open={isDrawerOpen && Boolean(agentFeedback)}
-        report={clientReport}
-        reportLoading={clientReportLoading}
-        reportError={clientReportError}
-        onGenerateReport={generateClientReport}
         onClose={() => setIsDrawerOpen(false)}
       />
     </div>
@@ -909,8 +856,9 @@ function BadDebtsClientsTable({ rows, loading, title, meta, activeFilters, page,
   );
 }
 
-function BadDebtsAgentDrawer({ feedback, open, report, reportLoading, reportError, onGenerateReport, onClose }) {
+function BadDebtsAgentDrawer({ feedback, open, onClose }) {
   if (!open || !feedback) return null;
+  const contact = feedback.contact || {};
   return (
     <div className="bad-debts-agent-overlay" role="presentation" onMouseDown={onClose}>
       <aside className="bad-debts-agent-drawer" role="dialog" aria-modal="true" aria-label="Analyse métier assistée client" onMouseDown={(event) => event.stopPropagation()}>
@@ -937,63 +885,29 @@ function BadDebtsAgentDrawer({ feedback, open, report, reportLoading, reportErro
           {feedback.anomalyEscalated && <div className="bad-debts-drawer-note"><AlertTriangle size={17} />Le niveau de risque a été renforcé car une anomalie ML a été détectée.</div>}
           <section><h4>Recommandation principale</h4><p>{feedback.action}</p></section>
           {!!feedback.factors.length && <section><h4>Facteurs principaux</h4><ul>{feedback.factors.map((item, index) => <li key={`${item}-${index}`}>{cleanBusinessText(item)}</li>)}</ul></section>}
-          <section>
-            <h4>Rapport métier client</h4>
-            <button className="bad-debts-btn secondary" type="button" onClick={() => onGenerateReport(feedback.msisdn)} disabled={reportLoading}>
-              {reportLoading ? <Loader2 className="spin" size={15} /> : <FileText size={15} />}
-              {reportLoading ? "Génération en cours..." : "Générer rapport client"}
-            </button>
-            {reportError && <p className="bad-debts-report-error">{reportError}</p>}
-            {report && <ClientReportBlock report={report} />}
-          </section>
+          {contact.type === "call_script" && (
+            <section>
+              <h4>Décision</h4>
+              <p>Contacter le client via le centre de relation client afin de qualifier la situation.</p>
+            </section>
+          )}
+          {(contact.type === "preventive_sms" || contact.type === "preventive_sms_ai") && contact.text && (
+            <section>
+              <h4>Exemple de message</h4>
+              <p>{contact.text}</p>
+            </section>
+          )}
+          {contact.type === "monitoring_note" && (
+            <section>
+              <h4>Décision</h4>
+              <p>Aucune action client immédiate. Suivi automatique recommandé.</p>
+            </section>
+          )}
         </div>
         <div className="bad-debts-drawer-actions">
           <button className="bad-debts-btn secondary" type="button" onClick={onClose}>Fermer</button>
         </div>
       </aside>
-    </div>
-  );
-}
-
-function ClientReportBlock({ report }) {
-  const verificationPoints = Array.isArray(report.verification_points) ? report.verification_points : [];
-  const showSms = Boolean(report.sms_proposal);
-  return (
-    <div className="bad-debts-client-report">
-      <h5>{cleanBusinessText(report.title, "Rapport métier client")}</h5>
-      <div>
-        <strong>Lecture métier du cas</strong>
-        <p>{cleanBusinessText(report.case_reading)}</p>
-      </div>
-      <div>
-        <strong>Interprétation des signaux</strong>
-        <p>{cleanBusinessText(report.signals_interpretation)}</p>
-      </div>
-      <div>
-        <strong>Risque opérationnel</strong>
-        <p>{cleanBusinessText(report.operational_risk)}</p>
-      </div>
-      {!!verificationPoints.length && (
-        <div>
-          <strong>Points à vérifier</strong>
-          <ul>{verificationPoints.map((item, index) => <li key={`report-check-${index}`}>{cleanBusinessText(item)}</li>)}</ul>
-        </div>
-      )}
-      <div>
-        <strong>Recommandation argumentée</strong>
-        <p>{cleanBusinessText(report.argued_recommendation)}</p>
-      </div>
-      {showSms && (
-        <div>
-          <strong>SMS proposé</strong>
-          <p>{cleanBusinessText(report.sms_proposal)}</p>
-        </div>
-      )}
-      <div>
-        <strong>Synthèse responsable</strong>
-        <p>{cleanBusinessText(report.manager_summary)}</p>
-      </div>
-      <span className="bad-debts-soft-badge">Confiance : {cleanBusinessText(report.confidence, "moyenne")}</span>
     </div>
   );
 }
@@ -1042,31 +956,31 @@ function GlobalReportPanel({ data, onPrint, onDownloadPdf, onClose }) {
   const kpiItems = Array.isArray(report.key_kpis) && report.key_kpis.length
     ? report.key_kpis
     : [
-        { label: "Clients scorés", value: formatNumber(total), comment: kpis.filter_summary || "" },
-        { label: "Anomalies détectées", value: formatNumber(anomalies), comment: "" },
-        { label: "Score de risque moyen", value: kpis.average_risk_score != null ? String(Math.round(kpis.average_risk_score * 1000) / 1000) : "-", comment: "Score agrégé" },
-        { label: "Dette moyenne", value: kpis.average_debt != null ? `${formatNumber(Math.round(kpis.average_debt))} TND` : "-", comment: "Encours moyen" },
-        { label: "Taux de remboursement moyen", value: kpis.average_reimbursement_ratio != null ? `${Math.round(kpis.average_reimbursement_ratio * 100)} %` : "-", comment: "" },
-      ];
+      { label: "Clients scorés", value: formatNumber(total), comment: kpis.filter_summary || "" },
+      { label: "Anomalies détectées", value: formatNumber(anomalies), comment: "" },
+      { label: "Score de risque moyen", value: kpis.average_risk_score != null ? String(Math.round(kpis.average_risk_score * 1000) / 1000) : "-", comment: "Score agrégé" },
+      { label: "Dette moyenne", value: kpis.average_debt != null ? `${formatNumber(Math.round(kpis.average_debt))} TND` : "-", comment: "Encours moyen" },
+      { label: "Taux de remboursement moyen", value: kpis.average_reimbursement_ratio != null ? `${Math.round(kpis.average_reimbursement_ratio * 100)} %` : "-", comment: "" },
+    ];
   const businessRecommendations = Array.isArray(report.business_recommendations)
     ? report.business_recommendations.slice(0, 4).map((item) => {
-        if (typeof item === "string") {
-          return {
-            title: cleanBusinessText(item),
-            why: "",
-            example: "",
-            expected_impact: "",
-            legacy: true,
-          };
-        }
+      if (typeof item === "string") {
         return {
-          title: cleanBusinessText(item.title),
-          why: cleanBusinessText(item.why),
-          example: cleanBusinessText(item.example),
-          expected_impact: cleanBusinessText(item.expected_impact),
-          legacy: false,
+          title: cleanBusinessText(item),
+          why: "",
+          example: "",
+          expected_impact: "",
+          legacy: true,
         };
-      }).filter((item) => item.title || item.why || item.example || item.expected_impact)
+      }
+      return {
+        title: cleanBusinessText(item.title),
+        why: cleanBusinessText(item.why),
+        example: cleanBusinessText(item.example),
+        expected_impact: cleanBusinessText(item.expected_impact),
+        legacy: false,
+      };
+    }).filter((item) => item.title || item.why || item.example || item.expected_impact)
     : [];
 
   // Helper arrays for simple graphs
@@ -1151,79 +1065,79 @@ function GlobalReportPanel({ data, onPrint, onDownloadPdf, onClose }) {
         {total <= 0 ? (
           <p className="bdx-empty">Aucune donnée disponible pour les graphiques.</p>
         ) : (
-        <div className="bdx-mini-charts-grid">
-          <div className="bdx-mini-chart-card">
-            <h5>Répartition du risque</h5>
-            <div className="bdx-mini-bars">
-              {riskRows.map(row => (
-                <div key={row.label} className="bdx-mini-bar-row">
-                  <div className="bdx-mini-bar-header">
-                    <span>{row.label}</span>
-                    <strong>{formatNumber(row.value)} ({Math.round(row.percent)}%)</strong>
-                  </div>
-                  <div className="bdx-mini-bar-track">
-                    <div className={`bdx-mini-bar-fill ${row.tone}`} style={{ width: `${row.percent}%` }}></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="bdx-mini-chart-card">
-            <h5>Anomalies détectées</h5>
-            <div className="bdx-mini-bars">
-              {anomalyRows.map(row => (
-                <div key={row.label} className="bdx-mini-bar-row">
-                  <div className="bdx-mini-bar-header">
-                    <span>{row.label}</span>
-                    <strong>{formatNumber(row.value)} ({Math.round(row.percent)}%)</strong>
-                  </div>
-                  <div className="bdx-mini-bar-track">
-                    <div className="bdx-mini-bar-fill neutral" style={{ width: `${row.percent}%` }}></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {actionRows.length > 0 && (
+          <div className="bdx-mini-charts-grid">
             <div className="bdx-mini-chart-card">
-              <h5>Actions recommandées</h5>
+              <h5>Répartition du risque</h5>
               <div className="bdx-mini-bars">
-                {actionRows.map(row => (
+                {riskRows.map(row => (
                   <div key={row.label} className="bdx-mini-bar-row">
                     <div className="bdx-mini-bar-header">
                       <span>{row.label}</span>
                       <strong>{formatNumber(row.value)} ({Math.round(row.percent)}%)</strong>
                     </div>
                     <div className="bdx-mini-bar-track">
-                      <div className="bdx-mini-bar-fill blue" style={{ width: `${row.percent}%` }}></div>
+                      <div className={`bdx-mini-bar-fill ${row.tone}`} style={{ width: `${row.percent}%` }}></div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-          )}
 
-          {segmentRows.length > 0 && (
             <div className="bdx-mini-chart-card">
-              <h5>Top Segments</h5>
+              <h5>Anomalies détectées</h5>
               <div className="bdx-mini-bars">
-                {segmentRows.map(row => (
+                {anomalyRows.map(row => (
                   <div key={row.label} className="bdx-mini-bar-row">
                     <div className="bdx-mini-bar-header">
                       <span>{row.label}</span>
                       <strong>{formatNumber(row.value)} ({Math.round(row.percent)}%)</strong>
                     </div>
                     <div className="bdx-mini-bar-track">
-                      <div className="bdx-mini-bar-fill cyan" style={{ width: `${row.percent}%` }}></div>
+                      <div className="bdx-mini-bar-fill neutral" style={{ width: `${row.percent}%` }}></div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
-          )}
-        </div>
+
+            {actionRows.length > 0 && (
+              <div className="bdx-mini-chart-card">
+                <h5>Actions recommandées</h5>
+                <div className="bdx-mini-bars">
+                  {actionRows.map(row => (
+                    <div key={row.label} className="bdx-mini-bar-row">
+                      <div className="bdx-mini-bar-header">
+                        <span>{row.label}</span>
+                        <strong>{formatNumber(row.value)} ({Math.round(row.percent)}%)</strong>
+                      </div>
+                      <div className="bdx-mini-bar-track">
+                        <div className="bdx-mini-bar-fill blue" style={{ width: `${row.percent}%` }}></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {segmentRows.length > 0 && (
+              <div className="bdx-mini-chart-card">
+                <h5>Top Segments</h5>
+                <div className="bdx-mini-bars">
+                  {segmentRows.map(row => (
+                    <div key={row.label} className="bdx-mini-bar-row">
+                      <div className="bdx-mini-bar-header">
+                        <span>{row.label}</span>
+                        <strong>{formatNumber(row.value)} ({Math.round(row.percent)}%)</strong>
+                      </div>
+                      <div className="bdx-mini-bar-track">
+                        <div className="bdx-mini-bar-fill cyan" style={{ width: `${row.percent}%` }}></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </section>
 
@@ -1267,30 +1181,30 @@ function GlobalReportPanel({ data, onPrint, onDownloadPdf, onClose }) {
           <h4>Recommandations opérationnelles</h4>
           <div className="global-report-recommendation-grid">
             {businessRecommendations.map((item, index) => (
-                <div className={`global-report-rec-card${item.legacy ? " legacy" : ""}`} key={`rec-card-${index}`}>
-                  <div className="global-report-rec-header">
-                    <span className="global-report-rec-number">{index + 1}</span>
-                    <h5>{item.title || "Recommandation"}</h5>
-                  </div>
-                  <div className="global-report-rec-body">
-                    {item.why && (
-                      <p className="global-report-rec-why">
-                        <strong>Pourquoi :</strong> {item.why}
-                      </p>
-                    )}
-                    {item.example && (
-                      <p className="global-report-rec-example">
-                        <strong>Exemple métier :</strong> {item.example}
-                      </p>
-                    )}
-                    {item.expected_impact && (
-                      <p className="global-report-rec-impact">
-                        <strong>Impact attendu :</strong> {item.expected_impact}
-                      </p>
-                    )}
-                  </div>
+              <div className={`global-report-rec-card${item.legacy ? " legacy" : ""}`} key={`rec-card-${index}`}>
+                <div className="global-report-rec-header">
+                  <span className="global-report-rec-number">{index + 1}</span>
+                  <h5>{item.title || "Recommandation"}</h5>
                 </div>
-              ))}
+                <div className="global-report-rec-body">
+                  {item.why && (
+                    <p className="global-report-rec-why">
+                      <strong>Pourquoi :</strong> {item.why}
+                    </p>
+                  )}
+                  {item.example && (
+                    <p className="global-report-rec-example">
+                      <strong>Exemple métier :</strong> {item.example}
+                    </p>
+                  )}
+                  {item.expected_impact && (
+                    <p className="global-report-rec-impact">
+                      <strong>Impact attendu :</strong> {item.expected_impact}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </section>
       )}
@@ -1319,12 +1233,79 @@ function AnomalyBadge({ value }) {
   return <span className={`bad-debts-badge anomaly-${value ? "yes" : "no"}`}>{value ? "Oui" : "Non"}</span>;
 }
 
-function ImportHistoryPage({ imports }) {
+function ImportHistoryPage({ imports, refreshDashboard }) {
   const rows = imports || [];
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState("");
+  const [uploadError, setUploadError] = useState("");
+  const latest = rows[0] || null;
+
+  async function submitImport(event) {
+    event.preventDefault();
+    if (!selectedFile || uploading) return;
+    setUploading(true);
+    setUploadMessage("");
+    setUploadError("");
+    try {
+      const response = await uploadBadDebtsRawImport(selectedFile);
+      if (response.data?.status === "SUCCES") {
+        const pipelineType = response.data?.pipeline_type;
+        if (pipelineType === "raw_sos") {
+          setUploadMessage("Fichier brut détecté : fusion, segmentation ML et import PostgreSQL exécutés.");
+        } else if (pipelineType === "segmented") {
+          setUploadMessage("Fichier segmenté détecté : contrôle qualité et import PostgreSQL exécutés.");
+        } else {
+          setUploadMessage("Import terminé avec succès. Les données Bad Debts ont été mises à jour.");
+        }
+        setSelectedFile(null);
+        event.target.reset();
+        await refreshDashboard?.();
+      } else {
+        setUploadError("Import échoué. Les données précédentes ont été conservées.");
+        await refreshDashboard?.();
+      }
+    } catch (err) {
+      setUploadError(getApiError(err, "Import échoué. Les données précédentes ont été conservées."));
+      await refreshDashboard?.();
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function statusTone(status) {
+    const normalized = String(status || "");
+    if (normalized === "SUCCES" || normalized === "success") return "low";
+    if (normalized === "EN_COURS") return "medium";
+    return "high";
+  }
+
   return (
     <div className="bdx-view">
+      <Panel title="Importer un fichier brut" meta="Nouveau cycle ML Bad Debts">
+        <form className="bdx-import-form" onSubmit={submitImport}>
+          <label className="bdx-file-picker">
+            <CloudUpload size={20} />
+            <span>{selectedFile ? selectedFile.name : "Choisir un fichier CSV ou XLSX"}</span>
+            <input type="file" accept=".csv,.xlsx,.xls" onChange={(event) => setSelectedFile(event.target.files?.[0] || null)} />
+          </label>
+          <button className="bdx-button primary" type="submit" disabled={!selectedFile || uploading}>
+            {uploading ? <Loader2 className="spin" size={18} /> : <CloudUpload size={18} />}
+            Importer un fichier brut
+          </button>
+        </form>
+        {uploadMessage && <div className="bdx-alert success"><CheckCircle2 size={18} />{uploadMessage}</div>}
+        {uploadError && <div className="bdx-alert"><AlertTriangle size={18} />{uploadError}</div>}
+        {latest && (
+          <div className="bdx-import-latest">
+            <strong>Dernier import</strong>
+            <span>{displayValue(latest.file_name)}</span>
+            <Badge tone={statusTone(latest.status)}>{importStatusLabel(latest.status)}</Badge>
+          </div>
+        )}
+      </Panel>
       <Panel title="Historique des imports" meta={`${rows.length} derniers imports`}>
-        <div className="bdx-table-wrap"><table className="bdx-table"><thead><tr><th>Date d'import</th><th>Fichier source</th><th>Nombre de clients</th><th>Statut</th><th>Message</th></tr></thead><tbody>{rows.length ? rows.map((item) => <tr key={item.id}><td>{formatDate(item.imported_at)}</td><td>{displayValue(item.file_name)}</td><td>{formatNumber(item.rows_imported)}</td><td><Badge tone={item.status === "success" ? "low" : "medium"}>{importStatusLabel(item.status)}</Badge></td><td>{item.error_message || "-"}</td></tr>) : <tr><td colSpan={5}><p className="bdx-empty">Aucun import disponible pour le moment.</p></td></tr>}</tbody></table></div>
+        <div className="bdx-table-wrap"><table className="bdx-table"><thead><tr><th>Date d'import</th><th>Date fin</th><th>Fichier source</th><th>Clients importés</th><th>Statut</th><th>Erreur</th></tr></thead><tbody>{rows.length ? rows.map((item) => <tr key={item.id}><td>{formatDate(item.imported_at)}</td><td>{formatDate(item.finished_at)}</td><td>{displayValue(item.file_name)}</td><td>{formatNumber(item.rows_imported)}</td><td><Badge tone={statusTone(item.status)}>{importStatusLabel(item.status)}</Badge></td><td>{item.error_message || "-"}</td></tr>) : <tr><td colSpan={6}><p className="bdx-empty">Aucun import disponible pour le moment.</p></td></tr>}</tbody></table></div>
       </Panel>
     </div>
   );

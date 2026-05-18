@@ -146,8 +146,8 @@ def main():
 
     errors = []
 
-    if df.shape[0] != 9748:
-        errors.append("Nombre de lignes différent de 9748.")
+    if df.shape[0] <= 0:
+        errors.append("Le fichier segmenté ne contient aucun client.")
 
     if df.shape[1] != 25:
         errors.append("Nombre de colonnes différent de 25.")

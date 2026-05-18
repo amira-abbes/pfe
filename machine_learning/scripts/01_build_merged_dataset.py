@@ -1,3 +1,4 @@
+import argparse
 import pandas as pd
 from pathlib import Path
 
@@ -60,6 +61,15 @@ def read_excel_safely(path: Path) -> pd.DataFrame:
     return df
 
 
+def read_sos_file(path: Path) -> pd.DataFrame:
+    suffix = path.suffix.lower()
+    if suffix in {".xlsx", ".xls"}:
+        return read_excel_safely(path)
+    if suffix == ".csv":
+        return read_csv_safely(path)
+    raise ValueError(f"Format SOS non supporté : {path.suffix}")
+
+
 def clean_msisdn(df: pd.DataFrame, dataset_name: str) -> pd.DataFrame:
     """
     Normalise la clé MSISDN pour garantir une jointure fiable.
@@ -85,14 +95,17 @@ def clean_msisdn(df: pd.DataFrame, dataset_name: str) -> pd.DataFrame:
     return df
 
 
-def main():
+def main(sos_file: Path | None = None, output_file: Path | None = None):
+    active_sos_file = sos_file or SOS_FILE
+    active_merged_file = output_file or MERGED_FILE
+
     print("=" * 90)
     print("Construction du dataset fusionné Machine Learning Bad Debts")
     print("=" * 90)
 
     print("\n1. Lecture des sources brutes")
     pop_df = read_csv_safely(POP_FILE)
-    sos_df = read_excel_safely(SOS_FILE)
+    sos_df = read_sos_file(active_sos_file)
 
     print("\n2. Dimensions initiales")
     print(f"Base population client : {pop_df.shape[0]} lignes x {pop_df.shape[1]} colonnes")
@@ -137,10 +150,12 @@ def main():
         print(missing_values)
 
     print("\n7. Sauvegarde du dataset final")
-    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
-    merged_df.to_csv(MERGED_FILE, index=False, encoding="utf-8-sig")
+    active_merged_file.parent.mkdir(parents=True, exist_ok=True)
+    temp_file = active_merged_file.with_name(f"{active_merged_file.stem}.tmp{active_merged_file.suffix}")
+    merged_df.to_csv(temp_file, index=False, encoding="utf-8-sig")
+    temp_file.replace(active_merged_file)
 
-    print(f"Fichier sauvegardé : {MERGED_FILE}")
+    print(f"Fichier sauvegardé : {active_merged_file}")
 
     print("\nColonnes du dataset final :")
     for col in merged_df.columns:
@@ -152,4 +167,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Construit merged_dataset_inner.csv pour le ML Bad Debts.")
+    parser.add_argument("--sos-file", type=Path, default=None, help="Fichier SOS Solde uploadé à utiliser.")
+    parser.add_argument("--output-file", type=Path, default=None, help="Chemin de sortie optionnel du dataset fusionné.")
+    args = parser.parse_args()
+    main(sos_file=args.sos_file, output_file=args.output_file)

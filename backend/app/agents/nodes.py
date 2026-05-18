@@ -224,7 +224,7 @@ def _normalize_message_contract(message: dict[str, Any]) -> dict[str, Any]:
         "title": message.get("title") or _contact_title_for_type(message.get("contact_type") or _contact_type_for_action(message.get("channel"))),
         "content": content,
         "message_text": content,
-        "internal_notice": "Proposition interne non envoyée automatiquement.",
+        "internal_notice": message.get("internal_notice") or _contact_notice(message.get("contact_type") or _contact_type_for_action(message.get("channel"))),
         "safe_to_send": bool(message.get("safe_to_send")),
         "generated_by": message.get("generated_by") or "deterministic_template",
         "llm_used": bool(message.get("llm_used")),
@@ -238,6 +238,8 @@ def _generate_local_contact_message(
 ) -> dict[str, Any]:
     action_type = str(decision.get("action_type") or decision.get("recommended_action") or "")
     if action_type != "sms_retention_offer":
+        return fallback_message
+    if not bool(client.get("is_anomaly")):
         return fallback_message
     if not settings or not bool(getattr(settings, "BAD_DEBTS_OLLAMA_ENABLED", False)):
         return fallback_message
@@ -267,35 +269,37 @@ def _call_contact_llm(prompt: str, model_name: str | None) -> dict[str, Any] | N
 
 
 def _contact_prompt(client: dict[str, Any], decision: dict[str, Any], fallback_message: dict[str, Any]) -> str:
-    action_type = str(decision.get("action_type") or decision.get("recommended_action") or "")
-    contact_type = fallback_message.get("contact_type")
-    title = fallback_message.get("title")
+    debt = _as_float(client.get("total_outstanding_amount"))
+    reimb = _as_float(client.get("avg_reimburse_ratio"))
+    reimb_percent = reimb * 100 if reimb is not None and reimb <= 1 else reimb
+    debt_text = _format_amount(debt) if debt is not None and debt > 0 else None
+    expected_shape = (
+        f"Bonjour, votre ligne fait l'objet d'un suivi de situation. Un solde à suivre de {debt_text} TND est identifié ; "
+        "nous vous invitons à vérifier votre situation ou à contacter le service client pour plus d'informations."
+        if debt_text
+        else "Bonjour, votre ligne fait l'objet d'un suivi de situation. Certains indicateurs nécessitent une vérification ; "
+        "nous vous invitons à vérifier votre situation ou à contacter le service client pour plus d'informations."
+    )
     context = {
-        "contact_type": contact_type,
-        "title": title,
-        "action": action_type,
-        "risk_effective": decision.get("effective_tier"),
-        "risk_raw": decision.get("raw_risk_tier"),
-        "priority": decision.get("priority_label") or decision.get("priority"),
-        "segment": client.get("cluster_name") or client.get("state"),
-        "is_anomaly": bool(client.get("is_anomaly")),
-        "debt": client.get("total_outstanding_amount"),
-        "reimbursement_ratio": client.get("avg_reimburse_ratio"),
-        "safe_to_send": bool(fallback_message.get("safe_to_send")),
+        "solde_autorise": debt_text,
+        "taux_remboursement_autorise": round(reimb_percent, 2) if reimb_percent is not None else None,
+        "segment_client": client.get("cluster_name") or client.get("state"),
+        "situation": "suivi de situation avec indicateurs à vérifier",
     }
-    if action_type == "call_center_priority":
-        instruction = "Rédige un script d'appel conseiller court. Ce n'est pas un SMS."
-    else:
-        instruction = "Rédige un SMS préventif court, neutre et sans offre commerciale."
     return (
-        f"{instruction} Réponds uniquement par un objet JSON avec la clé message_text. "
-        "N'invente aucun chiffre. Ne dis jamais qu'un message est envoyé ou qu'un appel a eu lieu. "
-        "Ne change pas l'action, le risque, la priorité ou le segment. "
-        "Interdits: plan d'apurement, offre de restructuration, remise, réduction, bonus, cadeau, "
-        "offre commerciale, sanction, menace, contentieux, poursuite, recouvrement agressif, fraude, blacklist, "
-        "Qwen, Ollama, API, JSON, backend, frontend, modèle IA, LLM, fallback. "
-        "Le texte doit rester une proposition interne non envoyée automatiquement. "
-        f"Contexte Python verrouillé:{json.dumps(context, ensure_ascii=False, default=str)}"
+        "Tu rédiges un seul SMS client court et neutre en français. "
+        "Réponds uniquement avec un objet contenant la clé message_text. "
+        "Copie presque ce modèle, en l'adaptant seulement au solde autorisé: "
+        f"\"{expected_shape}\" "
+        "N'écris pas les noms des clés du contexte. N'invente aucun chiffre ni historique. "
+        "Si solde_autorise vaut null, ne parle pas de solde à suivre. "
+        "Si taux_remboursement_autorise est supérieur ou égal à 95, ne parle pas de remboursement faible. "
+        "Ne mentionne pas anomalie, risque, score ML, défaut, urgence, menace ou recouvrement. "
+        "Ne dis jamais que le SMS a été envoyé. Ne promets aucune solution. "
+        "Interdits: anomalie détectée, risque de défaut, mauvais payeur, dette urgente, régler dans les brefs délais, "
+        "rester actif, suspension, sanction, menace, poursuite, contentieux, recouvrement, remise, réduction, bonus, "
+        "cadeau, offre commerciale, plan d'apurement, offre de restructuration, score ML, Qwen, IA, JSON, backend, API. "
+        f"Contexte:{json.dumps(context, ensure_ascii=False, default=str)}"
     )
 
 
@@ -305,31 +309,58 @@ def _build_contact_message(
     fallback_message: dict[str, Any],
     generated: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    content = str((generated or {}).get("message_text") or "").strip()
+    content = _clean_generated_sms(str((generated or {}).get("message_text") or "").strip(), client)
     if not content:
         return fallback_message
     action_type = str(decision.get("action_type") or decision.get("recommended_action") or "")
-    contact_type, title, safe_to_send = _contact_contract(action_type)
+    contact_type, title, safe_to_send = _contact_contract(action_type, bool(client.get("is_anomaly")))
     return {
         **fallback_message,
         "contact_type": contact_type,
         "title": title,
-        "channel": "sms" if contact_type == "preventive_sms" else "call" if contact_type == "call_script" else "monitoring",
+        "channel": "sms" if contact_type in {"preventive_sms", "preventive_sms_ai"} else "call" if contact_type == "call_script" else "monitoring",
         "message_text": content,
         "content": content,
         "language": "fr",
-        "internal_notice": "Proposition interne non envoyée automatiquement.",
+        "internal_notice": _contact_notice(contact_type),
         "safe_to_send": safe_to_send,
         "generated_by": "local_llm",
         "llm_used": True,
     }
 
 
-def _contact_contract(action_type: str) -> tuple[str, str, bool]:
+def _clean_generated_sms(text: str, client: dict[str, Any]) -> str:
+    cleaned = str(text or "").strip().strip('"').strip("'")
+    if not cleaned:
+        return ""
+    cleaned = re.sub(r"^message_text\s*[:=]\s*", "", cleaned, flags=re.IGNORECASE).strip()
+    cleaned = cleaned.replace("signal_atypique", "certains indicateurs")
+    cleaned = re.sub(r"\bsignal atypique\b", "certains indicateurs", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\batypique détecté\b", "nécessitent une vérification", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\batypique detecte\b", "nécessitent une vérification", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\bdétecté\b", "identifié", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\bdetecte\b", "identifié", cleaned, flags=re.IGNORECASE)
+    cleaned = cleaned.replace("_", " ")
+    debt = _as_float(client.get("total_outstanding_amount"))
+    if debt is not None and debt == 0:
+        cleaned = re.sub(r"[^.?!;]*\bsolde à suivre\b[^.?!;]*[.?!;]?", "", cleaned, flags=re.IGNORECASE).strip()
+        cleaned = re.sub(r"\s{2,}", " ", cleaned).strip()
+        if not cleaned or len(cleaned) < 25:
+            cleaned = (
+                "Bonjour, votre ligne fait l'objet d'un suivi de situation. "
+                "Certains indicateurs nécessitent une vérification ; nous vous invitons à vérifier votre situation "
+                "ou à contacter le service client pour plus d'informations."
+            )
+    return cleaned
+
+
+def _contact_contract(action_type: str, has_anomaly: bool = False) -> tuple[str, str, bool]:
     if action_type == "call_center_priority":
         return "call_script", "Script conseiller", False
     if action_type == "sms_retention_offer":
-        return "preventive_sms", "SMS préventif proposé", True
+        if has_anomaly:
+            return "preventive_sms_ai", "SMS personnalisé proposé", True
+        return "preventive_sms", "SMS personnalisé proposé", True
     return "monitoring_note", "Note de suivi", False
 
 
@@ -344,9 +375,15 @@ def _contact_type_for_action(channel: Any) -> str:
 def _contact_title_for_type(contact_type: Any) -> str:
     if contact_type == "call_script":
         return "Script conseiller"
-    if contact_type == "preventive_sms":
-        return "SMS préventif proposé"
+    if contact_type in {"preventive_sms", "preventive_sms_ai"}:
+        return "SMS personnalisé proposé"
     return "Note de suivi"
+
+
+def _contact_notice(contact_type: Any) -> str:
+    if contact_type in {"preventive_sms", "preventive_sms_ai"}:
+        return "Proposition interne à valider avant envoi."
+    return "Proposition interne non envoyée automatiquement."
 
 
 def _validate_contact_message(message: dict[str, Any], client: dict[str, Any], decision: dict[str, Any]) -> bool:
@@ -354,7 +391,7 @@ def _validate_contact_message(message: dict[str, Any], client: dict[str, Any], d
     if not text or len(text) > 420 or _contains_forbidden_contact_text(text):
         return False
     action_type = str(decision.get("action_type") or decision.get("recommended_action") or "")
-    expected_contact_type, expected_title, expected_safe = _contact_contract(action_type)
+    expected_contact_type, expected_title, expected_safe = _contact_contract(action_type, bool(client.get("is_anomaly")))
     if message.get("contact_type") != expected_contact_type or message.get("title") != expected_title:
         return False
     if bool(message.get("safe_to_send")) != expected_safe:
@@ -366,10 +403,10 @@ def _validate_contact_message(message: dict[str, Any], client: dict[str, Any], d
         return False
     if action_type == "monitor_only" and any(term in lowered for term in ("urgent", "critique", "prioritaire")):
         return False
-    if not bool(client.get("is_anomaly")) and "anomal" in lowered:
+    if "_" in text or "anomal" in lowered or "score ml" in lowered or "signal_atypique" in lowered or "atypique détecté" in lowered or "atypique detecte" in lowered:
         return False
     debt = _as_float(client.get("total_outstanding_amount"))
-    if debt is not None and debt == 0 and any(term in lowered for term in ("dette active", "encours actif", "impayé actif", "montant à recouvrer")):
+    if debt is not None and debt == 0 and any(term in lowered for term in ("dette active", "encours actif", "impayé actif", "montant à recouvrer", "solde à suivre")):
         return False
     reimb = _as_float(client.get("avg_reimburse_ratio"))
     reimb_percent = reimb * 100 if reimb is not None and reimb <= 1 else reimb
@@ -388,6 +425,14 @@ def _contains_forbidden_contact_text(text: str) -> bool:
         "plan d'apurement",
         "plan d’apurement",
         "offre de restructuration",
+        "anomalie détectée",
+        "risque de défaut",
+        "mauvais payeur",
+        "dette urgente",
+        "régler dans les brefs délais",
+        "regler dans les brefs delais",
+        "rester actif",
+        "suspension",
         "remise",
         "réduction",
         "reduction",
@@ -399,6 +444,11 @@ def _contains_forbidden_contact_text(text: str) -> bool:
         "contentieux",
         "poursuite",
         "recouvrement agressif",
+        "recouvrement",
+        "score ml",
+        "signal_atypique",
+        "atypique détecté",
+        "atypique detecte",
         "fraude",
         "blacklist",
         "qwen",
@@ -411,7 +461,7 @@ def _contains_forbidden_contact_text(text: str) -> bool:
         "llm",
         "fallback",
     )
-    return any(term in lowered for term in forbidden) or _contains_complete_msisdn(lowered)
+    return any(term in lowered for term in forbidden) or bool(re.search(r"\bia\b", lowered)) or _contains_complete_msisdn(lowered)
 
 
 def _numbers_allowed(text: str, client: dict[str, Any], decision: dict[str, Any]) -> bool:
@@ -513,12 +563,13 @@ def _normalize_ai_analysis(value: Any, fallback: dict[str, Any]) -> dict[str, An
 def _fallback_message(decision: dict[str, Any]) -> dict[str, Any]:
     action_type = decision.get("action_type")
     if not decision.get("safe_to_send"):
+        content = "Aucune action immédiate n’est recommandée. Conserver un suivi périodique lors des prochains imports."
         return {
             "contact_type": "monitoring_note",
             "title": "Note de suivi",
-            "channel": "internal_review",
-            "message_text": "Traitement interne recommande avant toute communication client.",
-            "content": "Traitement interne recommande avant toute communication client.",
+            "channel": "monitoring",
+            "message_text": content,
+            "content": content,
             "language": "fr",
             "internal_notice": "Proposition interne non envoyée automatiquement.",
             "safe_to_send": False,
@@ -526,12 +577,12 @@ def _fallback_message(decision: dict[str, Any]) -> dict[str, Any]:
             "llm_used": False,
         }
     if action_type == "call_center_priority":
-        content = "Appel prioritaire recommandé par le centre de relation client."
+        content = "Contacter le client via le centre de relation client afin de qualifier la situation, vérifier les informations disponibles et orienter le suivi selon les règles métier internes."
         return {"contact_type": "call_script", "title": "Script conseiller", "channel": "call", "message_text": content, "content": content, "language": "fr", "internal_notice": "Proposition interne non envoyée automatiquement.", "safe_to_send": False, "generated_by": "deterministic_template", "llm_used": False}
     if action_type == "sms_retention_offer":
-        content = "Bonjour, un rappel personnalisé est disponible avec un lien selfcare pour votre ligne."
-        return {"contact_type": "preventive_sms", "title": "SMS préventif proposé", "channel": "sms", "message_text": content, "content": content, "language": "fr", "internal_notice": "Proposition interne non envoyée automatiquement.", "safe_to_send": True, "generated_by": "deterministic_template", "llm_used": False}
-    content = "Suivi routine recommandé."
+        content = "Bonjour, un suivi de votre ligne est recommandé. Merci de vérifier votre situation ou de contacter le service client pour plus d’informations."
+        return {"contact_type": "preventive_sms", "title": "SMS personnalisé proposé", "channel": "sms", "message_text": content, "content": content, "language": "fr", "internal_notice": "Proposition interne à valider avant envoi.", "safe_to_send": True, "generated_by": "deterministic_template", "llm_used": False}
+    content = "Aucune action immédiate n’est recommandée. Conserver un suivi périodique lors des prochains imports."
     return {"contact_type": "monitoring_note", "title": "Note de suivi", "channel": "monitoring", "message_text": content, "content": content, "language": "fr", "internal_notice": "Proposition interne non envoyée automatiquement.", "safe_to_send": False, "generated_by": "deterministic_template", "llm_used": False}
 
 
@@ -651,7 +702,7 @@ def _business_factor_labels(value: Any) -> list[str]:
         "TOTAL_OUTSTANDING_AMOUNT": "Encours restant",
         "total_outstanding_amount": "Encours restant",
         "credit_intensity": "Fréquence d'utilisation SOS",
-        "full_repayer": "Historique de remboursement complet",
+        "full_repayer": "Remboursement intégral observé",
         "debt_to_credit": "Dette rapportée au crédit",
         "NB_SOS": "Nombre d'usages SOS",
     }
@@ -662,8 +713,9 @@ def _business_factor_labels(value: Any) -> list[str]:
             key = str(item.get("feature") or item.get("name") or "")
         else:
             key = str(item or "")
-        if key:
-            factors.append(labels.get(key, "Facteur explicatif"))
+        label = labels.get(key)
+        if label:
+            factors.append(label)
     return factors
 
 
@@ -720,6 +772,15 @@ def _as_float(value: Any) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _format_amount(value: Any) -> str:
+    numeric = _as_float(value)
+    if numeric is None:
+        return "0"
+    if numeric.is_integer():
+        return str(int(numeric))
+    return f"{numeric:.2f}".rstrip("0").rstrip(".")
 
 
 def _lower_text(value: Any) -> str:

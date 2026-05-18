@@ -9,7 +9,6 @@ if str(ROOT) not in sys.path:
 
 from app.agents.nodes import _validate_contact_message
 from app.services.bad_debts_agent_service import build_explanations, decide_next_action, generate_message
-from app.services.bad_debts_llm_report_service import fallback_client_report, validate_client_llm_report
 
 
 def _client(**overrides):
@@ -78,7 +77,7 @@ def main() -> int:
     _assert(high_message["contact_type"] == "call_script", "high proposition script conseiller")
     _assert(high_message["safe_to_send"] is False, "high safe_to_send false")
     _assert("sms" not in high_message["message_text"].lower(), "high pas de SMS direct")
-    _assert(high_message["message_text"] == "Qualifier la situation client via le centre de relation client avant toute action métier.", "high script interne court")
+    _assert("centre de relation client" in high_message["message_text"].lower(), "high script conseiller interne")
     _assert(_validate_contact_message(high_message, high, high_decision), "high message valide")
     bad_high = {**high_message, "message_text": "SMS envoyé avec menace de contentieux."}
     _assert(not _validate_contact_message(bad_high, high, high_decision), "high menace/SMS rejeté")
@@ -89,15 +88,31 @@ def main() -> int:
     _assert(medium_decision["recommended_action"] == "sms_retention_offer", "medium action SMS")
     _assert(medium_message["contact_type"] == "preventive_sms", "medium proposition SMS préventif")
     _assert(medium_message["safe_to_send"] is True, "medium safe_to_send true")
+    _assert(medium_message["llm_used"] is False, "medium sans anomalie sans IA")
     bad_medium = {**medium_message, "message_text": "Profitez d'une remise et d'une offre commerciale."}
     _assert(not _validate_contact_message(bad_medium, medium, medium_decision), "medium offre commerciale rejetée")
+
+    medium_anomaly = _client(cluster_name="Bon-payeur", risk_tier="low", is_anomaly=True, total_outstanding_amount=0, avg_reimburse_ratio=1)
+    medium_anomaly_decision = _decision(medium_anomaly)
+    medium_anomaly_template = generate_message(medium_anomaly, medium_anomaly_decision)
+    medium_anomaly_ai = {
+        **medium_anomaly_template,
+        "contact_type": "preventive_sms_ai",
+        "message_text": "Bonjour, votre ligne fait l’objet d’un suivi de situation et certains indicateurs sont à vérifier. Merci de vérifier votre situation ou de contacter le service client pour plus d’informations.",
+        "generated_by": "local_llm",
+        "llm_used": True,
+    }
+    _assert(medium_anomaly_decision["effective_tier"] == "medium", "anomalie low vers risque moyen")
+    _assert(_validate_contact_message(medium_anomaly_ai, medium_anomaly, medium_anomaly_decision), "medium anomaly SMS IA valide")
+    bad_anomaly_word = {**medium_anomaly_ai, "message_text": "Bonjour, une anomalie détectée nécessite une vérification."}
+    _assert(not _validate_contact_message(bad_anomaly_word, medium_anomaly, medium_anomaly_decision), "mot anomalie rejeté")
 
     low = _client(cluster_name="Bon-payeur", risk_tier="low", is_anomaly=False, total_outstanding_amount=0, avg_reimburse_ratio=1)
     low_decision = _decision(low)
     low_message = generate_message(low, low_decision)
     _assert(low_decision["recommended_action"] == "monitor_only", "low action suivi routine")
     _assert(low_message["contact_type"] == "monitoring_note", "low note de suivi")
-    _assert(low_message["message_text"] == "Suivi routine — aucune action immédiate.", "low suivi routine court")
+    _assert("suivi périodique" in low_message["message_text"].lower(), "low suivi routine court")
     _assert("urgent" not in low_message["message_text"].lower(), "low pas de dramatisation")
 
     no_debt = {**medium_message, "message_text": "Bonjour, un suivi neutre est proposé pour votre ligne sans dette active."}
@@ -107,16 +122,6 @@ def main() -> int:
     reimb_full = {**medium_message, "message_text": "Bonjour, remboursement faible détecté sur votre ligne."}
     _assert(not _validate_contact_message(reimb_full, low, low_decision), "remboursement 100 rejette remboursement faible")
 
-    report = fallback_client_report(_context(medium, medium_decision, medium_message))
-    _assert(validate_client_llm_report(report, _context(medium, medium_decision, medium_message)), "rapport client fallback valide")
-    _assert("kpis" not in report and "recommendation" not in report and "factors" not in report, "rapport client sans redondance drawer")
-    _assert(report.get("sms_proposal"), "rapport medium contient SMS proposé")
-    high_report = fallback_client_report(_context(high, high_decision, high_message))
-    low_report = fallback_client_report(_context(low, low_decision, low_message))
-    _assert(high_report.get("sms_proposal") is None, "rapport high sans SMS")
-    _assert(low_report.get("sms_proposal") is None, "rapport low sans SMS")
-    bad_report = {**report, "manager_summary": "fallback technique local_llm API JSON"}
-    _assert(not validate_client_llm_report(bad_report, _context(medium, medium_decision, medium_message)), "rapport rejette termes techniques")
     return 0
 
 

@@ -1,4 +1,4 @@
-﻿from datetime import datetime
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -87,6 +87,15 @@ class ImportRunItem(BaseModel):
     status: str
     error_message: str | None = None
     imported_at: datetime | None = None
+    finished_at: datetime | None = None
+
+
+class ImportUploadResponse(BaseModel):
+    import_id: int
+    status: str
+    rows_imported: int | None = None
+    error_message: str | None = None
+    pipeline_type: str | None = None
 
 
 class BadDebtsSummary(BaseModel):
@@ -117,25 +126,6 @@ class BadDebtsAgentResponse(BaseModel):
     ai_analysis: dict[str, Any] = Field(default_factory=dict)
     errors: list[str] = Field(default_factory=list)
     reused_existing_analysis: bool = False
-
-
-class BadDebtsClientLocalReport(BaseModel):
-    title: str
-    case_reading: str
-    signals_interpretation: str
-    operational_risk: str
-    verification_points: list[str] = Field(default_factory=list)
-    argued_recommendation: str
-    sms_proposal: str | None = None
-    manager_summary: str
-    confidence: str
-
-
-class BadDebtsClientReportResponse(BaseModel):
-    msisdn: str
-    report: BadDebtsClientLocalReport
-    report_source: str
-    decision_locked: bool = True
 
 
 class GlobalReportFilters(BaseModel):

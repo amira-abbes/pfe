@@ -200,37 +200,80 @@ def create_schema_and_tables(conn):
             rows_imported INTEGER DEFAULT 0,
             status VARCHAR(30) NOT NULL,
             error_message TEXT,
-            imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            imported_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            finished_at TIMESTAMP
         );
     """))
 
 
-def log_import_success(conn, file_name: str, rows_imported: int):
-    conn.execute(
+def table_has_column(conn, table_name: str, column_name: str) -> bool:
+    return conn.execute(
         text("""
-            INSERT INTO ml.ml_import_runs 
-            (file_name, rows_imported, status, error_message)
-            VALUES (:file_name, :rows_imported, 'success', NULL);
+            SELECT 1
+            FROM information_schema.columns
+            WHERE table_schema = 'ml'
+              AND table_name = :table_name
+              AND column_name = :column_name
         """),
-        {
-            "file_name": file_name,
-            "rows_imported": rows_imported,
-        }
-    )
+        {"table_name": table_name, "column_name": column_name},
+    ).first() is not None
+
+
+def existing_agent_tables(conn):
+    rows = conn.execute(
+        text("""
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = 'ml'
+              AND table_name IN ('agent_runs', 'agent_actions')
+        """)
+    ).scalars().all()
+    order = ["agent_actions", "agent_runs"]
+    return [name for name in order if name in set(rows)]
+
+
+def log_import_success(conn, file_name: str, rows_imported: int):
+    has_finished_at = table_has_column(conn, "ml_import_runs", "finished_at")
+    if has_finished_at:
+        conn.execute(
+            text("""
+                INSERT INTO ml.ml_import_runs
+                (file_name, rows_imported, status, error_message, finished_at)
+                VALUES (:file_name, :rows_imported, 'success', NULL, CURRENT_TIMESTAMP);
+            """),
+            {"file_name": file_name, "rows_imported": rows_imported},
+        )
+    else:
+        conn.execute(
+            text("""
+                INSERT INTO ml.ml_import_runs
+                (file_name, rows_imported, status, error_message)
+                VALUES (:file_name, :rows_imported, 'success', NULL);
+            """),
+            {"file_name": file_name, "rows_imported": rows_imported},
+        )
 
 
 def log_import_error(conn, file_name: str, error_message: str):
-    conn.execute(
-        text("""
-            INSERT INTO ml.ml_import_runs 
-            (file_name, rows_imported, status, error_message)
-            VALUES (:file_name, 0, 'failed', :error_message);
-        """),
-        {
-            "file_name": file_name,
-            "error_message": error_message[:1000],
-        }
-    )
+    has_finished_at = table_has_column(conn, "ml_import_runs", "finished_at")
+    if has_finished_at:
+        conn.execute(
+            text("""
+                INSERT INTO ml.ml_import_runs
+                (file_name, rows_imported, status, error_message, finished_at)
+                VALUES (:file_name, 0, 'failed', :error_message, CURRENT_TIMESTAMP);
+            """),
+            {"file_name": file_name, "error_message": error_message[:1000]},
+        )
+    else:
+        conn.execute(
+            text("""
+                INSERT INTO ml.ml_import_runs
+                (file_name, rows_imported, status, error_message)
+                VALUES (:file_name, 0, 'failed', :error_message);
+            """),
+            {"file_name": file_name, "error_message": error_message[:1000]},
+        )
 
 
 # ==========================================================
@@ -271,6 +314,11 @@ def import_clients_segmented():
 
             print("Vidage de la table ml.bad_debts_clients...")
             conn.execute(text("TRUNCATE TABLE ml.bad_debts_clients;"))
+
+            agent_tables = existing_agent_tables(conn)
+            if agent_tables:
+                print("Nettoyage des analyses client du cycle précédent...")
+                conn.execute(text(f"TRUNCATE TABLE {', '.join(f'ml.{name}' for name in agent_tables)} RESTART IDENTITY;"))
 
             print("Insertion des données dans PostgreSQL...")
             df.to_sql(

@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.agents.graph import run_agent_graph
@@ -8,19 +8,20 @@ from app.db.database import get_db
 from app.schemas.bad_debts import (
     BadDebtClientDetail,
     BadDebtClientsPage,
-    BadDebtsClientReportResponse,
     BadDebtsGlobalReportResponse,
     BadDebtsHealthResponse,
     BadDebtsSummary,
     BadDebtsAgentResponse,
     GlobalReportFilters,
     ImportRunItem,
+    ImportUploadResponse,
 )
 from app.services.bad_debts_agent_service import (
     AgentRunError,
     run_bad_debts_agent,
 )
-from app.services.bad_debts_llm_report_service import generate_client_llm_report, generate_global_llm_report
+from app.services.bad_debts_llm_report_service import generate_global_llm_report
+from app.services.bad_debts_import_service import BadDebtsImportService
 from app.services.bad_debts_service import BadDebtsService
 
 
@@ -29,6 +30,10 @@ router = APIRouter(prefix="/api/v1", tags=["Bad Debts ML"])
 
 def get_bad_debts_service(db: Session = Depends(get_db)) -> BadDebtsService:
     return BadDebtsService(db)
+
+
+def get_bad_debts_import_service(db: Session = Depends(get_db)) -> BadDebtsImportService:
+    return BadDebtsImportService(db)
 
 
 @router.get("/bad-debts/health", response_model=BadDebtsHealthResponse)
@@ -105,17 +110,6 @@ def run_bad_debt_agent(msisdn: str, db: Session = Depends(get_db)):
         return _bad_debts_agent_api_response(msisdn, response)
 
 
-@router.post("/bad-debts/clients/{msisdn}/report", response_model=BadDebtsClientReportResponse)
-def generate_bad_debt_client_report(msisdn: str, db: Session = Depends(get_db)):
-    response = generate_client_llm_report(db, msisdn)
-    if not response:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Client introuvable : {msisdn}",
-        )
-    return response
-
-
 @router.post("/bad-debts/reporting/global", response_model=BadDebtsGlobalReportResponse)
 def generate_global_bad_debts_report(
     filters: GlobalReportFilters,
@@ -124,13 +118,47 @@ def generate_global_bad_debts_report(
     return generate_global_llm_report(service, filters.model_dump(exclude_none=False))
 
 
+@router.post("/bad-debts/imports/upload", response_model=ImportUploadResponse)
+async def upload_bad_debts_import(
+    file: UploadFile = File(...),
+    service: BadDebtsImportService = Depends(get_bad_debts_import_service),
+):
+    return await service.run_uploaded_import(file)
+
+
+@router.get("/bad-debts/imports", response_model=list[ImportRunItem])
+def list_bad_debts_imports(
+    limit: int = Query(default=20, ge=1, le=100),
+    service: BadDebtsImportService = Depends(get_bad_debts_import_service),
+):
+    return service.list_import_runs(limit=limit)
+
+
+@router.get("/bad-debts/imports/latest", response_model=ImportRunItem | None)
+def latest_bad_debts_import(
+    service: BadDebtsImportService = Depends(get_bad_debts_import_service),
+):
+    return service.get_latest_import_run()
+
+
+@router.get("/bad-debts/imports/{import_id}", response_model=ImportRunItem)
+def get_bad_debts_import(
+    import_id: int,
+    service: BadDebtsImportService = Depends(get_bad_debts_import_service),
+):
+    item = service.get_import_run(import_id)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Import introuvable.")
+    return item
+
+
 def _bad_debts_agent_api_response(msisdn: str, result: dict[str, Any]) -> dict[str, Any]:
     decision = dict(result.get("decision") or {})
     action_id = result.get("action_id") or decision.get("stored_action_id")
     if action_id is not None:
         decision.setdefault("stored_action_id", action_id)
 
-    message = result.get("message") or _fallback_agent_message(decision)
+    message = _public_agent_message(result.get("message") or _fallback_agent_message(decision))
 
     return {
         "run_id": str(result.get("run_id") or ""),
@@ -192,6 +220,31 @@ def _fallback_agent_message(decision: dict[str, Any]) -> dict[str, Any]:
         "llm_duration_ms": 0,
         "llm_cache_hit": False,
         "decision_locked": True,
+    }
+
+
+def _public_agent_message(message: dict[str, Any]) -> dict[str, Any]:
+    contact_type = message.get("contact_type") or "monitoring_note"
+    title = message.get("title")
+    if contact_type == "call_script":
+        title = "Script conseiller"
+    elif contact_type in {"preventive_sms", "preventive_sms_ai"}:
+        title = "SMS personnalisé proposé"
+    else:
+        title = "Note de suivi"
+    notice = (
+        "Proposition interne à valider avant envoi."
+        if contact_type in {"preventive_sms", "preventive_sms_ai"}
+        else "Proposition interne non envoyée automatiquement."
+    )
+    return {
+        "contact_type": contact_type,
+        "title": title,
+        "message_text": message.get("message_text") or message.get("content") or "",
+        "internal_notice": notice,
+        "safe_to_send": bool(message.get("safe_to_send")),
+        "generated_by": message.get("generated_by") or "deterministic_template",
+        "llm_used": bool(message.get("llm_used")),
     }
 
 
