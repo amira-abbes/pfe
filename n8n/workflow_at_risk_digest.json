@@ -1,0 +1,117 @@
+{
+  "name": "At Risk Digest",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-at-risk",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.PFE_API_URL}}/api/v1/n8n/clients/at-risk?tier=high&page_size=20",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.N8N_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "http-at-risk",
+      "name": "GET High Risk Clients",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -460,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst items = data.items || [];\nconst rows = items.map((client) => `\n<tr>\n  <td>${client.msisdn ?? '-'}</td>\n  <td>${client.cluster_name ?? '-'}</td>\n  <td>${client.risk_label || client.risk_tier || '-'}</td>\n  <td>${client.final_risk_score ?? '-'}</td>\n  <td>${client.total_outstanding_amount ?? '-'}</td>\n</tr>`).join('');\nconst html = `\n<h2>Digest interne - Clients Bad Debts a risque eleve</h2>\n<p>Liste interne des clients a prioriser. Ce workflow n'envoie aucun SMS et ne contacte aucun client.</p>\n<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px;\">\n  <thead><tr><th>Client</th><th>Cluster</th><th>Risque</th><th>Score</th><th>Dette</th></tr></thead>\n  <tbody>${rows || '<tr><td colspan=\"5\">Aucun client retourne par l API.</td></tr>'}</tbody>\n</table>\n<p><a href=\"${$env.PFE_DASHBOARD_URL}/clients\">Ouvrir la liste des clients</a></p>\n<p style=\"color:#666;font-size:12px;\">Email interne genere par n8n a partir des APIs FastAPI.</p>`;\nreturn [{ json: { total: data.total, html_body: html, subject: 'Digest Bad Debts - clients a risque eleve' } }];"
+      },
+      "id": "build-at-risk-email",
+      "name": "Build HTML Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "n8n@example.com",
+        "toEmail": "={{$env.PFE_REPORT_EMAIL}}",
+        "subject": "={{$json.subject}}",
+        "emailFormat": "html",
+        "html": "={{$json.html_body}}",
+        "options": {}
+      },
+      "id": "send-at-risk-email",
+      "name": "Send Email - configure credential",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        60,
+        120
+      ],
+      "notes": "Placeholder: configure SMTP/Gmail credentials in n8n before activating this node."
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "GET High Risk Clients",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET High Risk Clients": {
+      "main": [
+        [
+          {
+            "node": "Build HTML Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build HTML Email": {
+      "main": [
+        [
+          {
+            "node": "Send Email - configure credential",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Africa/Tunis"
+  },
+  "pinData": {}
+}

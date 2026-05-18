@@ -1,0 +1,148 @@
+{
+  "name": "Daily Bad Debts Email",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-daily",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -760,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger-daily",
+      "name": "Schedule Trigger 08:30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -760,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.PFE_API_URL}}/api/v1/n8n/metrics/summary",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.N8N_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "http-summary",
+      "name": "GET Bad Debts Summary",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -500,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst byTier = data.by_tier || {};\nconst latestImport = data.latest_import_at || data.latest_import || null;\nconst score = data.avg_final_risk_score ?? data.average_score ?? null;\nconst dashboardUrl = $env.PFE_DASHBOARD_URL;\nconst html = `\n<h2>Rapport quotidien Bad Debts - SOS Solde & Data</h2>\n<p>Bonjour, voici la synthese quotidienne des creances a risque.</p>\n<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px;\">\n  <tr><td><strong>Total clients scores</strong></td><td>${data.total_clients_scored ?? '-'}</td></tr>\n  <tr><td><strong>Clients a risque</strong></td><td>${data.at_risk_count ?? '-'}</td></tr>\n  <tr><td><strong>Risque eleve</strong></td><td>${byTier.high ?? byTier.High ?? '-'}</td></tr>\n  <tr><td><strong>Anomalies</strong></td><td>${data.anomaly_count ?? '-'}</td></tr>\n  <tr><td><strong>Score moyen</strong></td><td>${score ?? '-'}</td></tr>\n  <tr><td><strong>Dernier import</strong></td><td>${latestImport ?? '-'}</td></tr>\n</table>\n<p><a href=\"${dashboardUrl}\">Ouvrir le dashboard Bad Debts</a></p>\n<p style=\"color:#666;font-size:12px;\">Email interne genere par n8n a partir des APIs FastAPI. LangGraph reste l'orchestrateur agentic.</p>`;\nreturn [{ json: { ...data, html_body: html, subject: 'Rapport quotidien Bad Debts - SOS Solde & Data' } }];"
+      },
+      "id": "build-summary-email",
+      "name": "Build HTML Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "n8n@example.com",
+        "toEmail": "={{$env.PFE_REPORT_EMAIL}}",
+        "subject": "={{$json.subject}}",
+        "emailFormat": "html",
+        "html": "={{$json.html_body}}",
+        "options": {}
+      },
+      "id": "send-summary-email",
+      "name": "Send Email - configure credential",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        20,
+        140
+      ],
+      "notes": "Placeholder: configure SMTP/Gmail credentials in n8n before activating this node."
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "GET Bad Debts Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger 08:30": {
+      "main": [
+        [
+          {
+            "node": "GET Bad Debts Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Bad Debts Summary": {
+      "main": [
+        [
+          {
+            "node": "Build HTML Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build HTML Email": {
+      "main": [
+        [
+          {
+            "node": "Send Email - configure credential",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Africa/Tunis"
+  },
+  "pinData": {}
+}

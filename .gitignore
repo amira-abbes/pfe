@@ -6,3 +6,5 @@ __pycache__/
 backend/venv/
 venv/
 .venv/
+
+n8n/stack.env

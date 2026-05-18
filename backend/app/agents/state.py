@@ -15,11 +15,15 @@ class AgentState(TypedDict, total=False):
     enable_llm: bool
     raw_client: Any
     persisted: bool
+    ml_signature: str
+    ml_signature_fields: dict[str, Any]
+    decision_policy_version: str
 
     profile: dict[str, Any]
     explanations: dict[str, Any]
     decision: dict[str, Any]
     message: dict[str, Any] | None
+    ai_analysis: dict[str, Any]
 
     action_id: int | None
     agent_run_id: int | None

@@ -38,10 +38,36 @@ class BadDebtClientItem(BaseModel):
     full_repayer: int | None = None
     is_dormant_like: int | None = None
     imported_at: datetime | None = None
+    recommended_action: str | None = None
+    recommended_action_label: str | None = None
+    priority: int | None = None
+    priority_label: str | None = None
+    next_best_action: str | None = None
+    raw_risk_tier: str | None = None
+    effective_tier: str | None = None
+    anomaly_escalated: bool | None = None
 
 
 class BadDebtClientDetail(BadDebtClientItem):
     actions: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class BadDebtFilterOption(BaseModel):
+    value: str
+    label: str
+    count: int
+
+
+class BadDebtFilterOptions(BaseModel):
+    recommended_actions: list[BadDebtFilterOption] = Field(default_factory=list)
+
+
+class BadDebtClientsSummary(BaseModel):
+    total_clients: int = 0
+    high_risk_count: int = 0
+    average_score: float | None = None
+    average_reimburse_ratio: float | None = None
+    priority_actions_count: int = 0
 
 
 class BadDebtClientsPage(BaseModel):
@@ -50,6 +76,8 @@ class BadDebtClientsPage(BaseModel):
     page: int
     page_size: int
     total_pages: int
+    filter_options: BadDebtFilterOptions = Field(default_factory=BadDebtFilterOptions)
+    summary: BadDebtClientsSummary = Field(default_factory=BadDebtClientsSummary)
 
 
 class ImportRunItem(BaseModel):
@@ -59,6 +87,15 @@ class ImportRunItem(BaseModel):
     status: str
     error_message: str | None = None
     imported_at: datetime | None = None
+    finished_at: datetime | None = None
+
+
+class ImportUploadResponse(BaseModel):
+    import_id: int
+    status: str
+    rows_imported: int | None = None
+    error_message: str | None = None
+    pipeline_type: str | None = None
 
 
 class BadDebtsSummary(BaseModel):
@@ -77,32 +114,6 @@ class BadDebtsSummary(BaseModel):
     latest_import: ImportRunItem | None = None
 
 
-class N8nSummary(BaseModel):
-    date: str
-    at_risk_count: int
-    messages_sent: int
-    anomaly_count: int
-    total_clients_scored: int
-    by_tier: dict[str, int]
-    by_cluster_name: dict[str, int]
-
-
-class N8nAtRiskClientItem(BaseModel):
-    msisdn: str
-    risk_tier: str | None = None
-    final_risk_score: float | None = None
-    risk_label: str | None = None
-    cluster_name: str | None = None
-    is_anomaly: bool | None = None
-
-
-class N8nAtRiskClientsPage(BaseModel):
-    items: list[N8nAtRiskClientItem]
-    total: int
-    page: int
-    page_size: int
-
-
 class BadDebtsAgentResponse(BaseModel):
     run_id: str
     action_id: int | None = None
@@ -112,53 +123,74 @@ class BadDebtsAgentResponse(BaseModel):
     explanations: dict[str, Any]
     decision: dict[str, Any]
     message: dict[str, Any]
+    ai_analysis: dict[str, Any] = Field(default_factory=dict)
     errors: list[str] = Field(default_factory=list)
+    reused_existing_analysis: bool = False
 
 
-class BadDebtsAgentBatchItem(BaseModel):
-    msisdn: str
-    status: str
-    client_label: str | None = None
-    processing_label: str | None = None
-    action_id: int | None = None
-    action_type: str | None = None
-    action_label: str | None = None
-    priority: int | None = None
-    priority_label: str | None = None
-    agent_run_id: int | None = None
-    business_comment: str | None = None
-    error: str | None = None
+class GlobalReportFilters(BaseModel):
+    risk_tier: str | None = None
+    cluster_name: str | None = None
+    is_anomaly: bool | None = None
+    recommended_action: str | None = None
+    search: str | None = None
 
 
-class BadDebtsAgentBatchResponse(BaseModel):
-    status: str
-    tier: str
-    limit: int
-    clients_analyzed: int
-    actions_created: int
-    actions_reused: int
-    errors_count: int
-    items: list[BadDebtsAgentBatchItem] = Field(default_factory=list)
-    report_id: int | None = None
-    report_summary: str | None = None
-    message: str | None = None
+class GlobalReportKpiItem(BaseModel):
+    label: str
+    value: str
+    comment: str = ""
 
 
-class BadDebtsAgentReportItem(BaseModel):
-    id: int
-    report_type: str
-    period_label: str | None = None
-    summary: str | None = None
-    recommendations: str | None = None
-    kpis_json: dict[str, Any] | None = None
-    generated_at: datetime | None = None
+class DecisionSupportItem(BaseModel):
+    priority: str
+    target: str
+    business_goal: str
+    recommended_focus: str
 
 
-class AgentActionItem(BaseModel):
-    id: int
-    msisdn: str
-    action_type: str
-    priority: int
-    recommendation: str | None = None
-    status: str
-    created_at: datetime | None = None
+class BusinessRecommendationItem(BaseModel):
+    title: str
+    why: str
+    example: str
+    expected_impact: str
+
+
+class GlobalReportContent(BaseModel):
+    report_title: str
+    executive_summary: str
+    risk_reading: str
+    key_kpis: list[GlobalReportKpiItem] = Field(default_factory=list)
+    business_rationale: list[str] = Field(default_factory=list)
+    decision_support: list[DecisionSupportItem] = Field(default_factory=list)
+    main_findings: list[str] = Field(default_factory=list)
+    business_recommendations: list[str | BusinessRecommendationItem] = Field(default_factory=list)
+    decision_limits: str = ""
+    internal_note: str = ""
+
+
+class GlobalReportKpis(BaseModel):
+    total_clients: int = 0
+    clients_high: int = 0
+    clients_medium: int = 0
+    clients_low: int = 0
+    clients_with_anomaly: int = 0
+    average_risk_score: float | None = None
+    average_debt: float | None = None
+    average_reimbursement_ratio: float | None = None
+    dominant_segment: str | None = None
+    dominant_recommended_action: str | None = None
+    distribution_by_segment: dict[str, int] = Field(default_factory=dict)
+    distribution_by_risk: dict[str, int] = Field(default_factory=dict)
+    distribution_by_action: dict[str, int] = Field(default_factory=dict)
+    filter_summary: str = ""
+
+
+class BadDebtsGlobalReportResponse(BaseModel):
+    scope: str
+    filters: dict[str, Any]
+    kpis: GlobalReportKpis
+    report: GlobalReportContent
+    report_source: str
+    decision_locked: bool = True
+    generated_at: str

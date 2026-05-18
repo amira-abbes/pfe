@@ -1,0 +1,117 @@
+{
+  "name": "Agentic Report Digest",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual-trigger-agentic-report",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$env.PFE_API_URL}}/api/v1/n8n/agent/reports?limit=1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.N8N_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "http-agentic-report",
+      "name": "GET Latest Agentic Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -460,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const reports = $input.first().json;\nconst report = Array.isArray(reports) ? reports[0] : reports;\nconst kpis = report?.kpis_json || {};\nconst kpiRows = Object.entries(kpis).map(([key, value]) => `<tr><td><strong>${key}</strong></td><td>${typeof value === 'object' ? JSON.stringify(value) : value}</td></tr>`).join('');\nconst html = report ? `\n<h2>Digest rapport agentic Bad Debts</h2>\n<p><strong>Resume :</strong></p>\n<p>${report.summary || '-'}</p>\n<p><strong>Recommandations :</strong></p>\n<p>${report.recommendations || '-'}</p>\n<table border=\"1\" cellpadding=\"6\" cellspacing=\"0\" style=\"border-collapse:collapse;font-family:Arial,sans-serif;font-size:13px;\">\n  <tbody>${kpiRows || '<tr><td colspan=\"2\">Aucun KPI disponible.</td></tr>'}</tbody>\n</table>\n<p><a href=\"${$env.PFE_DASHBOARD_URL}/reports\">Ouvrir les rapports agentic</a></p>\n<p style=\"color:#666;font-size:12px;\">Email interne genere par n8n. La decision reste produite par les regles metier, ML et LangGraph.</p>` : `\n<h2>Digest rapport agentic Bad Debts</h2>\n<p>Aucun rapport agentic disponible pour le moment.</p>\n<p><a href=\"${$env.PFE_DASHBOARD_URL}/reports\">Ouvrir les rapports agentic</a></p>`;\nreturn [{ json: { html_body: html, subject: 'Digest Bad Debts - dernier rapport agentic' } }];"
+      },
+      "id": "build-agentic-report-email",
+      "name": "Build HTML Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -200,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "fromEmail": "n8n@example.com",
+        "toEmail": "={{$env.PFE_REPORT_EMAIL}}",
+        "subject": "={{$json.subject}}",
+        "emailFormat": "html",
+        "html": "={{$json.html_body}}",
+        "options": {}
+      },
+      "id": "send-agentic-report-email",
+      "name": "Send Email - configure credential",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        60,
+        120
+      ],
+      "notes": "Placeholder: configure SMTP/Gmail credentials in n8n before activating this node."
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "GET Latest Agentic Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET Latest Agentic Report": {
+      "main": [
+        [
+          {
+            "node": "Build HTML Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build HTML Email": {
+      "main": [
+        [
+          {
+            "node": "Send Email - configure credential",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "timezone": "Africa/Tunis"
+  },
+  "pinData": {}
+}
