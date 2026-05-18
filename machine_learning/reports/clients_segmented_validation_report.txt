@@ -1,0 +1,38 @@
+==========================================================================================
+Validation du fichier clients_segmented.csv
+==========================================================================================
+Lignes  : 9748
+Colonnes: 25
+
+Colonnes obligatoires manquantes : aucune
+Doublons msisdn : 0
+
+Répartition risk_tier :
+risk_tier
+low       6318
+medium    2197
+high      1233
+Name: count, dtype: int64
+
+Répartition cluster_name :
+cluster_name
+Standard        6602
+Bon-payeur      2606
+SUSPENDED        497
+DISCONNECTED      28
+ON-HOLD           15
+Name: count, dtype: int64
+
+Anomalies :
+is_anomaly
+False    9471
+True      277
+Name: count, dtype: int64
+
+Score final :
+min    0.015
+mean   0.242
+max    0.988
+Name: final_risk_score, dtype: float64
+
+VALIDATION : fichier clients_segmented.csv conforme pour intégration agentic/backend.

@@ -48,6 +48,12 @@ class Settings(BaseSettings):
 
     ADMIN_WEBAUTHN_ACTION_EXPIRE_MINUTES: int = 5
 
+    ENABLE_LLM_AGENT: bool = False
+    OPENAI_API_KEY: str | None = None
+    OPENAI_MODEL: str = "gpt-4o-mini"
+    LLM_TIMEOUT_SECONDS: int = 12
+    LLM_MAX_TOKENS: int = 220
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",

@@ -13,13 +13,14 @@ import {
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-export default function Layout({ children, title, subtitle, noPadding = false, noScroll = false }) {
+export default function Layout({ children, title, subtitle, noPadding = false, noScroll = false, hideSidebar = false, className = "" }) {
   const { user, logout, hasRight } = useAuth();
   const location = useLocation();
   const currentPath = location.pathname;
 
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
   const isAdmin = user?.role === "ADMIN";
+  const isEltLayout = className.includes("app-shell--elt");
 
   // Navigation Items
   const navItems = [
@@ -86,31 +87,33 @@ export default function Layout({ children, title, subtitle, noPadding = false, n
   ];
 
   return (
-    <div className={`app-shell-bottom ${noScroll ? "no-scroll" : ""}`}>
+    <div className={`app-shell-bottom ${noScroll ? "no-scroll" : ""} ${className}`}>
       {/* ── Top Header ── */}
-      <header className="top-header">
-        <div className="top-header-brand">
-          <img src="/tt-logo.png" alt="Tunisie Telecom" />
-          <div className="top-header-text">
-            <span className="top-header-title">Tunisie Telecom</span>
-            <span className="top-header-sub">Plateforme Interne</span>
+      {!isEltLayout && (
+        <header className="top-header">
+          <div className="top-header-brand">
+            <img src="/tt-logo.png" alt="Tunisie Telecom" />
+            <div className="top-header-text">
+              <span className="top-header-title">Tunisie Telecom</span>
+              <span className="top-header-sub">Plateforme Interne</span>
+            </div>
           </div>
-        </div>
 
-        <div className="top-header-right">
-          <div className="user-chip">
-            <span>{user?.nom_complet || "Utilisateur"}</span>
-            <span className="user-chip-role">{user?.role === "SUPER_ADMIN" ? "S.Admin" : user?.role}</span>
+          <div className="top-header-right">
+            <div className="user-chip">
+              <span>{user?.nom_complet || "Utilisateur"}</span>
+              <span className="user-chip-role">{user?.role === "SUPER_ADMIN" ? "S.Admin" : user?.role}</span>
+            </div>
+            <button className="logout-chip" onClick={logout} title="Déconnexion">
+              <LogOut size={18} />
+            </button>
           </div>
-          <button className="logout-chip" onClick={logout} title="Déconnexion">
-            <LogOut size={18} />
-          </button>
-        </div>
-      </header>
+        </header>
+      )}
 
       {/* ── Main Content ── */}
       <main className={`bottom-main-content ${noPadding ? "p-0" : ""} ${noScroll ? "no-scroll" : ""}`}>
-        {title && !noPadding && (
+        {title && !noPadding && !isEltLayout && (
           <div style={{ marginBottom: "24px" }}>
             <h1 style={{ margin: 0, fontSize: "24px", color: "#0f172a", fontWeight: 800 }}>{title}</h1>
             {subtitle && <p style={{ margin: "4px 0 0", color: "#64748b", fontSize: "14px" }}>{subtitle}</p>}

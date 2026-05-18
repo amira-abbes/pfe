@@ -28,9 +28,11 @@ from app.core.constants import (
     SESSION_ACTIVE,
     SESSION_REVOKED,
     STATUT_ACTIVE,
+    STATUT_BLOQUE_TENTATIVES,
     STATUT_DISABLED,
     STATUT_MFA_SETUP_REQUIRED,
     STATUT_PENDING_ACTIVATION,
+    STATUT_SUPPRIME,
     TOKEN_PASSWORD_RESET_FROM_LOCKOUT,
 )
 from app.core.security import (
@@ -112,26 +114,12 @@ class AuthService:
             return secure_link_error
 
         if user.date_suppression is not None or not user.est_actif:
-            disabled_message = (
-                "Compte administrateur désactivé. Veuillez contacter le super administrateur."
-                if role == ROLE_ADMIN
-                else "Compte désactivé. Veuillez contacter l’administrateur de votre département."
-            )
-            return self._json_error(
-                "ACCOUNT_DISABLED",
-                disabled_message,
-                status="account_disabled",
-                reason="account_disabled",
-                role=role,
-                email=user.email,
-                can_request_reactivation=role in {ROLE_USER, ROLE_ADMIN},
-                redirect_to="/account-disabled",
-            )
+            return self._inactive_account_error(user, role)
 
-        if user.statut_compte == STATUT_PENDING_ACTIVATION:
+        if self._account_status(user) == STATUT_PENDING_ACTIVATION:
             return self._json_error(
                 "ACCOUNT_PENDING_ACTIVATION",
-                "Votre compte n’est pas encore activé. Veuillez vérifier votre boîte mail.",
+                "Votre compte est en attente de première connexion.",
                 redirect_to="/login",
             )
 
@@ -142,23 +130,9 @@ class AuthService:
                 redirect_to="/activation/totp",
             )
 
-        if user.statut_compte != STATUT_ACTIVE:
-            if user.statut_compte == STATUT_DISABLED:
-                disabled_message = (
-                    "Compte administrateur désactivé. Veuillez contacter le super administrateur."
-                    if role == ROLE_ADMIN
-                    else "Compte désactivé. Veuillez contacter l’administrateur de votre département."
-                )
-                return self._json_error(
-                    "ACCOUNT_DISABLED",
-                    disabled_message,
-                    status="account_disabled",
-                    reason="account_disabled",
-                    role=role,
-                    email=user.email,
-                    can_request_reactivation=role in {ROLE_USER, ROLE_ADMIN},
-                    redirect_to="/account-disabled",
-                )
+        if self._account_status(user) != STATUT_ACTIVE:
+            if self._account_status(user) in {STATUT_DISABLED, STATUT_BLOQUE_TENTATIVES, STATUT_SUPPRIME}:
+                return self._inactive_account_error(user, role)
             return self._json_error(
                 "ACCOUNT_NOT_ACTIVE",
                 "Compte indisponible.",
@@ -551,19 +525,7 @@ class AuthService:
             return secure_link_error
 
         if not user.est_actif or user.date_suppression is not None:
-            disabled_message = (
-                "Compte administrateur désactivé. Veuillez contacter le super administrateur."
-                if role == ROLE_ADMIN
-                else "Compte désactivé. Veuillez contacter l’administrateur de votre département."
-            )
-            return self._json_error(
-                "ACCOUNT_DISABLED",
-                disabled_message,
-                status="account_disabled",
-                reason="account_disabled",
-                role=role,
-                redirect_to="/login",
-            )
+            return self._inactive_account_error(user, role, redirect_to="/account-disabled")
 
         after_mfa_blocked = int(user.nombre_echecs_totp or 0) >= 4 or self._is_locked(user.blocage_totp_jusqu_a)
         if self._is_locked(user.recovery_code_cooldown_until):
@@ -1756,6 +1718,9 @@ class AuthService:
                 redirect_to="/auth/totp",
             )
         elif new_count >= 4:
+            user.est_actif = False
+            user.statut_compte = STATUT_BLOQUE_TENTATIVES
+            user.date_desactivation = now
             user.blocage_totp_jusqu_a = now + timedelta(minutes=15)
             user.recovery_code_failed_attempts = 0
             user.recovery_code_last_failure_at = None
@@ -1795,6 +1760,7 @@ class AuthService:
                 niveau_risque=("ELEVE" if mail_sent else "CRITIQUE"),
                 details={"attempt": new_count, "type": type_tentative},
             )
+            self._revoke_user_sessions_on_security_lock(user)
             response = self._json_error(
                 "MFA_TEMPORARILY_LOCKED",
                 "Vérification MFA bloquée. Veuillez vérifier votre boîte mail.",
@@ -1861,6 +1827,9 @@ class AuthService:
 
         if immediate_relock:
             new_count = max(current, 5)
+            user.est_actif = False
+            user.statut_compte = STATUT_BLOQUE_TENTATIVES
+            user.date_desactivation = now
             user.nombre_echecs_password = new_count
             user.blocage_password_jusqu_a = now + timedelta(minutes=15)
             user.password_lockout_requires_mail_action = True
@@ -1918,6 +1887,9 @@ class AuthService:
                     self.db.rollback()
                     mail_sent = False
                     user = self._get_user_by_email(email)
+                    user.est_actif = False
+                    user.statut_compte = STATUT_BLOQUE_TENTATIVES
+                    user.date_desactivation = now
                     user.nombre_echecs_password = new_count
                     user.blocage_password_jusqu_a = now + timedelta(minutes=15)
                     user.password_lockout_requires_mail_action = True
@@ -2003,6 +1975,9 @@ class AuthService:
         )
 
         if lock_minutes > 0:
+            user.est_actif = False
+            user.statut_compte = STATUT_BLOQUE_TENTATIVES
+            user.date_desactivation = now
             user.password_lockout_requires_mail_action = True
             user.password_lockout_resolved_at = None
             user.password_lockout_mail_sent_at = now
@@ -2021,6 +1996,9 @@ class AuthService:
                 self.db.rollback()
                 mail_sent = False
                 user = self._get_user_by_email(email)
+                user.est_actif = False
+                user.statut_compte = STATUT_BLOQUE_TENTATIVES
+                user.date_desactivation = now
                 user.nombre_echecs_password = new_count
                 user.blocage_password_jusqu_a = now + timedelta(minutes=15)
                 user.password_lockout_requires_mail_action = True
@@ -2564,7 +2542,7 @@ class AuthService:
         now,
     ) -> None:
         user.est_actif = False
-        user.statut_compte = STATUT_DISABLED
+        user.statut_compte = STATUT_BLOQUE_TENTATIVES
         user.date_desactivation = now
         user.date_modification = now
         user.recovery_code_cooldown_until = None
@@ -2728,7 +2706,7 @@ class AuthService:
         target.recovery_secure_link_required = False
         target.recovery_secure_link_expires_at = None
         target.date_modification = now
-        target.statut_compte = STATUT_ACTIVE if self._get_active_totp(target.id) else STATUT_MFA_SETUP_REQUIRED
+        target.statut_compte = STATUT_ACTIVE
         self.db.add(target)
 
     def _send_reactivation_success_email(
@@ -2940,6 +2918,12 @@ class AuthService:
             }
 
         target_role = self._user_role(target)
+        if action == "reactivate" and self._account_status(target) not in {STATUT_DISABLED, STATUT_BLOQUE_TENTATIVES}:
+            return {
+                "success": False,
+                "status": "not_reactivable",
+                "message": "Ce compte ne peut pas être réactivé par cette action.",
+            }
         try:
             if action == "disable":
                 self._disable_target_from_supervisor_action(
@@ -3040,8 +3024,9 @@ class AuthService:
             return {"success": False, "status": "invalid", "message": "Compte introuvable."}
 
         role = self._user_role(user)
-        if user.est_actif and user.statut_compte != STATUT_DISABLED:
-            return {"success": False, "status": "not_disabled", "message": "Ce compte n’est pas désactivé."}
+        account_status = self._account_status(user)
+        if account_status not in {STATUT_DISABLED, STATUT_BLOQUE_TENTATIVES}:
+            return {"success": False, "status": "not_reactivable", "message": "Ce compte ne peut pas être réactivé par cette action."}
         if role == ROLE_SUPER_ADMIN:
             return {
                 "success": False,
@@ -3923,6 +3908,47 @@ class AuthService:
         if role in {ROLE_ADMIN, ROLE_SUPER_ADMIN}:
             return role
         return ROLE_USER
+
+    def _account_status(self, user: Utilisateur) -> str:
+        if user.date_suppression is not None:
+            return STATUT_SUPPRIME
+        raw = str(user.statut_compte or "").upper()
+        if raw in {"ACTIVE", STATUT_ACTIVE} and user.est_actif:
+            return STATUT_ACTIVE
+        if raw in {"PENDING_ACTIVATION", "MFA_SETUP_REQUIRED", STATUT_PENDING_ACTIVATION}:
+            return STATUT_PENDING_ACTIVATION
+        if raw in {"DISABLED", STATUT_DISABLED}:
+            return STATUT_DISABLED
+        if raw == STATUT_BLOQUE_TENTATIVES:
+            return STATUT_BLOQUE_TENTATIVES
+        return raw or STATUT_DISABLED
+
+    def _inactive_account_error(self, user: Utilisateur, role: str, redirect_to: str = "/account-disabled"):
+        account_status = self._account_status(user)
+        messages = {
+            STATUT_DISABLED: "Votre compte a été désactivé. Contactez un administrateur.",
+            STATUT_BLOQUE_TENTATIVES: "Votre compte est bloqué après plusieurs tentatives de connexion. Contactez un administrateur.",
+            STATUT_PENDING_ACTIVATION: "Votre compte est en attente de première connexion.",
+            STATUT_SUPPRIME: "Ce compte n’est plus disponible.",
+        }
+        reason_by_status = {
+            STATUT_DISABLED: "account_disabled",
+            STATUT_BLOQUE_TENTATIVES: "account_blocked",
+            STATUT_PENDING_ACTIVATION: "account_pending_first_login",
+            STATUT_SUPPRIME: "account_deleted",
+        }
+        return self._json_error(
+            "ACCOUNT_UNAVAILABLE",
+            messages.get(account_status, "Compte indisponible."),
+            status=reason_by_status.get(account_status, "account_unavailable"),
+            reason=reason_by_status.get(account_status, "account_unavailable"),
+            role=role,
+            email=user.email,
+            statut_compte=account_status,
+            can_request_reactivation=account_status in {STATUT_DISABLED, STATUT_BLOQUE_TENTATIVES}
+            and role in {ROLE_USER, ROLE_ADMIN},
+            redirect_to=redirect_to,
+        )
 
     def _dashboard_path(self, role: str) -> str:
         role = str(role or ROLE_USER).upper()

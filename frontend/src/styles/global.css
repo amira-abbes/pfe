@@ -11,8 +11,29 @@
   --bg: #f4f7fb;
   --card: #ffffff;
   --shadow: 0 22px 55px rgba(18, 38, 91, 0.14);
+  --tt-blue-dark: #203a7a;
+  --tt-blue: #2f6bff;
+  --tt-cyan: #37b8ff;
+  --tt-turquoise: #35c7c0;
+  --tt-green: #5ac85a;
+  --tt-lime: #a7d94b;
+  --tt-yellow: #f3d34a;
+  --tt-orange: #ff9f43;
+  --tt-coral: #ff6f61;
+  --tt-red: #f24d4d;
+  --tt-pink: #ef4aa8;
+  --tt-magenta: #d93bb8;
+  --tt-violet: #7b4dff;
+  --tt-surface: rgba(255, 255, 255, 0.78);
+  --tt-surface-strong: rgba(255, 255, 255, 0.9);
+  --tt-border-soft: rgba(120, 160, 220, 0.22);
+  --tt-shadow: 0 16px 40px rgba(31, 62, 120, 0.12);
+  --tt-shadow-soft: 0 10px 24px rgba(31, 62, 120, 0.08);
+  --tt-text-main: #1d2f5f;
+  --tt-text-soft: #5d6f96;
   font-family: 'Outfit', Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
+
 
 * {
   box-sizing: border-box;
@@ -1565,6 +1586,11 @@ select {
   color: #b42318;
 }
 
+.badge-gray {
+  background: #f2f4f7;
+  color: #475467;
+}
+
 .actions {
   display: flex;
   gap: 8px;
@@ -1621,6 +1647,273 @@ select {
   .bottom-main-content {
     padding: 20px 16px 110px;
   }
+}
+
+.data-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.data-grid div {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  background: #f9fafb;
+  display: grid;
+  gap: 5px;
+}
+
+.data-grid strong {
+  color: #344054;
+  font-size: 13px;
+}
+
+.data-grid span {
+  color: var(--primary-dark);
+  font-weight: 800;
+}
+
+.dashboard-shell {
+  min-height: 100vh;
+  background: #f6f8fb;
+}
+
+.dashboard-navbar {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--line);
+  position: relative;
+  z-index: 20;
+}
+
+.dashboard-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: max-content;
+  color: var(--primary-dark);
+  font-weight: 900;
+}
+
+.dashboard-brand img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
+.dashboard-menu-button {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--primary-dark);
+  border-radius: 10px;
+  width: 38px;
+  height: 38px;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.dashboard-nav {
+  display: none;
+  position: absolute;
+  top: 56px;
+  left: 16px;
+  width: min(360px, calc(100vw - 32px));
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 18px 44px rgba(18, 38, 91, 0.14);
+  padding: 8px;
+}
+
+.dashboard-nav.is-open {
+  display: grid;
+  gap: 4px;
+}
+
+.dashboard-nav a {
+  text-decoration: none;
+  color: #344054;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 11px;
+  border-radius: 8px;
+  font-weight: 800;
+}
+
+.dashboard-nav a.active,
+.dashboard-nav a:hover {
+  background: #eef4ff;
+  color: var(--primary-dark);
+}
+
+.dashboard-user {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #344054;
+  font-weight: 800;
+  min-width: 0;
+}
+
+.dashboard-user span {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-user button {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--primary-dark);
+  border-radius: 10px;
+  width: 38px;
+  height: 38px;
+  display: inline-grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.dashboard-main {
+  width: 100%;
+}
+
+.powerbi-page {
+  width: 100%;
+  height: calc(100vh - 56px);
+  padding: 6px;
+  overflow: hidden;
+  background: #f6f8fb;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.powerbi-page iframe {
+  display: block;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  border: 0;
+  background: #fff;
+}
+
+.powerbi-view-toolbar {
+  min-height: 42px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.powerbi-view-toolbar span,
+.powerbi-minimal-toolbar span {
+  color: #475467;
+  font-size: 13px;
+  font-weight: 800;
+  margin-right: auto;
+}
+
+.powerbi-toast {
+  position: fixed;
+  top: 76px;
+  right: 18px;
+  z-index: 60;
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid #b2ddff;
+  background: #eff8ff;
+  color: #175cd3;
+  box-shadow: 0 14px 34px rgba(18, 38, 91, 0.14);
+  font-weight: 850;
+}
+
+.powerbi-error,
+.dashboard-placeholder {
+  width: min(720px, calc(100% - 32px));
+  margin: 24px auto;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 12px 34px rgba(18, 38, 91, 0.08);
+}
+
+.powerbi-error {
+  color: #912018;
+  background: #fff1f0;
+  border-color: #fecdca;
+  font-weight: 800;
+}
+
+.powerbi-minimal-page {
+  height: calc(100vh - 56px);
+  padding: 14px;
+  background: #f6f8fb;
+}
+
+.powerbi-minimal-toolbar {
+  min-height: 42px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.powerbi-minimal-toolbar .btn {
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+.powerbi-minimal-frame {
+  width: 100%;
+  height: calc(100vh - 122px);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(18, 38, 91, 0.08);
+}
+
+.powerbi-minimal-frame:fullscreen {
+  height: 100vh;
+  border: 0;
+  border-radius: 0;
+}
+
+.powerbi-minimal-frame iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+
+.powerbi-minimal-empty {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-weight: 800;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+
+  }
 
   .top-header {
     padding: 10px 14px;
@@ -1660,6 +1953,26 @@ select {
     width: 50px;
     height: 50px;
     margin-top: -22px;
+  }
+
+  .powerbi-minimal-toolbar {
+    min-height: 40px;
+  }
+
+  .powerbi-view-toolbar,
+  .powerbi-minimal-toolbar {
+    justify-content: stretch;
+  }
+
+  .powerbi-view-toolbar .btn,
+  .powerbi-minimal-toolbar .btn {
+    width: 100%;
+  }
+
+  .powerbi-view-toolbar span,
+  .powerbi-minimal-toolbar span {
+    width: 100%;
+
   }
 
   .grid-2,
@@ -1751,41 +2064,7 @@ select {
   font-weight: 800;
 }
 
-.blocked-box {
-  margin-top: 24px;
-  padding: 26px 22px;
-  border-radius: 22px;
-  background: linear-gradient(180deg, #fff1f0 0%, #ffe4e2 100%);
-  border: 1px solid #fecdca;
-  color: #912018;
-  text-align: center;
-  box-shadow: 0 18px 35px rgba(217, 45, 32, 0.12);
-}
 
-.blocked-icon {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background: #d92d20;
-  color: white;
-  display: grid;
-  place-items: center;
-  margin: 0 auto 16px;
-}
-
-.blocked-box h2 {
-  margin: 0 0 12px;
-  color: #912018;
-  font-size: 22px;
-  line-height: 1.25;
-}
-
-.blocked-box p {
-  margin: 0;
-  color: #912018;
-  font-weight: 700;
-  line-height: 1.6;
-}
 
 .success-security-box {
   margin-top: 24px;
@@ -1826,34 +2105,39 @@ select {
   overflow: hidden !important;
 }
 
-.success-security-box {
-  margin-top: 24px;
-  padding: 26px 22px;
-  border-radius: 22px;
-  background: linear-gradient(180deg, #ecfdf3 0%, #d1fadf 100%);
-  border: 1px solid #abefc6;
-  color: #027a48;
+.empty-cell {
   text-align: center;
-  box-shadow: 0 18px 35px rgba(18, 183, 106, 0.12);
+  color: #667085 !important;
+  font-weight: 800 !important;
+  padding: 28px !important;
 }
 
-.success-security-box svg {
-  color: #039855;
-  margin-bottom: 12px;
+.spin {
+  animation: appSpin 0.9s linear infinite;
 }
 
-.success-security-box h2 {
-  margin: 0 0 12px;
-  color: #027a48;
-  font-size: 22px;
-  line-height: 1.25;
+@keyframes appSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-margin: 0;
-color: #027a48;
-font-weight: 700;
-line-height: 1.6;
+.compact-status {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.app-shell--no-sidebar {
+  grid-template-columns: 1fr;
+}
+
 
 /* ============================================
    LANDING PAGE (Accueil) SECTIONS
@@ -3319,3 +3603,4 @@ body {
   background: #fee2e2;
   color: #991b1b;
 }
+

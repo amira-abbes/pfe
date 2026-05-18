@@ -1,6 +1,6 @@
 import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
 import { useAuth } from "../context/AuthContext";
@@ -8,6 +8,8 @@ import AuthTriangles from "../components/AuthTriangles";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { completeLogin } = useAuth();
   const passwordInputRef = useRef(null);
 
@@ -16,6 +18,14 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
+
+  const loginReason = location.state?.reason || searchParams.get("reason");
+  const infoMessage =
+    loginReason === "session_expired"
+      ? "Votre session a expiré après 30 minutes d’inactivité. Veuillez vous reconnecter."
+      : loginReason === "auth_required"
+        ? "Veuillez vous reconnecter."
+        : "";
 
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -70,6 +80,26 @@ export default function LoginPage() {
 
         if (data.status === "invalid_credentials") {
           setError(data.message || "Identifiants incorrects.");
+          return;
+        }
+
+        if (
+          [
+            "account_disabled",
+            "account_blocked",
+            "account_pending_first_login",
+            "account_deleted",
+          ].includes(data.status)
+        ) {
+          navigate(data.redirect_to || "/account-disabled", {
+            state: {
+              email: data.email || form.email,
+              role: data.role || "USER",
+              message: data.message,
+              reason: data.status,
+              can_request_reactivation: data.can_request_reactivation,
+            },
+          });
           return;
         }
 
@@ -145,6 +175,7 @@ export default function LoginPage() {
         <h1>Se connecter</h1>
         <div className="rainbow-line" />
 
+        {infoMessage && <div className="auth-info-banner" style={{ background: "rgba(37, 99, 235, 0.15)", border: "1px solid rgba(37, 99, 235, 0.4)", color: "#93c5fd", padding: "10px 14px", borderRadius: "12px", marginBottom: "18px", fontSize: "13px", fontWeight: 600 }}>{infoMessage}</div>}
         {error && <div className="auth-error-banner">{error}</div>}
 
         <form className="form" onSubmit={handleSubmit}>
@@ -222,4 +253,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
 

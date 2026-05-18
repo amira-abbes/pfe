@@ -199,7 +199,7 @@ export default function App() {
       />
 
       <Route
-        path="/dashboard/bad-debts"
+        path="/dashboard/bad-debts/*"
         element={
           <ProtectedRoute requiredRight="dashboard_bad_debts">
             <DashboardBadDebtsPage />

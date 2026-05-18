@@ -13,6 +13,10 @@ from app.core.constants import (
     ROLE_SUPER_ADMIN,
     SESSION_ACTIVE,
     SESSION_EXPIRED,
+    STATUT_BLOQUE_TENTATIVES,
+    STATUT_DISABLED,
+    STATUT_PENDING_ACTIVATION,
+    STATUT_SUPPRIME,
 )
 from app.core.security import (
     decode_access_token,
@@ -65,6 +69,9 @@ def get_current_user(
     )
 
     if not session:
+        inactive_user = db.query(Utilisateur).filter(Utilisateur.id == user_id).first()
+        if inactive_user and (not inactive_user.est_actif or inactive_user.date_suppression is not None):
+            raise _inactive_account_exception(inactive_user)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Session expirée. Veuillez vous reconnecter.",
@@ -117,9 +124,9 @@ def get_current_user(
     )
 
     if not user or not user.est_actif:
-        raise HTTPException(
+        raise _inactive_account_exception(user) if user else HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Compte indisponible.",
+            detail={"status": "account_unavailable", "message": "Compte indisponible."},
         )
 
     session.derniere_activite_a = now
@@ -170,6 +177,41 @@ def _expire_session(
         )
     )
     db.commit()
+
+
+def _inactive_account_exception(user: Utilisateur) -> HTTPException:
+    raw = str(user.statut_compte or "").upper()
+    if user.date_suppression is not None:
+        account_status = STATUT_SUPPRIME
+    elif raw in {"DISABLED", STATUT_DISABLED}:
+        account_status = STATUT_DISABLED
+    elif raw == STATUT_BLOQUE_TENTATIVES:
+        account_status = STATUT_BLOQUE_TENTATIVES
+    elif raw in {"PENDING_ACTIVATION", "MFA_SETUP_REQUIRED", STATUT_PENDING_ACTIVATION}:
+        account_status = STATUT_PENDING_ACTIVATION
+    else:
+        account_status = raw or "account_unavailable"
+
+    messages = {
+        STATUT_DISABLED: "Votre compte a été désactivé. Contactez un administrateur.",
+        STATUT_BLOQUE_TENTATIVES: "Votre compte est bloqué après plusieurs tentatives de connexion. Contactez un administrateur.",
+        STATUT_PENDING_ACTIVATION: "Votre compte est en attente de première connexion.",
+        STATUT_SUPPRIME: "Ce compte n’est plus disponible.",
+    }
+    statuses = {
+        STATUT_DISABLED: "account_disabled",
+        STATUT_BLOQUE_TENTATIVES: "account_blocked",
+        STATUT_PENDING_ACTIVATION: "account_pending_first_login",
+        STATUT_SUPPRIME: "account_deleted",
+    }
+    return HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail={
+            "status": statuses.get(account_status, "account_unavailable"),
+            "message": messages.get(account_status, "Compte indisponible."),
+            "statut_compte": account_status,
+        },
+    )
 
 
 def get_user_permissions(user: Utilisateur) -> list[str]:

@@ -6,13 +6,39 @@ import { useAuth } from "../context/AuthContext";
 
 const ITEMS_PER_PAGE = 10;
 
+const STATUS_LABELS = {
+  ACTIF: "Actif",
+  EN_ATTENTE_PREMIERE_CONNEXION: "En attente de première connexion",
+  DESACTIVE_ADMIN: "Désactivé",
+  BLOQUE_TENTATIVES: "Bloqué",
+  SUPPRIME: "Supprimé",
+};
+
+const STATUS_CLASSES = {
+  ACTIF: "au-badge au-badge-green",
+  EN_ATTENTE_PREMIERE_CONNEXION: "au-badge au-badge-orange",
+  DESACTIVE_ADMIN: "au-badge au-badge-orange",
+  BLOQUE_TENTATIVES: "au-badge au-badge-red",
+  SUPPRIME: "au-badge au-badge-gray",
+};
+
+function normalizeStatus(item) {
+  if (item.date_suppression) return "SUPPRIME";
+  const raw = String(item.statut_compte || "").toUpperCase();
+  if (raw === "ACTIVE") return "ACTIF";
+  if (raw === "PENDING_ACTIVATION" || raw === "MFA_SETUP_REQUIRED") {
+    return "EN_ATTENTE_PREMIERE_CONNEXION";
+  }
+  if (raw === "DISABLED") return "DESACTIVE_ADMIN";
+  return raw;
+}
+
 export default function AdminUsersPage() {
   const { user: currentUser } = useAuth();
-
   const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
   const isAdmin = currentUser?.role === "ADMIN";
 
-  // ── Core state (unchanged logic) ──────────────────────────────────────────
+  // ── Core state ────────────────────────────────────────────────────────────
   const [users, setUsers] = useState([]);
   const [departements, setDepartements] = useState([]);
   const [form, setForm] = useState({
@@ -26,7 +52,7 @@ export default function AdminUsersPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ── UI state ───────────────────────────────────────────────────────────────
+  // ── UI state ──────────────────────────────────────────────────────────────
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("");
@@ -34,7 +60,7 @@ export default function AdminUsersPage() {
   const [filterStatus, setFilterStatus] = useState("");
   const [page, setPage] = useState(1);
 
-  // ── Data loading (unchanged logic) ────────────────────────────────────────
+  // ── Data loading ──────────────────────────────────────────────────────────
   async function loadData() {
     setError("");
     try {
@@ -73,7 +99,7 @@ export default function AdminUsersPage() {
     setForm((c) => ({ ...c, [field]: value }));
   }
 
-  // ── Create user (unchanged logic) ─────────────────────────────────────────
+  // ── Create user ───────────────────────────────────────────────────────────
   async function createUser(event) {
     event.preventDefault();
     setError(""); setMessage(""); setDebugLink(""); setLoading(true);
@@ -81,7 +107,6 @@ export default function AdminUsersPage() {
       const payload = {
         email: form.email,
         nom_complet: form.nom_complet,
-        role: isSuperAdmin ? form.role : "USER",
         departement_nom: isSuperAdmin
           ? form.departement_nom
           : currentUser?.departement_nom || form.departement_nom || "",
@@ -99,15 +124,15 @@ export default function AdminUsersPage() {
     }
   }
 
-  // ── Toggle status (unchanged logic) ───────────────────────────────────────
-  async function toggleStatus(user) {
-    const action = user.est_actif ? "désactiver" : "réactiver";
-    if (!confirm(`Voulez-vous ${action} le compte ${user.email} ?`)) return;
+  // ── Toggle status ─────────────────────────────────────────────────────────
+  async function toggleStatus(item) {
+    const action = item.est_actif ? "désactiver" : "réactiver";
+    if (!confirm(`Voulez-vous ${action} le compte ${item.email} ?`)) return;
     setError(""); setMessage("");
     try {
       const response = await api.patch(
-        `/admin/users/by-email/${encodeURIComponent(user.email)}/status`,
-        { est_actif: !user.est_actif }
+        `/admin/users/by-email/${encodeURIComponent(item.email)}/status`,
+        { est_actif: !item.est_actif }
       );
       setMessage(response.data.message || "Statut utilisateur mis à jour.");
       await loadData();
@@ -116,7 +141,7 @@ export default function AdminUsersPage() {
     }
   }
 
-  // ── Update profile (unchanged logic) ──────────────────────────────────────
+  // ── Update profile ────────────────────────────────────────────────────────
   async function updateUserProfile(user, changes) {
     if (!isSuperAdmin) return;
     setError(""); setMessage("");
@@ -132,12 +157,12 @@ export default function AdminUsersPage() {
     }
   }
 
-  // ── Delete user (unchanged logic) ─────────────────────────────────────────
-  async function deleteUser(user) {
-    if (!confirm(`Supprimer l'utilisateur ${user.email} ?`)) return;
+  // ── Delete user ───────────────────────────────────────────────────────────
+  async function deleteUser(item) {
+    if (!confirm(`Supprimer l'utilisateur ${item.email} ?`)) return;
     setError(""); setMessage("");
     try {
-      await api.delete(`/admin/users/by-email/${encodeURIComponent(user.email)}`);
+      await api.delete(`/admin/users/by-email/${encodeURIComponent(item.email)}`);
       setMessage("Utilisateur supprimé.");
       await loadData();
     } catch (err) {
@@ -145,7 +170,15 @@ export default function AdminUsersPage() {
     }
   }
 
-  // ── Derived / filtered data ────────────────────────────────────────────────
+  function canDeactivate(item) {
+    return item.est_actif && normalizeStatus(item) === "ACTIF" && item.id !== currentUser?.id;
+  }
+
+  function canReactivate(item) {
+    return !item.est_actif && ["DESACTIVE_ADMIN", "BLOQUE_TENTATIVES"].includes(normalizeStatus(item));
+  }
+
+  // ── Derived / filtered data ───────────────────────────────────────────────
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return users.filter((u) => {
@@ -278,7 +311,7 @@ export default function AdminUsersPage() {
             <thead>
               <tr>
                 <th>Email</th>
-                <th>Nom</th>
+                <th>Nom complet</th>
                 <th>Département</th>
                 <th>Rôle</th>
                 <th>Statut</th>
@@ -287,68 +320,78 @@ export default function AdminUsersPage() {
               </tr>
             </thead>
             <tbody>
-              {paginated.map((item) => (
-                <tr key={item.id} className="au-table-row">
-                  <td className="au-td-email">{item.email}</td>
-                  <td className="au-td-name">{item.nom_complet}</td>
+              {paginated.map((item) => {
+                const status = normalizeStatus(item);
+                return (
+                  <tr key={item.id} className="au-table-row">
+                    <td className="au-td-email">{item.email}</td>
+                    <td className="au-td-name">{item.nom_complet}</td>
 
-                  <td>
-                    {isSuperAdmin ? (
-                      <select
-                        className="au-inline-select"
-                        value={item.departement_nom || ""}
-                        onChange={(e) => updateUserProfile(item, { departement_nom: e.target.value })}
-                      >
-                        <option value="">Aucun</option>
-                        {departements.map((dep) => (
-                          <option key={dep.id} value={dep.nom_departement}>{dep.nom_departement}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className="au-td-text">{item.departement_nom || "—"}</span>
-                    )}
-                  </td>
+                    <td>
+                      {isSuperAdmin ? (
+                        <select
+                          className="au-inline-select"
+                          value={item.departement_nom || ""}
+                          onChange={(e) => updateUserProfile(item, { departement_nom: e.target.value })}
+                        >
+                          <option value="">Aucun</option>
+                          {departements.map((dep) => (
+                            <option key={dep.id} value={dep.nom_departement}>{dep.nom_departement}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="au-td-text">{item.departement_nom || "—"}</span>
+                      )}
+                    </td>
 
-                  <td>
-                    {isSuperAdmin ? (
-                      <select
-                        className="au-inline-select"
-                        value={item.role}
-                        onChange={(e) => updateUserProfile(item, { role: e.target.value })}
-                      >
-                        <option value="USER">USER</option>
-                        <option value="ADMIN">ADMIN</option>
-                      </select>
-                    ) : (
-                      <span className="au-role-badge">{item.role}</span>
-                    )}
-                  </td>
+                    <td>
+                      {isSuperAdmin ? (
+                        <select
+                          className="au-inline-select"
+                          value={item.role}
+                          onChange={(e) => updateUserProfile(item, { role: e.target.value })}
+                        >
+                          <option value="USER">USER</option>
+                          <option value="ADMIN">ADMIN</option>
+                        </select>
+                      ) : (
+                        <span className="au-role-badge">{item.role}</span>
+                      )}
+                    </td>
 
-                  <td>
-                    <span className={item.est_actif && item.statut_compte === "ACTIVE" ? "au-badge au-badge-green" : "au-badge au-badge-red"}>
-                      {item.est_actif ? item.statut_compte : "Désactivé"}
-                    </span>
-                  </td>
+                    <td>
+                      <span className={STATUS_CLASSES[status] || "au-badge au-badge-orange"}>
+                        {STATUS_LABELS[status] || status}
+                      </span>
+                    </td>
 
-                  <td>
-                    <span className={item.est_actif ? "au-badge au-badge-green" : "au-badge au-badge-red"}>
-                      {item.est_actif ? "Oui" : "Non"}
-                    </span>
-                  </td>
+                    <td>
+                      <span className={item.est_actif ? "au-badge au-badge-green" : "au-badge au-badge-red"}>
+                        {item.est_actif ? "Oui" : "Non"}
+                      </span>
+                    </td>
 
-                  <td>
-                    <div className="au-actions">
-                      <button className="au-btn-toggle" onClick={() => toggleStatus(item)}>
-                        {item.est_actif ? "Désactiver" : "Réactiver"}
-                      </button>
-                      <button className="au-btn-delete" onClick={() => deleteUser(item)}>
-                        <UserX size={14} />
-                        Supprimer
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    <td>
+                      <div className="au-actions">
+                        {canDeactivate(item) && (
+                          <button className="au-btn-toggle" onClick={() => toggleStatus(item)}>
+                            Désactiver
+                          </button>
+                        )}
+                        {canReactivate(item) && (
+                          <button className="au-btn-toggle" onClick={() => toggleStatus(item)}>
+                            {status === "BLOQUE_TENTATIVES" ? "Débloquer" : "Réactiver"}
+                          </button>
+                        )}
+                        <button className="au-btn-delete" onClick={() => deleteUser(item)}>
+                          <UserX size={14} />
+                          Supprimer
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
 
               {paginated.length === 0 && (
                 <tr>
@@ -363,39 +406,49 @@ export default function AdminUsersPage() {
 
         {/* ── Mobile card list ── */}
         <div className="au-card-list">
-          {paginated.map((item) => (
-            <div key={item.id} className="au-list-card">
-              <div className="au-list-card-header">
-                <div className="au-td-email">{item.email}</div>
-                <span className={item.est_actif && item.statut_compte === "ACTIVE" ? "au-badge au-badge-green" : "au-badge au-badge-red"}>
-                  {item.est_actif ? item.statut_compte : "Désactivé"}
-                </span>
-              </div>
-              <div className="au-list-card-body">
-                <div className="au-list-card-row">
-                  <span className="au-list-card-label">Nom</span>
-                  <span className="au-list-card-value">{item.nom_complet}</span>
+          {paginated.map((item) => {
+            const status = normalizeStatus(item);
+            return (
+              <div key={item.id} className="au-list-card">
+                <div className="au-list-card-header">
+                  <div className="au-td-email">{item.email}</div>
+                  <span className={STATUS_CLASSES[status] || "au-badge au-badge-orange"}>
+                    {STATUS_LABELS[status] || status}
+                  </span>
                 </div>
-                <div className="au-list-card-row">
-                  <span className="au-list-card-label">Département</span>
-                  <span className="au-list-card-value">{item.departement_nom || "—"}</span>
+                <div className="au-list-card-body">
+                  <div className="au-list-card-row">
+                    <span className="au-list-card-label">Nom</span>
+                    <span className="au-list-card-value">{item.nom_complet}</span>
+                  </div>
+                  <div className="au-list-card-row">
+                    <span className="au-list-card-label">Département</span>
+                    <span className="au-list-card-value">{item.departement_nom || "—"}</span>
+                  </div>
+                  <div className="au-list-card-row">
+                    <span className="au-list-card-label">Rôle</span>
+                    <span className="au-role-badge">{item.role}</span>
+                  </div>
                 </div>
-                <div className="au-list-card-row">
-                  <span className="au-list-card-label">Rôle</span>
-                  <span className="au-role-badge">{item.role}</span>
+                <div className="au-list-card-actions">
+                  {canDeactivate(item) && (
+                    <button className="au-btn-toggle" onClick={() => toggleStatus(item)}>
+                      Désactiver
+                    </button>
+                  )}
+                  {canReactivate(item) && (
+                    <button className="au-btn-toggle" onClick={() => toggleStatus(item)}>
+                      {status === "BLOQUE_TENTATIVES" ? "Débloquer" : "Réactiver"}
+                    </button>
+                  )}
+                  <button className="au-btn-delete" onClick={() => deleteUser(item)}>
+                    <UserX size={14} />
+                    Supprimer
+                  </button>
                 </div>
               </div>
-              <div className="au-list-card-actions">
-                <button className="au-btn-toggle" onClick={() => toggleStatus(item)}>
-                  {item.est_actif ? "Désactiver" : "Réactiver"}
-                </button>
-                <button className="au-btn-delete" onClick={() => deleteUser(item)}>
-                  <UserX size={14} />
-                  Supprimer
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
           {paginated.length === 0 && (
             <div className="au-empty-row">
               {search ? "Aucun résultat pour cette recherche." : "Aucun utilisateur."}

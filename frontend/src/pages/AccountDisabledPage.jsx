@@ -1,14 +1,16 @@
 import { ShieldAlert } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
 
 export default function AccountDisabledPage() {
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const email = location.state?.email || "";
   const role = String(location.state?.role || "USER").toUpperCase();
-  const initialMessage = location.state?.message || "";
+  const reason = location.state?.reason || searchParams.get("reason") || "account_disabled";
+  const initialMessage = location.state?.message || searchParams.get("message") || "";
   const canRequest = location.state?.can_request_reactivation !== false;
 
   const [loading, setLoading] = useState(false);
@@ -17,6 +19,25 @@ export default function AccountDisabledPage() {
   const [requestSent, setRequestSent] = useState(false);
 
   const copy = useMemo(() => {
+    if (reason === "account_blocked") {
+      return {
+        title: "Compte bloqué",
+        message:
+          "Votre compte est bloqué après plusieurs tentatives de connexion. Contactez un administrateur.",
+      };
+    }
+    if (reason === "account_pending_first_login") {
+      return {
+        title: "Compte en attente",
+        message: "Votre compte est en attente de première connexion.",
+      };
+    }
+    if (reason === "account_deleted") {
+      return {
+        title: "Compte indisponible",
+        message: "Ce compte n’est plus disponible.",
+      };
+    }
     if (role === "ADMIN") {
       return {
         title: "Compte administrateur désactivé",
@@ -29,7 +50,7 @@ export default function AccountDisabledPage() {
       message:
         "Votre compte est désactivé. Veuillez contacter l’administrateur de votre département pour le réactiver.",
     };
-  }, [role]);
+  }, [reason, role]);
 
   async function requestReactivation() {
     setError("");
@@ -70,7 +91,7 @@ export default function AccountDisabledPage() {
         {error && <div className="alert alert-error">{error}</div>}
 
         <div className="form">
-          {canRequest && (
+          {canRequest && ["account_disabled", "account_blocked"].includes(reason) && (
             <button
               className="btn btn-primary"
               type="button"
