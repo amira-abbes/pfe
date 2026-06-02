@@ -4,7 +4,10 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from sqlalchemy.orm import Session
 
 from app.agents.graph import run_agent_graph
+from app.api.deps import require_permission
+from app.core.constants import PERMISSION_DASHBOARD_BAD_DEBTS
 from app.db.database import get_db
+from app.models.utilisateur import Utilisateur
 from app.schemas.bad_debts import (
     BadDebtClientDetail,
     BadDebtClientsPage,
@@ -26,6 +29,7 @@ from app.services.bad_debts_service import BadDebtsService
 
 
 router = APIRouter(prefix="/api/v1", tags=["Bad Debts ML"])
+require_bad_debts_dashboard = require_permission(PERMISSION_DASHBOARD_BAD_DEBTS)
 
 
 def get_bad_debts_service(db: Session = Depends(get_db)) -> BadDebtsService:
@@ -37,12 +41,18 @@ def get_bad_debts_import_service(db: Session = Depends(get_db)) -> BadDebtsImpor
 
 
 @router.get("/bad-debts/health", response_model=BadDebtsHealthResponse)
-def bad_debts_health(service: BadDebtsService = Depends(get_bad_debts_service)):
+def bad_debts_health(
+    _: Utilisateur = Depends(require_bad_debts_dashboard),
+    service: BadDebtsService = Depends(get_bad_debts_service),
+):
     return service.health()
 
 
 @router.get("/bad-debts/metrics/summary", response_model=BadDebtsSummary)
-def bad_debts_metrics_summary(service: BadDebtsService = Depends(get_bad_debts_service)):
+def bad_debts_metrics_summary(
+    _: Utilisateur = Depends(require_bad_debts_dashboard),
+    service: BadDebtsService = Depends(get_bad_debts_service),
+):
     return service.get_summary()
 
 
@@ -55,6 +65,7 @@ def list_bad_debt_clients(
     is_anomaly: bool | None = Query(default=None),
     recommended_action: str | None = Query(default=None),
     search: str | None = Query(default=None),
+    _: Utilisateur = Depends(require_bad_debts_dashboard),
     service: BadDebtsService = Depends(get_bad_debts_service),
 ):
     return service.list_clients(
@@ -73,13 +84,18 @@ def list_bad_debt_at_risk_clients(
     tier: str = Query(default="high"),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=50, ge=1, le=500),
+    _: Utilisateur = Depends(require_bad_debts_dashboard),
     service: BadDebtsService = Depends(get_bad_debts_service),
 ):
     return service.list_at_risk_clients(tier=tier, page=page, page_size=page_size)
 
 
 @router.post("/bad-debts/clients/{msisdn}/run-agent", response_model=BadDebtsAgentResponse)
-def run_bad_debt_agent(msisdn: str, db: Session = Depends(get_db)):
+def run_bad_debt_agent(
+    msisdn: str,
+    _: Utilisateur = Depends(require_bad_debts_dashboard),
+    db: Session = Depends(get_db),
+):
     try:
         graph_result = run_agent_graph(msisdn, db=db)
         if _is_client_not_found(graph_result, msisdn):
@@ -113,6 +129,7 @@ def run_bad_debt_agent(msisdn: str, db: Session = Depends(get_db)):
 @router.post("/bad-debts/reporting/global", response_model=BadDebtsGlobalReportResponse)
 def generate_global_bad_debts_report(
     filters: GlobalReportFilters,
+    _: Utilisateur = Depends(require_bad_debts_dashboard),
     service: BadDebtsService = Depends(get_bad_debts_service),
 ):
     return generate_global_llm_report(service, filters.model_dump(exclude_none=False))
@@ -121,6 +138,7 @@ def generate_global_bad_debts_report(
 @router.post("/bad-debts/imports/upload", response_model=ImportUploadResponse)
 async def upload_bad_debts_import(
     file: UploadFile = File(...),
+    _: Utilisateur = Depends(require_bad_debts_dashboard),
     service: BadDebtsImportService = Depends(get_bad_debts_import_service),
 ):
     return await service.run_uploaded_import(file)
@@ -129,6 +147,7 @@ async def upload_bad_debts_import(
 @router.get("/bad-debts/imports", response_model=list[ImportRunItem])
 def list_bad_debts_imports(
     limit: int = Query(default=20, ge=1, le=100),
+    _: Utilisateur = Depends(require_bad_debts_dashboard),
     service: BadDebtsImportService = Depends(get_bad_debts_import_service),
 ):
     return service.list_import_runs(limit=limit)
@@ -136,6 +155,7 @@ def list_bad_debts_imports(
 
 @router.get("/bad-debts/imports/latest", response_model=ImportRunItem | None)
 def latest_bad_debts_import(
+    _: Utilisateur = Depends(require_bad_debts_dashboard),
     service: BadDebtsImportService = Depends(get_bad_debts_import_service),
 ):
     return service.get_latest_import_run()
@@ -144,6 +164,7 @@ def latest_bad_debts_import(
 @router.get("/bad-debts/imports/{import_id}", response_model=ImportRunItem)
 def get_bad_debts_import(
     import_id: int,
+    _: Utilisateur = Depends(require_bad_debts_dashboard),
     service: BadDebtsImportService = Depends(get_bad_debts_import_service),
 ):
     item = service.get_import_run(import_id)
@@ -256,7 +277,11 @@ def _is_client_not_found(result: dict[str, Any], msisdn: str) -> bool:
 
 
 @router.get("/bad-debts/clients/{msisdn}", response_model=BadDebtClientDetail)
-def get_bad_debt_client(msisdn: str, service: BadDebtsService = Depends(get_bad_debts_service)):
+def get_bad_debt_client(
+    msisdn: str,
+    _: Utilisateur = Depends(require_bad_debts_dashboard),
+    service: BadDebtsService = Depends(get_bad_debts_service),
+):
     client = service.get_client(msisdn)
     if not client:
         raise HTTPException(
@@ -269,6 +294,7 @@ def get_bad_debt_client(msisdn: str, service: BadDebtsService = Depends(get_bad_
 @router.get("/bad-debts/import-runs", response_model=list[ImportRunItem])
 def list_bad_debt_import_runs(
     limit: int = Query(default=20, ge=1, le=100),
+    _: Utilisateur = Depends(require_bad_debts_dashboard),
     service: BadDebtsService = Depends(get_bad_debts_service),
 ):
     return service.get_import_runs(limit=limit)

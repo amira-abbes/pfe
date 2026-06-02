@@ -1,12 +1,14 @@
 import { Download, Mail, ShieldCheck } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, getApiError } from "../api/api";
+import OtpInput from "../components/OtpInput";
 
 export default function ActivationTotpPage() {
   const navigate = useNavigate();
 
   const setupToken = sessionStorage.getItem("totp_setup_token");
+  const setupStartedRef = useRef(false);
 
   const [setup, setSetup] = useState(null);
   const [code, setCode] = useState("");
@@ -22,6 +24,11 @@ export default function ActivationTotpPage() {
   useEffect(() => {
     async function start() {
       try {
+        if (setupStartedRef.current) {
+          return;
+        }
+        setupStartedRef.current = true;
+
         if (!setupToken) {
           navigate("/login");
           return;
@@ -181,16 +188,13 @@ export default function ActivationTotpPage() {
 
             <form className="form" onSubmit={handleVerify}>
               <div className="input-group">
-                <label>Code Authenticator</label>
-                <input
-                  className="input"
+                <label className="otp-label">Code Authenticator</label>
+                <OtpInput
                   value={code}
-                  onChange={(event) =>
-                    setCode(event.target.value.replace(/\D/g, "").slice(0, 6))
-                  }
-                  placeholder="123456"
-                  maxLength={6}
-                  required
+                  onChange={setCode}
+                  autoFocus
+                  disabled={loading}
+                  ariaLabel="Code Authenticator"
                 />
               </div>
 

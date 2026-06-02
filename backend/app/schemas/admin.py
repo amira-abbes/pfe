@@ -9,6 +9,7 @@ class AdminCreateUserRequest(BaseModel):
     email: EmailStr
     nom_complet: str = Field(min_length=2, max_length=150)
     departement_nom: Optional[str] = Field(default=None, max_length=100)
+    role: Optional[str] = None
 
 
 class AdminCreateUserResponse(BaseModel):
@@ -30,9 +31,7 @@ class AdminUpdateUserStatusRequest(BaseModel):
 
 class AdminUpdateUserProfileRequest(BaseModel):
     departement_nom: Optional[str] = Field(default=None, max_length=100)
-
-    class Config:
-        extra = "allow"
+    role: Optional[str] = None
 
 
 class AdminUserListItem(BaseModel):

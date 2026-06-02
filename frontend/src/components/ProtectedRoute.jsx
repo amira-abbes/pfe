@@ -1,5 +1,8 @@
 import { Navigate } from "react-router-dom";
+import { firstAuthorizedPath } from "../accessControl";
 import { useAuth } from "../context/AuthContext";
+
+const DEPARTMENT_ADMIN_ROLES = ["ADMIN", "ADMIN_DEPARTEMENTAL"];
 
 function hasAnyRequiredRight(hasRight, requiredRight, requiredAnyRight = []) {
   const requiredRights = [
@@ -14,11 +17,13 @@ function hasAnyRequiredRight(hasRight, requiredRight, requiredAnyRight = []) {
 export default function ProtectedRoute({
   children,
   adminOnly = false,
+  departmentAdminOnly = false,
   superAdminOnly = false,
   requiredRight,
   requiredAnyRight = [],
 }) {
   const { hasRight, isAuthenticated, loading, user } = useAuth();
+  const authorizedFallback = firstAuthorizedPath(user);
 
   if (loading) {
     return (
@@ -47,15 +52,19 @@ export default function ProtectedRoute({
   }
 
   if (superAdminOnly && user.role !== "SUPER_ADMIN") {
-    return <Navigate to="/access-denied" replace />;
+    return <Navigate to={authorizedFallback} replace />;
   }
 
-  if (adminOnly && !["ADMIN", "SUPER_ADMIN"].includes(user.role)) {
-    return <Navigate to="/access-denied" replace />;
+  if (departmentAdminOnly && !DEPARTMENT_ADMIN_ROLES.includes(user.role)) {
+    return <Navigate to={authorizedFallback} replace />;
+  }
+
+  if (adminOnly && ![...DEPARTMENT_ADMIN_ROLES, "SUPER_ADMIN"].includes(user.role)) {
+    return <Navigate to={authorizedFallback} replace />;
   }
 
   if (!hasAnyRequiredRight(hasRight, requiredRight, requiredAnyRight)) {
-    return <Navigate to="/access-denied" replace />;
+    return <Navigate to={authorizedFallback} replace />;
   }
 
   return children;

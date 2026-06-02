@@ -16,7 +16,14 @@ from app.core.constants import (
     STATUT_SUPPRIME,
     TOKEN_ACCOUNT_ACTIVATION,
 )
-from app.core.security import generate_raw_activation_token, hash_activation_token, utc_now
+from app.core.security import (
+    generate_numeric_code,
+    generate_raw_activation_token,
+    hash_activation_token,
+    hash_recovery_code,
+    utc_now,
+)
+from app.models.code_secours import CodeSecours
 from app.models.departement import Departement
 from app.models.jeton_activation import JetonActivation
 from app.models.journal_audit import JournalAudit
@@ -179,7 +186,7 @@ class AdminService:
                 user.nom_complet = nom_clean
                 user.departement_id = departement.id
                 user.mot_de_passe_hash = None
-                user.est_actif = False
+                user.est_actif = True
                 user.role = role_clean
                 user.statut_compte = STATUT_PENDING_ACTIVATION
                 user.nombre_echecs_password = 0
@@ -207,7 +214,7 @@ class AdminService:
                     nom_complet=nom_clean,
                     departement_id=departement.id,
                     mot_de_passe_hash=None,
-                    est_actif=False,
+                    est_actif=True,
                     role=role_clean,
                     statut_compte=STATUT_PENDING_ACTIVATION,
                     nombre_echecs_password=0,
@@ -518,7 +525,8 @@ class AdminService:
     def update_user_profile_by_email(
         self,
         email: str,
-        departement_nom: str,
+        departement_nom: str | None,
+        role: str | None,
         admin_user: Utilisateur,
     ):
         try:
@@ -547,7 +555,27 @@ class AdminService:
 
             self._assert_can_manage_user(admin_user, user)
 
-            departement_clean = str(departement_nom or "").strip()
+            role_clean = str(role or user.role or ROLE_USER).strip().upper()
+            if role_clean not in {ROLE_USER, ROLE_ADMIN}:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "status": "invalid_role",
+                        "message": "Le rôle doit être USER ou ADMIN.",
+                    },
+                )
+
+            if user.id == admin_user.id and role_clean != str(user.role or "").upper():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "status": "self_role_update_forbidden",
+                        "message": "Vous ne pouvez pas modifier votre propre rôle.",
+                    },
+                )
+
+            current_departement_name = user.departement.nom_departement if user.departement else ""
+            departement_clean = str(departement_nom or current_departement_name).strip()
 
             departement = (
                 self.db.query(Departement)
@@ -564,8 +592,10 @@ class AdminService:
             old_departement = (
                 user.departement.nom_departement if user.departement else None
             )
+            old_role = user.role
 
             user.departement_id = departement.id
+            user.role = role_clean
             user.date_modification = utc_now()
 
             self.db.add(user)
@@ -580,6 +610,8 @@ class AdminService:
                         "email": user.email,
                         "old_departement": old_departement,
                         "new_departement": departement.nom_departement,
+                        "old_role": old_role,
+                        "new_role": role_clean,
                     },
                 )
             )
@@ -588,7 +620,7 @@ class AdminService:
 
             return {
                 "success": True,
-                "message": "Département utilisateur mis à jour avec succès.",
+                "message": "Profil utilisateur mis à jour avec succès.",
                 "email": user.email,
                 "role": user.role,
                 "departement_nom": departement.nom_departement,
@@ -672,4 +704,89 @@ class AdminService:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Erreur interne suppression utilisateur: {str(exc)}",
+            )
+
+    def regenerate_user_recovery_codes_by_email(self, email: str, admin_user: Utilisateur):
+        try:
+            user = (
+                self.db.query(Utilisateur)
+                .filter(Utilisateur.email == email.strip().lower())
+                .filter(Utilisateur.date_suppression.is_(None))
+                .first()
+            )
+
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Utilisateur introuvable.",
+                )
+
+            self._assert_can_manage_user(admin_user, user)
+
+            self.db.query(CodeSecours).filter(
+                CodeSecours.utilisateur_id == user.id
+            ).delete(synchronize_session=False)
+
+            raw_codes: list[str] = []
+            for _ in range(10):
+                code = generate_numeric_code(10)
+                raw_codes.append(code)
+                self.db.add(
+                    CodeSecours(
+                        utilisateur_id=user.id,
+                        code_hash=hash_recovery_code(code),
+                        est_utilise=False,
+                        utilise=False,
+                        utilise_a=None,
+                    )
+                )
+
+            user.recovery_code_failed_attempts = 0
+            user.recovery_code_cooldown_until = None
+            user.recovery_code_last_failure_at = None
+            user.recovery_code_alert_sent_at = None
+            user.recovery_code_warning_sent_at = None
+            user.date_modification = utc_now()
+            self.db.add(user)
+
+            mail_sent = self.mail_service.send_recovery_codes_email(
+                to_email=user.email,
+                recovery_codes=raw_codes,
+                db=self.db,
+                utilisateur_id=user.id,
+                role=str(user.role or "").upper(),
+                details={"source": "admin_department_recovery_regeneration", "admin": admin_user.email},
+            )
+
+            self.db.add(
+                JournalAudit(
+                    utilisateur_acteur_id=admin_user.id,
+                    cible_utilisateur_id=user.id,
+                    action_effectuee="ADMIN_REGENERATE_USER_RECOVERY_CODES",
+                    niveau_risque="ELEVE",
+                    details={"email": user.email, "mail_sent": bool(mail_sent)},
+                )
+            )
+
+            self.db.commit()
+
+            return {
+                "success": True,
+                "message": (
+                    "Codes de secours régénérés et envoyés par email."
+                    if mail_sent
+                    else "Codes de secours régénérés, mais l'email n'a pas pu être envoyé."
+                ),
+                "email": user.email,
+            }
+
+        except HTTPException:
+            self.db.rollback()
+            raise
+
+        except Exception as exc:
+            self.db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Erreur interne régénération codes de secours: {str(exc)}",
             )

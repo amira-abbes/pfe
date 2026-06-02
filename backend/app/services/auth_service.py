@@ -113,6 +113,43 @@ class AuthService:
             self.db.commit()
             return secure_link_error
 
+        if (
+            user.date_suppression is None
+            and not user.est_actif
+            and self._account_status(user) == STATUT_PENDING_ACTIVATION
+            and user.mot_de_passe_hash
+        ):
+            if not verify_password(password, user.mot_de_passe_hash):
+                return self._handle_password_failure(
+                    user=user,
+                    role=role,
+                    email=email_clean,
+                    adresse_ip=adresse_ip,
+                    user_agent=user_agent,
+                )
+
+            setup_token = self._create_activation_totp_setup_token(user)
+            self._audit(
+                action="ACTIVATION_TOTP_SETUP_RESUMED",
+                acteur_id=user.id,
+                cible_id=user.id,
+                adresse_ip=adresse_ip,
+                user_agent=user_agent,
+                niveau_risque="MOYEN",
+                details={"role": role},
+            )
+            self.db.commit()
+            return {
+                "success": False,
+                "code": "ACTIVATION_TOTP_SETUP_REQUIRED",
+                "status": "activation_totp_setup_required",
+                "role": role,
+                "email": user.email,
+                "message": "Veuillez terminer la configuration Authenticator.",
+                "setup_token": setup_token,
+                "redirect_to": "/activation/totp",
+            }
+
         if user.date_suppression is not None or not user.est_actif:
             return self._inactive_account_error(user, role)
 
@@ -3952,10 +3989,8 @@ class AuthService:
 
     def _dashboard_path(self, role: str) -> str:
         role = str(role or ROLE_USER).upper()
-        if role == ROLE_SUPER_ADMIN:
-            return "/super-admin/dashboard"
-        if role == ROLE_ADMIN:
-            return "/admin/dashboard"
+        if role in {ROLE_SUPER_ADMIN, ROLE_ADMIN}:
+            return "/accueil"
         return "/user/dashboard"
 
     def _is_admin(self, user: Utilisateur) -> bool:
@@ -3971,6 +4006,13 @@ class AuthService:
                 "setup_id": str(uuid4()),
             },
             purpose="super_admin_mfa_setup",
+            expires_delta=timedelta(minutes=10),
+        )
+
+    def _create_activation_totp_setup_token(self, user: Utilisateur) -> str:
+        return create_scoped_token(
+            data={"sub": str(user.id), "email": user.email},
+            purpose="totp_setup",
             expires_delta=timedelta(minutes=10),
         )
 

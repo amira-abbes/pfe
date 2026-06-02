@@ -118,6 +118,7 @@ class CurrentUserResponse(BaseModel):
     statut_compte: str
     departement_nom: Optional[str] = None
     permissions: list[str] = []
+    date_creation: Optional[datetime] = None
     date_derniere_connexion: Optional[datetime] = None
 
 

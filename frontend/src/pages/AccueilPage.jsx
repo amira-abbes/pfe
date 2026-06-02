@@ -3,18 +3,16 @@ import {
   BarChart2,
   Brain,
   Building2,
-  Database,
-  LayoutDashboard,
   PieChart,
   Shield,
   ShieldCheck,
   Sparkles,
-  TrendingDown,
   User,
   Users,
 } from "lucide-react";
 import { useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { firstAuthorizedPath } from "../accessControl";
 import Layout from "../components/Layout";
 import { useAuth } from "../context/AuthContext";
 
@@ -104,11 +102,9 @@ export default function AccueilPage() {
     }
     if (isAdmin) {
       return [
-        allCards.find((c) => c.to === "/dashboard/parc-service-sos"),
-        allCards.find((c) => c.to === "/dashboard/service-sos"),
-        allCards.find((c) => c.to === "/dashboard/bad-debts"),
+        ...allCards.filter((c) => !c.hidden && c.to.startsWith("/dashboard/")),
         {
-          to: "/admin/departement",
+          to: "/admin/mon-departement",
           icon: <Building2 size={40} />,
           label: "Mon Département",
           desc: "Consulter les informations de mon département",
@@ -126,7 +122,7 @@ export default function AccueilPage() {
         color: "#16a34a", // green
       },
       {
-        to: "/dashboard",
+        to: "/mon-compte",
         icon: <User size={40} />,
         label: "Mon Compte",
         desc: (
@@ -149,6 +145,8 @@ export default function AccueilPage() {
       },
     ];
   }, [isSuperAdmin, isAdmin, allCards, user, hasRight]);
+
+  const primaryCtaPath = firstAuthorizedPath(user);
 
   return (
     <Layout title="Accueil" subtitle="Plateforme interne Tunisie Telecom">
@@ -187,7 +185,7 @@ export default function AccueilPage() {
           </p>
 
           {/* CTA Button */}
-          <Link to="/dashboard/parc-service-sos" className="accueil-cta-btn">
+          <Link to={primaryCtaPath} className="accueil-cta-btn">
             Commencer →
           </Link>
 

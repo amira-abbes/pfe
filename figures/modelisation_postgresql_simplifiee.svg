@@ -1,0 +1,226 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Figure XX : Modelisation simplifiee PostgreSQL de la plateforme</title>
+  <desc id="desc">Schema simplifie de la base PostgreSQL montrant les domaines applicatif, securite et analytique avec les entites principales et leurs relations.</desc>
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+    <marker id="arrowBlue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowTeal" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#0f766e"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#ea580c"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 800 34px Arial, sans-serif; fill: #0f172a; letter-spacing: 0; }
+      .subtitle { font: 500 18px Arial, sans-serif; fill: #475569; }
+      .domain { fill: #ffffff; stroke-width: 2.5; rx: 24; filter: url(#shadow); }
+      .domain-app { stroke: #2563eb; }
+      .domain-sec { stroke: #0f766e; }
+      .domain-ana { stroke: #ea580c; }
+      .header-app { fill: #1d4ed8; }
+      .header-sec { fill: #0f766e; }
+      .header-ana { fill: #f97316; }
+      .header-text { font: 800 22px Arial, sans-serif; fill: #ffffff; }
+      .entity { fill: #ffffff; stroke-width: 1.8; rx: 16; filter: url(#shadow); }
+      .entity-app { stroke: #93c5fd; }
+      .entity-sec { stroke: #99f6e4; }
+      .entity-ana { stroke: #fed7aa; }
+      .entity-title { font: 800 18px Arial, sans-serif; fill: #0f172a; }
+      .entity-small { font: 600 13.5px Arial, sans-serif; fill: #64748b; }
+      .attr { font: 700 14px Arial, sans-serif; fill: #475569; }
+      .rel-blue { fill: none; stroke: #2563eb; stroke-width: 2.8; marker-end: url(#arrowBlue); }
+      .rel-teal { fill: none; stroke: #0f766e; stroke-width: 2.8; marker-end: url(#arrowTeal); }
+      .rel-orange { fill: none; stroke: #ea580c; stroke-width: 2.8; marker-end: url(#arrowOrange); }
+      .rel-dash { fill: none; stroke: #64748b; stroke-width: 2.3; stroke-dasharray: 7 7; marker-end: url(#arrowBlue); }
+      .rel-label { font: 800 13px Arial, sans-serif; fill: #334155; }
+      .icon-app { fill: none; stroke: #2563eb; stroke-width: 2.7; stroke-linecap: round; stroke-linejoin: round; }
+      .icon-sec { fill: none; stroke: #0f766e; stroke-width: 2.7; stroke-linecap: round; stroke-linejoin: round; }
+      .icon-ana { fill: none; stroke: #ea580c; stroke-width: 2.7; stroke-linecap: round; stroke-linejoin: round; }
+      .note { font: 700 15px Arial, sans-serif; fill: #334155; }
+      .note-box { fill: #eef2ff; stroke: #c7d2fe; stroke-width: 1.5; rx: 14; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1600" height="1000"/>
+  <text x="800" y="55" text-anchor="middle" class="title">Modelisation simplifiee PostgreSQL de la plateforme</text>
+  <text x="800" y="86" text-anchor="middle" class="subtitle">Vue conceptuelle conforme aux entites principales du backend</text>
+
+  <!-- Domains -->
+  <rect x="50" y="125" width="480" height="790" class="domain domain-app"/>
+  <rect x="50" y="125" width="480" height="52" rx="24" class="header-app"/>
+  <text x="290" y="159" text-anchor="middle" class="header-text">Domaine applicatif</text>
+
+  <rect x="560" y="125" width="500" height="790" class="domain domain-sec"/>
+  <rect x="560" y="125" width="500" height="52" rx="24" class="header-sec"/>
+  <text x="810" y="159" text-anchor="middle" class="header-text">Domaine securite</text>
+
+  <rect x="1090" y="125" width="460" height="790" class="domain domain-ana"/>
+  <rect x="1090" y="125" width="460" height="52" rx="24" class="header-ana"/>
+  <text x="1320" y="159" text-anchor="middle" class="header-text">Domaine analytique</text>
+
+  <!-- Applicative entities -->
+  <rect x="120" y="235" width="315" height="95" class="entity entity-app"/>
+  <g transform="translate(145 257)">
+    <path d="M8 47h48M14 47V17h14v30M36 47V9h14v38M20 25h2M20 34h2M42 19h2M42 29h2M42 39h2" class="icon-app"/>
+  </g>
+  <text x="300" y="270" text-anchor="middle" class="entity-title">Departement</text>
+  <text x="300" y="297" text-anchor="middle" class="entity-small">id, nom_departement</text>
+
+  <rect x="120" y="440" width="315" height="115" class="entity entity-app"/>
+  <g transform="translate(148 466)">
+    <circle cx="26" cy="18" r="14" class="icon-app"/>
+    <path d="M3 62c6-26 40-26 46 0" class="icon-app"/>
+  </g>
+  <text x="300" y="474" text-anchor="middle" class="entity-title">Utilisateur</text>
+  <text x="300" y="501" text-anchor="middle" class="entity-small">role, statut_compte</text>
+  <text x="300" y="523" text-anchor="middle" class="entity-small">mot de passe hache</text>
+
+  <rect x="120" y="665" width="315" height="100" class="entity entity-app"/>
+  <g transform="translate(148 688)">
+    <path d="M28 6l24 10v18c0 18-12 30-24 36C16 64 4 52 4 34V16z" class="icon-app"/>
+  </g>
+  <text x="300" y="702" text-anchor="middle" class="entity-title">Permission</text>
+  <text x="300" y="729" text-anchor="middle" class="entity-small">id, nom_droit</text>
+
+  <rect x="92" y="805" width="370" height="62" class="entity entity-app"/>
+  <text x="277" y="831" text-anchor="middle" class="entity-title">Association Departement-Permission</text>
+  <text x="277" y="854" text-anchor="middle" class="entity-small">table d'association N a N</text>
+
+  <!-- Applicative relations -->
+  <path d="M278 330 L278 433" class="rel-blue"/>
+  <text x="292" y="385" class="rel-label">1 a N</text>
+
+  <path d="M220 330 C150 470 160 640 214 802" class="rel-blue"/>
+  <text x="135" y="592" class="rel-label">1 a N</text>
+
+  <path d="M338 765 C378 785 390 800 394 804" class="rel-blue"/>
+  <text x="375" y="789" class="rel-label">N a N</text>
+
+  <!-- Note: no direct user permission -->
+  <rect x="83" y="580" width="390" height="48" class="note-box"/>
+  <text x="278" y="610" text-anchor="middle" class="note">Les permissions passent par le departement</text>
+
+  <!-- Security entities -->
+  <rect x="610" y="218" width="190" height="80" class="entity entity-sec"/>
+  <g transform="translate(630 237)">
+    <circle cx="18" cy="18" r="10" class="icon-sec"/>
+    <path d="M28 28l20 20M42 42l10-10M37 37l8-8" class="icon-sec"/>
+  </g>
+  <text x="720" y="248" class="entity-title">Session</text>
+  <text x="720" y="272" class="entity-small">active / expiree</text>
+
+  <rect x="830" y="218" width="190" height="80" class="entity entity-sec"/>
+  <g transform="translate(850 237)">
+    <path d="M26 4l24 10v18c0 18-12 30-24 36C14 62 2 50 2 32V14z" class="icon-sec"/>
+    <path d="M20 34l8 8 16-20" class="icon-sec"/>
+  </g>
+  <text x="940" y="248" class="entity-title">MFA/TOTP</text>
+  <text x="940" y="272" class="entity-small">identifiant unique</text>
+
+  <rect x="610" y="330" width="190" height="80" class="entity entity-sec"/>
+  <g transform="translate(630 351)">
+    <rect x="8" y="24" width="42" height="34" rx="5" class="icon-sec"/>
+    <path d="M17 24V14c0-18 24-18 24 0v10" class="icon-sec"/>
+  </g>
+  <text x="720" y="360" class="entity-title">Code secours</text>
+  <text x="720" y="384" class="entity-small">usage controle</text>
+
+  <rect x="830" y="330" width="190" height="80" class="entity entity-sec"/>
+  <g transform="translate(850 351)">
+    <path d="M10 14h42v46H10zM20 26h22M20 38h22M20 50h14" class="icon-sec"/>
+  </g>
+  <text x="940" y="360" class="entity-title">Tentative</text>
+  <text x="940" y="384" class="entity-small">connexion</text>
+
+  <rect x="610" y="442" width="190" height="80" class="entity entity-sec"/>
+  <g transform="translate(630 463)">
+    <path d="M12 8h42v54H12zM22 22h22M22 34h22M22 46h16" class="icon-sec"/>
+  </g>
+  <text x="720" y="472" class="entity-title">Journal audit</text>
+  <text x="720" y="496" class="entity-small">actions sensibles</text>
+
+  <rect x="830" y="442" width="190" height="80" class="entity entity-sec"/>
+  <g transform="translate(850 464)">
+    <rect x="6" y="12" width="54" height="38" rx="5" class="icon-sec"/>
+    <path d="M8 16l25 20 25-20" class="icon-sec"/>
+  </g>
+  <text x="940" y="472" class="entity-title">Notification</text>
+  <text x="940" y="496" class="entity-small">securite email</text>
+
+  <rect x="610" y="554" width="190" height="80" class="entity entity-sec"/>
+  <g transform="translate(630 574)">
+    <circle cx="24" cy="24" r="16" class="icon-sec"/>
+    <path d="M36 36l18 18M47 47l9-9" class="icon-sec"/>
+  </g>
+  <text x="720" y="584" class="entity-title">Jeton activation</text>
+  <text x="720" y="608" class="entity-small">expiration</text>
+
+  <rect x="830" y="554" width="190" height="80" class="entity entity-sec"/>
+  <g transform="translate(850 574)">
+    <path d="M12 34c0-16 12-28 28-28 10 0 18 4 24 11" class="icon-sec"/>
+    <path d="M64 7v18H46" class="icon-sec"/>
+    <path d="M66 34c0 16-12 28-28 28-10 0-18-4-24-11" class="icon-sec"/>
+    <path d="M14 61V43h18" class="icon-sec"/>
+  </g>
+  <text x="940" y="580" class="entity-title">Jeton reset</text>
+  <text x="940" y="606" class="entity-small">mot de passe</text>
+
+  <!-- Security fan-in relation from user -->
+  <circle cx="560" cy="498" r="5" fill="#0f766e"/>
+  <path d="M435 498 L560 498" class="rel-dash"/>
+  <text x="463" y="487" class="rel-label">Utilisateur</text>
+  <path d="M560 498 L604 258" class="rel-teal"/>
+  <path d="M560 498 L824 258" class="rel-teal"/>
+  <path d="M560 498 L604 370" class="rel-teal"/>
+  <path d="M560 498 L824 370" class="rel-teal"/>
+  <path d="M560 498 L604 482" class="rel-teal"/>
+  <path d="M560 498 L824 482" class="rel-teal"/>
+  <path d="M560 498 L604 594" class="rel-teal"/>
+  <path d="M560 498 L824 594" class="rel-teal"/>
+  <text x="575" y="531" class="rel-label">1 a N</text>
+  <text x="867" y="206" class="rel-label">1 a 1 pour MFA/TOTP</text>
+
+  <!-- Analytic entities -->
+  <rect x="1170" y="240" width="300" height="115" class="entity entity-ana"/>
+  <g transform="translate(1200 266)">
+    <ellipse cx="30" cy="12" rx="27" ry="10" class="icon-ana"/>
+    <path d="M3 12v44c0 6 12 10 27 10s27-4 27-10V12" class="icon-ana"/>
+    <path d="M3 34c0 6 12 10 27 10s27-4 27-10" class="icon-ana"/>
+  </g>
+  <text x="1352" y="282" text-anchor="middle" class="entity-title">Import analytique</text>
+  <text x="1352" y="309" text-anchor="middle" class="entity-small">historique des imports</text>
+
+  <rect x="1145" y="520" width="350" height="260" class="entity entity-ana"/>
+  <g transform="translate(1175 548)">
+    <circle cx="25" cy="16" r="12" class="icon-ana"/>
+    <path d="M4 58c6-24 36-24 42 0" class="icon-ana"/>
+    <path d="M66 16h72M66 34h72M66 52h48" class="icon-ana"/>
+  </g>
+  <text x="1330" y="558" text-anchor="middle" class="entity-title">Client Bad Debts</text>
+  <text x="1330" y="589" text-anchor="middle" class="entity-small">donnees client enrichies ML</text>
+
+  <rect x="1188" y="620" width="265" height="120" rx="14" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/>
+  <text x="1320" y="648" text-anchor="middle" class="attr">Score de risque</text>
+  <text x="1320" y="671" text-anchor="middle" class="attr">Niveau de risque</text>
+  <text x="1320" y="694" text-anchor="middle" class="attr">Segment</text>
+  <text x="1320" y="717" text-anchor="middle" class="attr">Anomalie, indicateurs ML</text>
+  <text x="1320" y="740" text-anchor="middle" class="attr">Recommandations</text>
+
+  <path d="M1320 356 L1320 512" class="rel-orange"/>
+  <text x="1337" y="438" class="rel-label">alimente</text>
+
+  <rect x="1135" y="820" width="370" height="52" class="note-box" fill="#fff7ed" stroke="#fed7aa"/>
+  <text x="1320" y="853" text-anchor="middle" class="note">Score, segment et anomalie sont des attributs du client</text>
+
+  <!-- Legend -->
+  <rect x="575" y="835" width="455" height="80" rx="16" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <path d="M605 862 L690 862" class="rel-blue"/>
+  <text x="710" y="867" class="note">relation structurelle</text>
+  <path d="M605 892 L690 892" class="rel-orange"/>
+  <text x="710" y="897" class="note">flux fonctionnel analytique</text>
+</svg>

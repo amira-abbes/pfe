@@ -107,6 +107,7 @@ export default function AdminUsersPage() {
       const payload = {
         email: form.email,
         nom_complet: form.nom_complet,
+        role: isSuperAdmin ? form.role : "USER",
         departement_nom: isSuperAdmin
           ? form.departement_nom
           : currentUser?.departement_nom || form.departement_nom || "",
@@ -167,6 +168,19 @@ export default function AdminUsersPage() {
       await loadData();
     } catch (err) {
       setError(getApiError(err, "Erreur suppression utilisateur."));
+    }
+  }
+
+  async function regenerateRecoveryCodes(item) {
+    if (!confirm(`Régénérer les codes de secours de ${item.email} et les envoyer par email ?`)) return;
+    setError(""); setMessage("");
+    try {
+      const response = await api.post(
+        `/admin/users/by-email/${encodeURIComponent(item.email)}/recovery-codes/regenerate`
+      );
+      setMessage(response.data.message || "Codes de secours régénérés.");
+    } catch (err) {
+      setError(getApiError(err, "Erreur régénération codes de secours."));
     }
   }
 
@@ -383,6 +397,9 @@ export default function AdminUsersPage() {
                             {status === "BLOQUE_TENTATIVES" ? "Débloquer" : "Réactiver"}
                           </button>
                         )}
+                        <button className="au-btn-toggle" onClick={() => regenerateRecoveryCodes(item)}>
+                          Codes secours
+                        </button>
                         <button className="au-btn-delete" onClick={() => deleteUser(item)}>
                           <UserX size={14} />
                           Supprimer
@@ -441,6 +458,9 @@ export default function AdminUsersPage() {
                       {status === "BLOQUE_TENTATIVES" ? "Débloquer" : "Réactiver"}
                     </button>
                   )}
+                  <button className="au-btn-toggle" onClick={() => regenerateRecoveryCodes(item)}>
+                    Codes secours
+                  </button>
                   <button className="au-btn-delete" onClick={() => deleteUser(item)}>
                     <UserX size={14} />
                     Supprimer

@@ -177,7 +177,10 @@ class ActivationService:
                     ),
                 }
 
-            if user.statut_compte == STATUT_MFA_SETUP_REQUIRED:
+            if (
+                STATUT_MFA_SETUP_REQUIRED != STATUT_PENDING_ACTIVATION
+                and user.statut_compte == STATUT_MFA_SETUP_REQUIRED
+            ):
                 self._audit(
                     action="ACTIVATION_RESEND_MFA_SETUP_REQUIRED",
                     cible_id=user.id,
@@ -417,6 +420,13 @@ class ActivationService:
                 detail="Utilisateur introuvable.",
             )
 
+        payload_email = str(payload.get("email") or "").strip().lower()
+        if payload_email and str(user.email or "").strip().lower() != payload_email:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session de configuration TOTP invalide.",
+            )
+
         if user.statut_compte != STATUT_MFA_SETUP_REQUIRED:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -473,6 +483,9 @@ class ActivationService:
             )
 
             if totp_identity:
+                existing_secret = decrypt_secret(totp_identity.secret_chiffre)
+                if existing_secret and not totp_identity.est_actif:
+                    return build_response(existing_secret)
                 apply_totp_setup(totp_identity, secret)
             else:
                 now = utc_now()
@@ -514,6 +527,10 @@ class ActivationService:
                     detail="Configuration TOTP en cours. Veuillez réessayer.",
                 )
 
+            existing_secret = decrypt_secret(totp_identity.secret_chiffre)
+            if existing_secret and not totp_identity.est_actif:
+                return build_response(existing_secret)
+
             apply_totp_setup(totp_identity, retry_secret)
 
             self.db.add(totp_identity)
@@ -542,6 +559,13 @@ class ActivationService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Utilisateur introuvable.",
+            )
+
+        payload_email = str(payload.get("email") or "").strip().lower()
+        if payload_email and str(user.email or "").strip().lower() != payload_email:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Session de configuration TOTP invalide.",
             )
 
         if user.statut_compte != STATUT_MFA_SETUP_REQUIRED:

@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { effectivePermissionsForUser } from "../accessControl";
 import { api } from "../api/api";
 
 const AuthContext = createContext(null);
@@ -27,6 +28,8 @@ const MFA_SESSION_KEYS = [
   "mfa_setup_token",
 ];
 
+const ADMIN_ROLES = ["ADMIN", "ADMIN_DEPARTEMENTAL", "SUPER_ADMIN"];
+
 function readStoredUser() {
   const raw = localStorage.getItem("current_user");
   if (!raw) return null;
@@ -40,10 +43,8 @@ function readStoredUser() {
 }
 
 function dashboardForRole(role) {
-  // Still available for explicit navigation to role-based dashboards
   const normalizedRole = String(role || "USER").toUpperCase();
-  if (normalizedRole === "SUPER_ADMIN") return "/super-admin/dashboard";
-  if (normalizedRole === "ADMIN") return "/admin/dashboard";
+  if (ADMIN_ROLES.includes(normalizedRole)) return "/accueil";
   return "/user/dashboard";
 }
 
@@ -62,8 +63,7 @@ function readLastActivityAt() {
 
 function userHasRight(user, code) {
   if (!code) return true;
-  if (String(user?.role || "").toUpperCase() === "SUPER_ADMIN") return true;
-  return Array.isArray(user?.permissions) && user.permissions.includes(code);
+  return effectivePermissionsForUser(user).includes(code);
 }
 
 function isAuthFlowPath(pathname = window.location.pathname) {
@@ -113,7 +113,7 @@ export function AuthProvider({ children }) {
   });
 
   const isAuthenticated = Boolean(accessToken);
-  const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(user?.role);
+  const isAdmin = ADMIN_ROLES.includes(user?.role);
   const hasRight = (code) => userHasRight(user, code);
 
   function clearInactivityTimer() {
@@ -229,7 +229,7 @@ export function AuthProvider({ children }) {
     api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`;
     setAccessToken(data.access_token);
 
-    const currentUser = await refreshMe({ skipAuthRedirect: true });
+    await refreshMe({ skipAuthRedirect: true });
 
     // Always land on /accueil after login; ignore server-side redirect_to
     return "/accueil";

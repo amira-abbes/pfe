@@ -1,9 +1,40 @@
 import { Building2, Key, Plus, RefreshCw, Search, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api, getApiError } from "../api/api";
+import { DEPARTMENT_KEYS, departmentKey } from "../accessControl";
 import Layout from "../components/Layout";
 
 const ITEMS_PER_PAGE = 10;
+
+const PERMISSION_LABELS = {
+  voir_dashboard_service_sos: "Dashboard Service SOS",
+  voir_dashboard_parc_service_sos: "Dashboard Parc Service SOS",
+  voir_dashboard_bad_debts: "Dashboard Bad Debts",
+  lancer_traitement_elt: "Lancer traitement ELT",
+  voir_resultat_elt: "Voir résultat ELT",
+};
+
+const VALID_PERMISSION_NAMES = Object.keys(PERMISSION_LABELS);
+
+const DEPARTMENT_ALLOWED_PERMISSIONS = {
+  [DEPARTMENT_KEYS.COMMERCIAL]: ["voir_dashboard_bad_debts"],
+  [DEPARTMENT_KEYS.ASSURANCE_RISQUE]: [
+    "voir_dashboard_service_sos",
+    "voir_dashboard_parc_service_sos",
+    "lancer_traitement_elt",
+    "voir_resultat_elt",
+  ],
+  [DEPARTMENT_KEYS.ANALYSE_OPERATIONNELLE]: [
+    "voir_dashboard_service_sos",
+    "voir_dashboard_parc_service_sos",
+    "lancer_traitement_elt",
+    "voir_resultat_elt",
+  ],
+};
+
+function permissionLabel(permission) {
+  return permission?.label || PERMISSION_LABELS[permission?.nom_droit] || permission?.nom_droit;
+}
 
 export default function AdminDepartmentsPage() {
   // ── Core state (unchanged logic) ──────────────────────────────────────────
@@ -23,12 +54,20 @@ export default function AdminDepartmentsPage() {
   const [searchDept, setSearchDept] = useState("");
   const [page, setPage] = useState(1);
 
+  const allowedPermissionNames = useMemo(() => {
+    const key = departmentKey(selectedDepartement);
+    return DEPARTMENT_ALLOWED_PERMISSIONS[key] || [];
+  }, [selectedDepartement]);
+
   const availableDroits = useMemo(
     () =>
       droits.filter(
-        (droit) => !selectedDroits.some((item) => item.nom_droit === droit.nom_droit)
+        (droit) =>
+          VALID_PERMISSION_NAMES.includes(droit.nom_droit) &&
+          allowedPermissionNames.includes(droit.nom_droit) &&
+          !selectedDroits.some((item) => item.nom_droit === droit.nom_droit)
       ),
-    [droits, selectedDroits]
+    [droits, selectedDroits, allowedPermissionNames]
   );
 
   async function loadData() {
@@ -42,7 +81,9 @@ export default function AdminDepartmentsPage() {
       ]);
 
       const deps = Array.isArray(depsResponse.data) ? depsResponse.data : [];
-      const allDroits = Array.isArray(droitsResponse.data) ? droitsResponse.data : [];
+      const allDroits = Array.isArray(droitsResponse.data)
+        ? droitsResponse.data.filter((droit) => VALID_PERMISSION_NAMES.includes(droit.nom_droit))
+        : [];
 
       setDepartements(deps);
       setDroits(allDroits);
@@ -70,7 +111,11 @@ export default function AdminDepartmentsPage() {
       const response = await api.get(
         `/admin/departements/by-name/${encodeURIComponent(nom)}/droits`
       );
-      setSelectedDroits(response.data?.droits || []);
+      setSelectedDroits(
+        (response.data?.droits || []).filter((droit) =>
+          VALID_PERMISSION_NAMES.includes(droit.nom_droit)
+        )
+      );
     } catch (err) {
       setSelectedDroits([]);
       setRightsError(getApiError(err, "Département introuvable ou supprimé."));
@@ -228,7 +273,7 @@ export default function AdminDepartmentsPage() {
           </div>
           <div>
             <div className="au-stat-value">{droits.length}</div>
-            <div className="au-stat-label">Permissions système disponibles</div>
+            <div className="au-stat-label">Permissions métier disponibles</div>
           </div>
         </div>
       </div>
@@ -373,7 +418,7 @@ export default function AdminDepartmentsPage() {
                 <option value="">Choisir une permission à ajouter...</option>
                 {availableDroits.map((droit) => (
                   <option key={droit.id} value={droit.nom_droit}>
-                    {droit.nom_droit}
+                    {permissionLabel(droit)}
                   </option>
                 ))}
               </select>
@@ -406,7 +451,7 @@ export default function AdminDepartmentsPage() {
                   }}
                 >
                   <Key size={14} style={{ color: "#94a3b8" }} />
-                  {droit.nom_droit}
+                  {permissionLabel(droit)}
                   <button
                     type="button"
                     onClick={() => removePermission(droit.nom_droit)}

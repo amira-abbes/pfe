@@ -1,6 +1,5 @@
 ﻿import {
   Activity,
-  BarChart3,
   AlertCircle,
   CheckCircle2,
   Clock3,
@@ -10,9 +9,7 @@
   Eye,
   FileText,
   Info as InfoIcon,
-  LayoutDashboard,
   Loader2,
-  LogOut,
   PlayCircle,
   Power,
   Printer,
@@ -210,10 +207,9 @@ function saveBlob(blob, filename) {
 }
 
 export default function AdminEltPage() {
-  const { hasRight, logout, user } = useAuth();
+  const { hasRight } = useAuth();
   const navigate = useNavigate();
   const canRunElt = hasRight("lancer_elt");
-  const dashboardPath = user?.role === "SUPER_ADMIN" ? "/super-admin/dashboard" : "/admin/dashboard";
 
   const [loading, setLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -773,10 +769,6 @@ export default function AdminEltPage() {
         <div className="elt-bg-waves" aria-hidden="true" />
 
       <section className="elt-hero-header elt-reveal">
-        <div className="elt-hero-brand">
-          <img className="elt-hero-logo" src="/tt-logo.png" alt="Tunisie Telecom" />
-          <span className="elt-hero-badge">Plateforme interne</span>
-        </div>
         <div className="elt-hero-copy">
           <h1 className="elt-hero-title">Pilotage ELT Service SOS Solde & Data</h1>
         </div>
@@ -872,32 +864,6 @@ export default function AdminEltPage() {
           onDownload={() => download(technicalCsvPath(report), "/elt/download/csv", "suivi-technique.csv")}
         />
       )}
-      <nav className="elt-bottom-nav" aria-label="Navigation ELT">
-        <button type="button" onClick={() => navigate(dashboardPath)}>
-          <LayoutDashboard size={18} />
-          <span>Dashboard</span>
-        </button>
-        <button type="button" className="active" onClick={() => navigate("/admin/elt")}>
-          <PlayCircle size={18} />
-          <span>Traitement ELT</span>
-        </button>
-        {hasRight("dashboard_service_sos") && (
-          <button type="button" onClick={() => navigate("/dashboard/service-sos")}>
-            <BarChart3 size={18} />
-            <span>Service SOS</span>
-          </button>
-        )}
-        {hasRight("dashboard_parc_service_sos") && (
-          <button type="button" onClick={() => navigate("/dashboard/parc-service-sos")}>
-            <BarChart3 size={18} />
-            <span>Parc SOS</span>
-          </button>
-        )}
-        <button type="button" className="logout" onClick={logout}>
-          <LogOut size={18} />
-          <span>Déconnexion</span>
-        </button>
-      </nav>
       </div>
     </Layout>
   );

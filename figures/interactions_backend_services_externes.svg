@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title id="title">Figure XX : Interactions entre le Backend FastAPI et les services externes</title>
+  <desc id="desc">Schema horizontal montrant FastAPI comme centre d'orchestration entre React JS, PostgreSQL, SMTP, ELT, Power BI et Machine Learning Bad Debts.</desc>
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="11" flood-color="#0f172a" flood-opacity="0.13"/>
+    </filter>
+    <marker id="arrowBlue" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowTeal" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#0f766e"/>
+    </marker>
+    <marker id="arrowOrange" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#ea580c"/>
+    </marker>
+    <marker id="arrowPurple" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#7c3aed"/>
+    </marker>
+    <style>
+      .bg { fill: #ffffff; }
+      .title { font: 800 34px Arial, sans-serif; fill: #0f172a; letter-spacing: 0; }
+      .subtitle { font: 500 18px Arial, sans-serif; fill: #475569; }
+      .card { fill: #ffffff; stroke-width: 2.2; rx: 22; filter: url(#shadow); }
+      .user { stroke: #94a3b8; }
+      .react { stroke: #2563eb; }
+      .fastapi { fill: #ecfeff; stroke: #0f766e; stroke-width: 3; rx: 30; filter: url(#shadow); }
+      .postgres { stroke: #7c3aed; }
+      .external { stroke: #fb923c; }
+      .label { font: 800 24px Arial, sans-serif; fill: #0f172a; }
+      .small { font: 600 15px Arial, sans-serif; fill: #64748b; }
+      .tiny { font: 700 13px Arial, sans-serif; fill: #475569; }
+      .icon-gray { fill: none; stroke: #475569; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      .icon-blue { fill: none; stroke: #2563eb; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      .icon-teal { fill: none; stroke: #0f766e; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      .icon-purple { fill: none; stroke: #7c3aed; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      .icon-orange { fill: none; stroke: #ea580c; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      .flow-blue { fill: none; stroke: #2563eb; stroke-width: 3.2; stroke-linecap: round; marker-end: url(#arrowBlue); }
+      .flow-teal { fill: none; stroke: #0f766e; stroke-width: 3.2; stroke-linecap: round; marker-end: url(#arrowTeal); }
+      .flow-orange { fill: none; stroke: #ea580c; stroke-width: 3.2; stroke-linecap: round; marker-end: url(#arrowOrange); }
+      .flow-purple { fill: none; stroke: #7c3aed; stroke-width: 3.2; stroke-linecap: round; marker-end: url(#arrowPurple); }
+      .hint { font: 800 14px Arial, sans-serif; fill: #334155; }
+      .pill { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1.4; rx: 14; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="900" class="bg"/>
+  <text x="800" y="58" text-anchor="middle" class="title">Interactions entre le Backend FastAPI et les services externes</text>
+  <text x="800" y="91" text-anchor="middle" class="subtitle">FastAPI orchestre les acces, les donnees et les services decisionnels</text>
+
+  <!-- User -->
+  <rect x="95" y="155" width="255" height="120" class="card user"/>
+  <g transform="translate(132 183)">
+    <circle cx="34" cy="20" r="16" class="icon-gray"/>
+    <path d="M6 74c7-31 49-31 56 0" class="icon-gray"/>
+  </g>
+  <text x="245" y="201" text-anchor="middle" class="label">Utilisateur</text>
+  <text x="245" y="232" text-anchor="middle" class="small">profils autorises</text>
+
+  <!-- React -->
+  <rect x="470" y="155" width="295" height="120" class="card react"/>
+  <g transform="translate(510 184)">
+    <rect x="0" y="12" width="64" height="45" rx="8" class="icon-blue"/>
+    <path d="M14 72h36M24 57v15M40 57v15" class="icon-blue"/>
+  </g>
+  <text x="638" y="201" text-anchor="middle" class="label">React JS Frontend</text>
+  <text x="638" y="232" text-anchor="middle" class="small">interfaces et appels API</text>
+
+  <!-- FastAPI center -->
+  <rect x="600" y="370" width="400" height="170" class="fastapi"/>
+  <g transform="translate(642 405)">
+    <rect x="0" y="12" width="70" height="48" rx="9" class="icon-teal"/>
+    <path d="M13 25h44M13 38h44M13 51h29" class="icon-teal"/>
+    <path d="M92 13v48M112 13v48M132 13v48" class="icon-teal"/>
+  </g>
+  <text x="823" y="430" text-anchor="middle" class="label">FastAPI Backend</text>
+  <text x="823" y="462" text-anchor="middle" class="small">API REST securisees</text>
+  <text x="823" y="488" text-anchor="middle" class="small">controle des acces</text>
+  <text x="823" y="514" text-anchor="middle" class="small">orchestration applicative</text>
+
+  <!-- PostgreSQL -->
+  <rect x="125" y="595" width="340" height="125" class="card postgres"/>
+  <g transform="translate(165 625)">
+    <ellipse cx="34" cy="13" rx="30" ry="11" class="icon-purple"/>
+    <path d="M4 13v48c0 7 13 12 30 12s30-5 30-12V13" class="icon-purple"/>
+    <path d="M4 37c0 7 13 12 30 12s30-5 30-12" class="icon-purple"/>
+  </g>
+  <text x="315" y="642" text-anchor="middle" class="label">PostgreSQL</text>
+  <text x="315" y="673" text-anchor="middle" class="small">donnees applicatives</text>
+  <text x="315" y="696" text-anchor="middle" class="small">securite et analytique</text>
+
+  <!-- External services right -->
+  <rect x="1140" y="230" width="330" height="95" class="card external"/>
+  <g transform="translate(1174 255)">
+    <rect x="5" y="10" width="62" height="43" rx="7" class="icon-orange"/>
+    <path d="M7 15l29 23 29-23" class="icon-orange"/>
+  </g>
+  <text x="1320" y="263" text-anchor="middle" class="label">SMTP</text>
+  <text x="1320" y="293" text-anchor="middle" class="small">activation, recuperation, alertes</text>
+
+  <rect x="1140" y="365" width="330" height="95" class="card external"/>
+  <g transform="translate(1177 388)">
+    <path d="M10 51V20l24-12 24 12v31L34 63z" class="icon-orange"/>
+    <path d="M22 36h24M34 22v28" class="icon-orange"/>
+  </g>
+  <text x="1320" y="398" text-anchor="middle" class="label">ELT</text>
+  <text x="1320" y="428" text-anchor="middle" class="small">traitements et alimentation</text>
+
+  <rect x="1140" y="500" width="330" height="95" class="card external"/>
+  <g transform="translate(1175 525)">
+    <rect x="6" y="8" width="64" height="47" rx="7" class="icon-orange"/>
+    <path d="M20 45V30M36 45V19M52 45V36" class="icon-orange"/>
+  </g>
+  <text x="1320" y="533" text-anchor="middle" class="label">Power BI</text>
+  <text x="1320" y="563" text-anchor="middle" class="small">dashboards decisionnels</text>
+
+  <rect x="1140" y="635" width="330" height="105" class="card external"/>
+  <g transform="translate(1176 663)">
+    <circle cx="36" cy="28" r="23" class="icon-orange"/>
+    <path d="M36 5v46M13 28h46M21 12l30 32M51 12L21 44" class="icon-orange"/>
+  </g>
+  <text x="1320" y="672" text-anchor="middle" class="label">Machine Learning</text>
+  <text x="1320" y="701" text-anchor="middle" class="small">Bad Debts, scoring, risques</text>
+
+  <!-- Main flows -->
+  <path d="M350 215 L463 215" class="flow-blue"/>
+  <text x="392" y="198" class="hint">interaction</text>
+
+  <path d="M690 275 C730 315 765 336 795 364" class="flow-blue"/>
+  <path d="M755 370 C718 336 690 316 654 282" class="flow-blue"/>
+  <text x="728" y="326" class="hint">API REST securisees</text>
+
+  <!-- FastAPI PostgreSQL bidirectional -->
+  <path d="M600 500 C510 555 480 610 472 645" class="flow-purple"/>
+  <path d="M465 675 C520 620 560 575 610 530" class="flow-purple"/>
+  <text x="498" y="575" class="hint">lecture / ecriture</text>
+
+  <!-- FastAPI external bidirectional simplified -->
+  <path d="M1000 400 C1060 342 1080 278 1132 278" class="flow-orange"/>
+  <path d="M1132 292 C1076 314 1060 365 1008 424" class="flow-orange"/>
+
+  <path d="M1000 442 L1130 412" class="flow-orange"/>
+  <path d="M1130 426 L1008 466" class="flow-orange"/>
+
+  <path d="M1000 486 L1130 546" class="flow-orange"/>
+  <path d="M1130 560 L1008 510" class="flow-orange"/>
+
+  <path d="M1000 530 C1065 605 1080 685 1132 685" class="flow-orange"/>
+  <path d="M1132 699 C1074 670 1060 595 1008 516" class="flow-orange"/>
+
+  <text x="1038" y="356" class="hint">emails</text>
+  <text x="1048" y="424" class="hint">jobs</text>
+  <text x="1048" y="536" class="hint">rapports</text>
+  <text x="1038" y="645" class="hint">analyses</text>
+
+  <!-- Message pill -->
+  <rect x="520" y="790" width="560" height="58" class="pill"/>
+  <text x="800" y="826" text-anchor="middle" class="hint">FastAPI centralise les controles, les donnees et l'orchestration des services</text>
+</svg>

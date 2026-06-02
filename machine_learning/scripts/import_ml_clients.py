@@ -1,13 +1,15 @@
+import json
 import pandas as pd
 from pathlib import Path
 from sqlalchemy import create_engine, text
+from sqlalchemy.dialects.postgresql import JSONB, BOOLEAN, INTEGER, DOUBLE_PRECISION, VARCHAR
 
 
 # ==========================================================
 # CONFIGURATION
 # ==========================================================
 
-PROJECT_DIR = Path(r"C:\Users\benab\OneDrive\Bureau\PFE TT\PLATEFORME TT")
+PROJECT_DIR = Path(__file__).resolve().parent.parent.parent
 
 CSV_PATH = PROJECT_DIR / "machine_learning" / "data" / "exports" / "clients_segmented.csv"
 
@@ -78,6 +80,17 @@ def clean_boolean_column(series: pd.Series) -> pd.Series:
     )
 
 
+def parse_json_col(val):
+    if not val or pd.isna(val):
+        return []
+    if isinstance(val, (list, dict)):
+        return val
+    try:
+        return json.loads(val)
+    except Exception:
+        return []
+
+
 def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """
     Nettoie et prépare le DataFrame avant insertion PostgreSQL.
@@ -99,18 +112,22 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     df = df[df["msisdn"].str.strip() != ""]
 
     # Booléen
-    df["is_anomaly"] = clean_boolean_column(df["is_anomaly"])
+    bool_cols = [
+        "is_anomaly",
+        "has_debt",
+        "uses_sos",
+        "never_repaid",
+        "full_repayer",
+        "is_dormant_like",
+    ]
+    for col in bool_cols:
+        df[col] = clean_boolean_column(df[col])
 
     # Entiers
     integer_cols = [
         "cluster_id",
         "risk_level",
         "nb_sos",
-        "has_debt",
-        "uses_sos",
-        "never_repaid",
-        "full_repayer",
-        "is_dormant_like",
     ]
 
     for col in integer_cols:
@@ -139,11 +156,15 @@ def clean_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         "cluster_name",
         "risk_label",
         "risk_tier",
-        "top_drivers",
     ]
 
     for col in text_cols:
         df[col] = df[col].fillna("").astype(str).str.strip()
+
+    # JSONB
+    df["top_drivers"] = df["top_drivers"].apply(parse_json_col)
+
+    df["imported_at"] = pd.Timestamp.now()
 
     return df
 
@@ -329,6 +350,14 @@ def import_clients_segmented():
                 index=False,
                 method="multi",
                 chunksize=1000,
+                dtype={
+                    "top_drivers": JSONB,
+                    "has_debt": BOOLEAN,
+                    "uses_sos": BOOLEAN,
+                    "never_repaid": BOOLEAN,
+                    "full_repayer": BOOLEAN,
+                    "is_dormant_like": BOOLEAN,
+                }
             )
 
             count = conn.execute(

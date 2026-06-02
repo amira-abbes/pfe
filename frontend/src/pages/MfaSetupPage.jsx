@@ -1,9 +1,10 @@
 import { Download, QrCode, ShieldCheck } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
 import { useAuth } from "../context/AuthContext";
+import OtpInput from "../components/OtpInput";
 
 function downloadCodes(codes) {
   const content = [
@@ -25,7 +26,6 @@ function downloadCodes(codes) {
 export default function MfaSetupPage() {
   const navigate = useNavigate();
   const { completeLogin } = useAuth();
-  const codeInputRef = useRef(null);
 
   const setupToken = sessionStorage.getItem("mfa_setup_token") || "";
   const [step, setStep] = useState("intro");
@@ -64,7 +64,6 @@ export default function MfaSetupPage() {
       setQrCode(data.qr_code_base64 || data.qr_code || "");
       setMessage(data.message || "Scannez le QR code avec votre application Authenticator.");
       setStep("qr");
-      window.setTimeout(() => codeInputRef.current?.focus(), 0);
     } catch (err) {
       setError(getApiError(err, "Configuration MFA impossible."));
     } finally {
@@ -93,7 +92,6 @@ export default function MfaSetupPage() {
           return;
         }
         setError(data.message || "Code incorrect. Veuillez réessayer.");
-        window.setTimeout(() => codeInputRef.current?.focus(), 0);
         return;
       }
 
@@ -105,7 +103,6 @@ export default function MfaSetupPage() {
     } catch (err) {
       setCode("");
       setError(getApiError(err, "Connexion validée, mais le chargement de votre session a échoué."));
-      window.setTimeout(() => codeInputRef.current?.focus(), 0);
     } finally {
       setLoading(false);
     }
@@ -153,16 +150,13 @@ export default function MfaSetupPage() {
             )}
             <form className="form" onSubmit={confirmSetup}>
               <div className="input-group">
-                <label>Code Authenticator</label>
-                <input
-                  ref={codeInputRef}
-                  className="input"
+                <label className="otp-label">Code Authenticator</label>
+                <OtpInput
                   value={code}
-                  onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                  inputMode="numeric"
-                  maxLength={6}
-                  disabled={cooldownSeconds > 0}
-                  required
+                  onChange={setCode}
+                  autoFocus
+                  disabled={cooldownSeconds > 0 || loading}
+                  ariaLabel="Code Authenticator"
                 />
               </div>
               <button className="btn btn-primary" disabled={loading || cooldownSeconds > 0}>

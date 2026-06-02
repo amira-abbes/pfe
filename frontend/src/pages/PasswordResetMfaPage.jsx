@@ -1,9 +1,10 @@
-import { KeyRound, ShieldCheck, ArrowRight } from "lucide-react";
+import { ArrowRight, KeyRound, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
 import AuthTriangles from "../components/AuthTriangles";
+import OtpInput from "../components/OtpInput";
 
 function formatCountdown(seconds) {
   const safeSeconds = Math.max(0, Number(seconds || 0));
@@ -30,7 +31,7 @@ export default function PasswordResetMfaPage() {
   );
 
   useEffect(() => {
-    if (cooldown <= 0) return;
+    if (cooldown <= 0) return undefined;
 
     const timer = window.setInterval(() => {
       setCooldown((current) => Math.max(0, current - 1));
@@ -126,7 +127,7 @@ export default function PasswordResetMfaPage() {
         <div className="rainbow-line" />
 
         {!isBlocked && (
-          <p className="subtitle" style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <p className="subtitle" style={{ textAlign: "center", marginBottom: "24px" }}>
             {isRecovery
               ? "Entrez l'un de vos codes de secours à 10 chiffres."
               : "Entrez le code à 6 chiffres de votre application Authenticator."}
@@ -134,12 +135,12 @@ export default function PasswordResetMfaPage() {
         )}
 
         {email && !error && !info && (
-          <div style={{ textAlign: 'center', marginBottom: '20px', fontSize: '13px', color: '#64748b' }}>
+          <div style={{ textAlign: "center", marginBottom: "20px", fontSize: "13px", color: "#64748b" }}>
             Compte : <strong>{email}</strong>
           </div>
         )}
 
-        {info && <div className="auth-error-banner" style={{ background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0' }}>{info}</div>}
+        {info && <div className="auth-error-banner" style={{ background: "#f8fafc", color: "#64748b", border: "1px solid #e2e8f0" }}>{info}</div>}
         {error && (
           <div className="auth-error-banner">
             {error}
@@ -153,8 +154,8 @@ export default function PasswordResetMfaPage() {
         )}
 
         {isBlocked && (
-          <div className="blocked-box" style={{ textAlign: 'center' }}>
-            <button className="btn-primary" onClick={switchToRecovery} style={{ width: '100%' }}>
+          <div className="blocked-box" style={{ textAlign: "center" }}>
+            <button className="btn-primary" onClick={switchToRecovery} style={{ width: "100%" }}>
               <KeyRound size={18} />
               Utiliser un code de secours
             </button>
@@ -164,17 +165,33 @@ export default function PasswordResetMfaPage() {
         {!isBlocked && (
           <form className="form" onSubmit={handleSubmit}>
             <div className="input-group">
-              <div className="input-icon-wrap">
-                <span className="input-icon-left">{isRecovery ? <KeyRound size={17} /> : <ShieldCheck size={17} />}</span>
-                <input
-                  className="input"
-                  value={code}
-                  onChange={(event) => setCode(event.target.value)}
-                  placeholder={isRecovery ? "Code à 10 chiffres" : "000 000"}
-                  disabled={loading || isCooldown}
-                  required
-                />
-              </div>
+              {isRecovery ? (
+                <div className="input-icon-wrap">
+                  <span className="input-icon-left"><KeyRound size={17} /></span>
+                  <input
+                    className="input"
+                    value={code}
+                    onChange={(event) => setCode(event.target.value)}
+                    placeholder="Code à 10 chiffres"
+                    disabled={loading || isCooldown}
+                    required
+                  />
+                </div>
+              ) : (
+                <>
+                  <label className="otp-label">
+                    <ShieldCheck size={17} />
+                    Code Authenticator
+                  </label>
+                  <OtpInput
+                    value={code}
+                    onChange={setCode}
+                    autoFocus
+                    disabled={loading || isCooldown}
+                    ariaLabel="Code Authenticator"
+                  />
+                </>
+              )}
             </div>
 
             <button className="btn-primary" disabled={loading || isCooldown}>
@@ -183,11 +200,11 @@ export default function PasswordResetMfaPage() {
             </button>
 
             {!isRecovery && (recoveryRequired || !isCooldown) && (
-              <div className="auth-forgot" style={{ textAlign: 'center', marginTop: '16px', justifyContent: 'center' }}>
+              <div className="auth-forgot" style={{ textAlign: "center", marginTop: "16px", justifyContent: "center" }}>
                 <button
                   type="button"
                   onClick={switchToRecovery}
-                  style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                  style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: "8px" }}
                 >
                   <KeyRound size={15} /> Utiliser un code de secours
                 </button>
@@ -196,7 +213,7 @@ export default function PasswordResetMfaPage() {
           </form>
         )}
 
-        <div className="auth-forgot" style={{ textAlign: 'center', marginTop: '24px', justifyContent: 'center' }}>
+        <div className="auth-forgot" style={{ textAlign: "center", marginTop: "24px", justifyContent: "center" }}>
           <Link to="/login">Retour à la connexion</Link>
         </div>
       </div>

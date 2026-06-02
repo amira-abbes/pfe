@@ -67,6 +67,13 @@ export default function LoginPage() {
           return;
         }
 
+        if (data.status === "activation_totp_setup_required") {
+          sessionStorage.setItem("totp_setup_token", data.setup_token || "");
+          sessionStorage.setItem("activation_email", data.email || form.email);
+          navigate(data.redirect_to || "/activation/totp");
+          return;
+        }
+
         if (data.status === "recovery_required" || data.reason === "mfa_blocked") {
           navigate(data.redirect_to || "/mfa-blocked", {
             state: {
@@ -237,16 +244,6 @@ export default function LoginPage() {
                 ? `Réessayer (${cooldownSeconds}s)`
                 : "Se connecter"}
             {!loading && cooldownSeconds <= 0 && <ArrowRight size={18} />}
-          </button>
-
-          {/* Direct login (ghost style for dev) */}
-          <button
-            className="btn-ghost"
-            type="button"
-            disabled={loading || cooldownSeconds > 0}
-            onClick={() => handleSubmit(null, "plateforme.tt.systemeadmin@gmail.com", "SuperAdmin@2026!")}
-          >
-            🚀 Connexion Directe
           </button>
         </form>
       </div>

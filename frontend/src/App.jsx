@@ -25,8 +25,8 @@ import PasswordResetRecoveryTokenPage from "./pages/PasswordResetRecoveryTokenPa
 import ActivationPage from "./pages/ActivationPage";
 import ActivationTotpPage from "./pages/ActivationTotpPage";
 
-import UserDashboard from "./pages/UserDashboard";
-import AdminDashboard from "./pages/AdminDashboard";
+import MonComptePage from "./pages/MonComptePage";
+import AdminMyDepartmentPage from "./pages/AdminMyDepartmentPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminDepartmentsPage from "./pages/AdminDepartmentsPage";
 import AdminEltPage from "./pages/AdminEltPage";
@@ -110,10 +110,18 @@ export default function App() {
       />
 
       <Route
+        path="/mon-compte"
+        element={
+          <ProtectedRoute>
+            <MonComptePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <UserDashboard />
+            <MonComptePage />
           </ProtectedRoute>
         }
       />
@@ -121,7 +129,7 @@ export default function App() {
         path="/user/dashboard"
         element={
           <ProtectedRoute>
-            <UserDashboard />
+            <MonComptePage />
           </ProtectedRoute>
         }
       />
@@ -136,19 +144,10 @@ export default function App() {
       />
 
       <Route
-        path="/super-admin/dashboard"
+        path="/admin/mon-departement"
         element={
-          <ProtectedRoute superAdminOnly>
-            <AdminDashboard />
-          </ProtectedRoute>
-        }
-      />
-
-      <Route
-        path="/admin/dashboard"
-        element={
-          <ProtectedRoute adminOnly>
-            <AdminDashboard />
+          <ProtectedRoute departmentAdminOnly>
+            <AdminMyDepartmentPage />
           </ProtectedRoute>
         }
       />
@@ -156,7 +155,7 @@ export default function App() {
       <Route
         path="/admin/users"
         element={
-          <ProtectedRoute adminOnly requiredRight="gerer_utilisateurs">
+          <ProtectedRoute superAdminOnly>
             <AdminUsersPage />
           </ProtectedRoute>
         }
@@ -165,7 +164,7 @@ export default function App() {
       <Route
         path="/admin/departements"
         element={
-          <ProtectedRoute adminOnly requiredAnyRight={["gerer_departements", "gerer_roles"]}>
+          <ProtectedRoute superAdminOnly>
             <AdminDepartmentsPage />
           </ProtectedRoute>
         }

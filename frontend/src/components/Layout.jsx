@@ -3,115 +3,98 @@ import {
   Building2,
   Home,
   KeyRound,
-  LayoutDashboard,
-  LogOut,
   PlayCircle,
   TrendingDown,
-  User,
+  UserRound,
   Users,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import AppHeader from "./AppHeader";
 
-export default function Layout({ children, title, subtitle, noPadding = false, noScroll = false, hideSidebar = false, className = "" }) {
-  const { user, logout, hasRight } = useAuth();
+export default function Layout({ children, title, subtitle, noPadding = false, noScroll = false, className = "" }) {
+  const { user, hasRight } = useAuth();
   const location = useLocation();
   const currentPath = location.pathname;
 
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
-  const isAdmin = user?.role === "ADMIN";
+  const isAdmin = ["ADMIN", "ADMIN_DEPARTEMENTAL"].includes(user?.role);
   const isEltLayout = className.includes("app-shell--elt");
 
-  // Navigation Items
   const navItems = [
     {
-      to: isSuperAdmin ? "/super-admin/dashboard" : isAdmin ? "/admin/dashboard" : "/dashboard",
-      icon: (isAdmin || isSuperAdmin) ? <LayoutDashboard size={22} /> : <User size={22} />,
-      label: (isAdmin || isSuperAdmin) ? "Dashboard" : "Mon Compte",
-      id: "dashboard"
+      to: "/accueil",
+      icon: <Home size={22} />,
+      label: "Accueil",
+      id: "accueil",
     },
     {
-      to: "/security",
-      icon: <KeyRound size={22} />,
-      label: "Sécurité",
-      id: "security"
+      to: "/mon-compte",
+      icon: <UserRound size={22} />,
+      label: "Mon compte",
+      id: "mon-compte",
     },
     {
       to: "/admin/users",
       icon: <Users size={22} />,
       label: "Utilisateurs",
       id: "users",
-      hidden: !hasRight("gerer_utilisateurs")
+      hidden: !isSuperAdmin,
     },
     {
       to: "/admin/departements",
       icon: <Building2 size={22} />,
       label: "Départements & permissions",
       id: "depts",
-      hidden: !(hasRight("gerer_departements") || hasRight("gerer_roles"))
+      hidden: !isSuperAdmin,
     },
     {
       to: "/dashboard/service-sos",
       icon: <BarChart3 size={22} />,
       label: "Dashboard Service SOS",
       id: "service-sos",
-      hidden: !hasRight("dashboard_service_sos")
-    },
-    {
-      to: "/admin/elt",
-      icon: <PlayCircle size={22} />,
-      label: "Traitement ELT",
-      id: "elt",
-      hidden: !hasRight("lancer_elt")
+      hidden: !hasRight("dashboard_service_sos"),
     },
     {
       to: "/dashboard/parc-service-sos",
       icon: <BarChart3 size={22} />,
       label: "Dashboard Parc Service SOS",
       id: "parc-service-sos",
-      hidden: !hasRight("dashboard_parc_service_sos")
+      hidden: !hasRight("dashboard_parc_service_sos"),
     },
     {
       to: "/dashboard/bad-debts",
       icon: <TrendingDown size={22} />,
       label: "Dashboard Bad Debts",
       id: "bad-debts",
-      hidden: !hasRight("dashboard_bad_debts")
+      hidden: !hasRight("dashboard_bad_debts"),
     },
     {
-      to: "/accueil",
-      icon: <Home size={22} />,
-      label: "Accueil",
-      id: "accueil"
+      to: "/admin/elt",
+      icon: <PlayCircle size={22} />,
+      label: "Traitement ELT",
+      id: "elt",
+      hidden: !hasRight("lancer_elt"),
+    },
+    {
+      to: "/admin/mon-departement",
+      icon: <Building2 size={22} />,
+      label: "Mon département",
+      id: "my-department",
+      hidden: !isAdmin,
+    },
+    {
+      to: "/security",
+      icon: <KeyRound size={22} />,
+      label: "Sécurité",
+      id: "security",
     },
   ];
 
   return (
     <div className={`app-shell-bottom ${noScroll ? "no-scroll" : ""} ${className}`}>
-      {/* ── Top Header ── */}
-      {!isEltLayout && (
-        <header className="top-header">
-          <div className="top-header-brand">
-            <img src="/tt-logo.png" alt="Tunisie Telecom" />
-            <div className="top-header-text">
-              <span className="top-header-title">Tunisie Telecom</span>
-              <span className="top-header-sub">Plateforme Interne</span>
-            </div>
-          </div>
+      <AppHeader />
 
-          <div className="top-header-right">
-            <div className="user-chip">
-              <span>{user?.nom_complet || "Utilisateur"}</span>
-              <span className="user-chip-role">{user?.role === "SUPER_ADMIN" ? "S.Admin" : user?.role}</span>
-            </div>
-            <button className="logout-chip" onClick={logout} title="Déconnexion">
-              <LogOut size={18} />
-            </button>
-          </div>
-        </header>
-      )}
-
-      {/* ── Main Content ── */}
       <main className={`bottom-main-content ${noPadding ? "p-0" : ""} ${noScroll ? "no-scroll" : ""}`}>
         {title && !noPadding && !isEltLayout && (
           <div style={{ marginBottom: "24px" }}>
@@ -122,9 +105,8 @@ export default function Layout({ children, title, subtitle, noPadding = false, n
         {children}
       </main>
 
-      {/* ── Bottom Navbar ── */}
       <nav className="bottom-navbar">
-        {navItems.filter(item => !item.hidden).map((item) => {
+        {navItems.filter((item) => !item.hidden).map((item) => {
           const isActive = currentPath === item.to || (item.to !== "/accueil" && currentPath.startsWith(item.to));
           return (
             <Link

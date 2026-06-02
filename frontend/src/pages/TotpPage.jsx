@@ -1,15 +1,15 @@
 import { KeyRound, ShieldCheck } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
 import { useAuth } from "../context/AuthContext";
 import AuthTriangles from "../components/AuthTriangles";
+import OtpInput from "../components/OtpInput";
 
 export default function TotpPage() {
   const navigate = useNavigate();
   const { completeLogin, isAuthenticated, loading: authLoading } = useAuth();
-  const codeInputRef = useRef(null);
 
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
@@ -41,12 +41,8 @@ export default function TotpPage() {
     setCode(clean);
   }
 
-  function clearCodeAfterError(shouldFocus = true) {
+  function clearCodeAfterError() {
     setCode("");
-
-    if (shouldFocus) {
-      window.setTimeout(() => codeInputRef.current?.focus(), 0);
-    }
   }
 
   async function handleSubmit(event) {
@@ -187,21 +183,17 @@ export default function TotpPage() {
 
         <form className="form" onSubmit={handleSubmit}>
           <div className="input-group">
-            <div className="input-icon-wrap">
-              <span className="input-icon-left"><ShieldCheck size={17} /></span>
-              <input
-                ref={codeInputRef}
-                className="input"
-                value={code}
-                onChange={(event) => handleCodeChange(event.target.value)}
-                placeholder="000 000"
-                inputMode="numeric"
-                maxLength={6}
-                autoFocus
-                required
-                disabled={cooldownSeconds > 0 || loading}
-              />
+            <div className="otp-label">
+              <ShieldCheck size={17} />
+              Code de vérification
             </div>
+            <OtpInput
+              value={code}
+              onChange={handleCodeChange}
+              autoFocus
+              disabled={cooldownSeconds > 0 || loading}
+              ariaLabel="Code Authenticator"
+            />
           </div>
 
           <button

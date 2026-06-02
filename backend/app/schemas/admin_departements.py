@@ -20,6 +20,7 @@ class AdminCreateDroitRequest(BaseModel):
 class AdminDroitResponse(BaseModel):
     id: UUID
     nom_droit: str
+    label: str | None = None
 
 
 class AdminAssignRightsToDepartementRequest(BaseModel):
@@ -29,6 +30,7 @@ class AdminAssignRightsToDepartementRequest(BaseModel):
 class AdminDepartmentRightItem(BaseModel):
     id: UUID
     nom_droit: str
+    label: str | None = None
 
 
 class AdminDepartmentRightsResponse(BaseModel):

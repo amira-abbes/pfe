@@ -261,6 +261,7 @@ def me(current_user: Utilisateur = Depends(get_current_user)):
             else None
         ),
         "permissions": permissions,
+        "date_creation": current_user.date_creation,
         "date_derniere_connexion": current_user.date_derniere_connexion,
     }
 

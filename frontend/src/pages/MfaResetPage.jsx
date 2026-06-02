@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
+import OtpInput from "../components/OtpInput";
 
 function formatSeconds(totalSeconds) {
   const safe = Math.max(0, Number(totalSeconds) || 0);
@@ -16,7 +17,6 @@ export default function MfaResetPage() {
   const [searchParams] = useSearchParams();
   const token = useMemo(() => searchParams.get("token") || "", [searchParams]);
   const recoveryInputRef = useRef(null);
-  const totpInputRef = useRef(null);
 
   const [step, setStep] = useState("recovery");
   const [recoveryCode, setRecoveryCode] = useState("");
@@ -56,7 +56,6 @@ export default function MfaResetPage() {
 
   function clearTotpField() {
     setTotpCode("");
-    window.setTimeout(() => totpInputRef.current?.focus(), 0);
   }
 
   async function verifyRecoveryCode(event) {
@@ -206,18 +205,12 @@ export default function MfaResetPage() {
             <form className="form" onSubmit={confirmNewMfa}>
               <div className="input-group">
                 <label>Code généré par la nouvelle application</label>
-                <input
-                  ref={totpInputRef}
-                  className="input"
+                <OtpInput
                   value={totpCode}
-                  onChange={(event) =>
-                    setTotpCode(event.target.value.replace(/\D/g, "").slice(0, 6))
-                  }
-                  inputMode="numeric"
-                  maxLength={6}
-                  disabled={totpCooldownSeconds > 0}
-                  required
+                  onChange={setTotpCode}
                   autoFocus
+                  disabled={totpCooldownSeconds > 0 || loading}
+                  ariaLabel="Code généré par la nouvelle application"
                 />
               </div>
 

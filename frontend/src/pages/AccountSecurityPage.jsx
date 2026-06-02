@@ -2,6 +2,7 @@ import { CheckCircle2, Download, Eye, EyeOff, FileDigit, Info, Mail, RefreshCcw,
 import { useEffect, useState } from "react";
 import { api, getApiError } from "../api/api";
 import Layout from "../components/Layout";
+import OtpInput from "../components/OtpInput";
 
 export default function AccountSecurityPage() {
   const [status, setStatus] = useState(null);
@@ -74,6 +75,11 @@ export default function AccountSecurityPage() {
     setError("");
     setMessage("");
     setNewCodes([]);
+
+    if (form.code_totp.length !== 6) {
+      setError("Le code Authenticator doit contenir 6 chiffres.");
+      return;
+    }
 
     try {
       const response = await api.post("/auth/security/recovery-codes/regenerate", {
@@ -193,16 +199,11 @@ export default function AccountSecurityPage() {
 
           <div className="au-field" style={{ marginBottom: "16px" }}>
             <label className="au-label">Code Authenticator</label>
-            <input
-              className="au-input"
-              style={{ width: "100%" }}
+            <OtpInput
               value={form.code_totp}
-              onChange={(event) =>
-                updateField("code_totp", event.target.value.replace(/\D/g, "").slice(0, 6))
-              }
-              placeholder="123456"
-              maxLength={6}
-              required
+              onChange={(value) => updateField("code_totp", value)}
+              disabled={false}
+              ariaLabel="Code Authenticator"
             />
           </div>
 

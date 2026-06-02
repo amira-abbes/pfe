@@ -1,0 +1,163 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="920" viewBox="0 0 1400 920" role="img" aria-labelledby="title desc">
+  <title id="title">Figure XX : Architecture interne du Backend</title>
+  <desc id="desc">Schema d'architecture applicative montrant le backend FastAPI comme coeur central entre React JS, PostgreSQL, ELT, Power BI, Machine Learning Bad Debts et SMTP.</desc>
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.13"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-gray" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#64748b"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 800 34px Arial, sans-serif; fill: #0f172a; letter-spacing: 0; }
+      .subtitle { font: 500 18px Arial, sans-serif; fill: #475569; }
+      .box { fill: #ffffff; stroke: #dbeafe; stroke-width: 2; rx: 22; filter: url(#shadow); }
+      .backend { fill: #eff6ff; stroke: #2563eb; stroke-width: 3; rx: 30; filter: url(#shadow); }
+      .module { fill: #ffffff; stroke: #bfdbfe; stroke-width: 1.8; rx: 16; }
+      .side { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; rx: 20; filter: url(#shadow); }
+      .db { fill: #ffffff; stroke: #1d4ed8; stroke-width: 2.5; rx: 24; filter: url(#shadow); }
+      .label { font: 800 24px Arial, sans-serif; fill: #0f172a; }
+      .small { font: 700 17px Arial, sans-serif; fill: #1e293b; }
+      .tiny { font: 600 14px Arial, sans-serif; fill: #64748b; }
+      .icon { fill: none; stroke: #2563eb; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      .icon-gray { fill: none; stroke: #475569; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+      .flow { fill: none; stroke: #2563eb; stroke-width: 3.2; stroke-linecap: round; marker-end: url(#arrow); }
+      .flow2 { fill: none; stroke: #64748b; stroke-width: 3; stroke-linecap: round; marker-end: url(#arrow-gray); }
+      .caption { font: 700 16px Arial, sans-serif; fill: #334155; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1400" height="920"/>
+
+  <text x="700" y="62" text-anchor="middle" class="title">Architecture interne du Backend</text>
+  <text x="700" y="94" text-anchor="middle" class="subtitle">FastAPI comme coeur applicatif d'une plateforme decisionnelle securisee</text>
+
+  <!-- Frontend -->
+  <rect x="430" y="132" width="430" height="112" class="box"/>
+  <g transform="translate(475 157)">
+    <rect x="0" y="12" width="58" height="42" rx="7" class="icon"/>
+    <path d="M12 68h34M22 54v14M36 54v14" class="icon"/>
+    <circle cx="78" cy="30" r="13" class="icon"/>
+    <path d="M60 66c6-18 30-18 36 0" class="icon"/>
+  </g>
+  <text x="645" y="177" text-anchor="middle" class="label">Frontend React JS</text>
+  <text x="645" y="205" text-anchor="middle" class="tiny">Interfaces, navigation, appels API</text>
+
+  <!-- Backend main block -->
+  <rect x="250" y="320" width="620" height="370" class="backend"/>
+  <g transform="translate(295 348)">
+    <rect x="0" y="10" width="64" height="44" rx="8" class="icon"/>
+    <path d="M10 22h44M10 34h44M10 46h28" class="icon"/>
+    <path d="M80 16v42M98 16v42M116 16v42" class="icon"/>
+  </g>
+  <text x="590" y="382" text-anchor="middle" class="label">Backend FastAPI</text>
+  <text x="590" y="410" text-anchor="middle" class="tiny">API REST, securite, orchestration, services metier</text>
+
+  <!-- Backend modules -->
+  <rect x="292" y="445" width="250" height="54" class="module"/>
+  <text x="417" y="479" text-anchor="middle" class="small">Authentification &amp; MFA</text>
+
+  <rect x="578" y="445" width="250" height="54" class="module"/>
+  <text x="703" y="479" text-anchor="middle" class="small">Gestion utilisateurs</text>
+
+  <rect x="292" y="518" width="250" height="54" class="module"/>
+  <text x="417" y="552" text-anchor="middle" class="small">Roles &amp; permissions</text>
+
+  <rect x="578" y="518" width="250" height="54" class="module"/>
+  <text x="703" y="552" text-anchor="middle" class="small">Gestion sessions</text>
+
+  <rect x="292" y="591" width="160" height="54" class="module"/>
+  <text x="372" y="625" text-anchor="middle" class="small">API ELT</text>
+
+  <rect x="476" y="591" width="160" height="54" class="module"/>
+  <text x="556" y="625" text-anchor="middle" class="small">API Power BI</text>
+
+  <rect x="660" y="591" width="168" height="54" class="module"/>
+  <text x="744" y="625" text-anchor="middle" class="small">API Bad Debts</text>
+
+  <rect x="388" y="662" width="340" height="54" class="module"/>
+  <text x="558" y="696" text-anchor="middle" class="small">Notifications Email</text>
+
+  <!-- PostgreSQL -->
+  <rect x="430" y="770" width="430" height="110" class="db"/>
+  <g transform="translate(480 793)">
+    <ellipse cx="34" cy="14" rx="31" ry="12" class="icon"/>
+    <path d="M3 14v46c0 7 14 12 31 12s31-5 31-12V14" class="icon"/>
+    <path d="M3 37c0 7 14 12 31 12s31-5 31-12" class="icon"/>
+  </g>
+  <text x="665" y="817" text-anchor="middle" class="label">PostgreSQL</text>
+  <text x="665" y="846" text-anchor="middle" class="tiny">Donnees applicatives, securite et analytique</text>
+
+  <!-- External services -->
+  <g>
+    <rect x="1010" y="300" width="270" height="86" class="side"/>
+    <g transform="translate(1034 319)">
+      <path d="M10 44V18l20-10 20 10v26l-20 10z" class="icon-gray"/>
+      <path d="M20 28h20M30 18v30" class="icon-gray"/>
+    </g>
+    <text x="1165" y="335" text-anchor="middle" class="label">ELT</text>
+    <text x="1165" y="361" text-anchor="middle" class="tiny">Traitements &amp; rapports</text>
+  </g>
+
+  <g>
+    <rect x="1010" y="410" width="270" height="86" class="side"/>
+    <g transform="translate(1036 431)">
+      <rect x="4" y="7" width="58" height="42" rx="6" class="icon-gray"/>
+      <path d="M16 40V26M30 40V18M44 40V31" class="icon-gray"/>
+    </g>
+    <text x="1165" y="445" text-anchor="middle" class="label">Power BI</text>
+    <text x="1165" y="471" text-anchor="middle" class="tiny">Dashboards integres</text>
+  </g>
+
+  <g>
+    <rect x="1010" y="520" width="270" height="86" class="side"/>
+    <g transform="translate(1036 539)">
+      <circle cx="33" cy="29" r="22" class="icon-gray"/>
+      <path d="M33 7v44M11 29h44M18 14l30 30M48 14l-30 30" class="icon-gray"/>
+    </g>
+    <text x="1165" y="552" text-anchor="middle" class="label">Machine Learning</text>
+    <text x="1165" y="578" text-anchor="middle" class="tiny">Bad Debts, scoring, risques</text>
+  </g>
+
+  <g>
+    <rect x="1010" y="630" width="270" height="86" class="side"/>
+    <g transform="translate(1035 652)">
+      <rect x="4" y="8" width="60" height="42" rx="7" class="icon-gray"/>
+      <path d="M6 13l28 23 28-23" class="icon-gray"/>
+    </g>
+    <text x="1165" y="665" text-anchor="middle" class="label">SMTP</text>
+    <text x="1165" y="691" text-anchor="middle" class="tiny">Emails &amp; alertes</text>
+  </g>
+
+  <!-- Arrows central -->
+  <path d="M645 244 L645 314" class="flow"/>
+  <path d="M645 690 L645 763" class="flow"/>
+
+  <!-- bidirectional side arrows -->
+  <path d="M870 370 C925 370 946 343 1000 343" class="flow2"/>
+  <path d="M1000 354 C946 354 925 382 870 382" class="flow2"/>
+
+  <path d="M870 462 C925 462 946 453 1000 453" class="flow2"/>
+  <path d="M1000 464 C946 464 925 475 870 475" class="flow2"/>
+
+  <path d="M870 554 C925 554 946 563 1000 563" class="flow2"/>
+  <path d="M1000 574 C946 574 925 586 870 586" class="flow2"/>
+
+  <path d="M870 647 C925 647 946 673 1000 673" class="flow2"/>
+  <path d="M1000 684 C946 684 925 659 870 659" class="flow2"/>
+
+  <!-- Flow labels -->
+  <text x="690" y="285" class="caption">Requetes securisees</text>
+  <text x="690" y="742" class="caption">Persistance &amp; consultation</text>
+  <text x="918" y="328" class="tiny">orchestration</text>
+  <text x="918" y="443" class="tiny">dashboards</text>
+  <text x="912" y="543" class="tiny">analyses</text>
+  <text x="925" y="638" class="tiny">notifications</text>
+
+  <!-- Footer note -->
+  <rect x="190" y="895" width="1020" height="1.5" fill="#cbd5e1"/>
+</svg>

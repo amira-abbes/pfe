@@ -5,6 +5,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import settings
+from app.core.access_control import DEPARTMENT_ADMIN_ROLES, user_effective_permissions
 from app.core.constants import (
     AUDIT_ADMIN_SESSION_EXPIRED,
     AUDIT_SESSION_ACTIVITY_UPDATED,
@@ -95,7 +96,7 @@ def get_current_user(
 
     inactivity_limit = (
         timedelta(minutes=settings.ADMIN_SESSION_IDLE_MINUTES)
-        if str(session.role or "").upper() in {ROLE_ADMIN, ROLE_SUPER_ADMIN}
+        if str(session.role or "").upper() in {*DEPARTMENT_ADMIN_ROLES, ROLE_SUPER_ADMIN}
         else timedelta(minutes=settings.USER_SESSION_IDLE_MINUTES)
     )
 
@@ -215,27 +216,12 @@ def _inactive_account_exception(user: Utilisateur) -> HTTPException:
 
 
 def get_user_permissions(user: Utilisateur) -> list[str]:
-    permissions: list[str] = []
-
-    if not user.departement:
-        return permissions
-
-    for item in user.departement.departement_droits:
-        if item.droit_acces and item.droit_acces.nom_droit:
-            permissions.append(item.droit_acces.nom_droit)
-
-    return permissions
+    return sorted(user_effective_permissions(user))
 
 
 def require_permission(permission: str):
     def checker(current_user: Utilisateur = Depends(get_current_user)) -> Utilisateur:
         role = str(current_user.role or "").upper()
-        if role not in {ROLE_ADMIN, ROLE_SUPER_ADMIN}:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={"status": "forbidden", "message": "Accès refusé."},
-            )
-
         if role == ROLE_SUPER_ADMIN:
             return current_user
 
@@ -255,7 +241,7 @@ def require_permission(permission: str):
 def require_admin_or_super_admin(
     current_user: Utilisateur = Depends(get_current_user),
 ) -> Utilisateur:
-    if str(current_user.role or "").upper() not in {ROLE_ADMIN, ROLE_SUPER_ADMIN}:
+    if str(current_user.role or "").upper() not in {*DEPARTMENT_ADMIN_ROLES, ROLE_SUPER_ADMIN}:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"status": "forbidden", "message": "Accès refusé."},
@@ -283,7 +269,7 @@ def require_super_admin(
 def require_department_admin(
     current_user: Utilisateur = Depends(get_current_user),
 ) -> Utilisateur:
-    if str(current_user.role or "").upper() != ROLE_ADMIN or not current_user.departement_id:
+    if str(current_user.role or "").upper() not in DEPARTMENT_ADMIN_ROLES or not current_user.departement_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"status": "forbidden", "message": "Accès refusé."},

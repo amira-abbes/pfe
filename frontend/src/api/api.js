@@ -1,4 +1,5 @@
 import axios from "axios";
+import { firstAuthorizedPath } from "../accessControl";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
@@ -84,6 +85,21 @@ function redirectToAccountDisabledOnce(detailStatus, message) {
   safeSpaRedirect(`/account-disabled?reason=${accountStatus}&message=${encodedMessage}`, detailStatus);
 }
 
+function readCurrentUser() {
+  try {
+    return JSON.parse(localStorage.getItem("current_user") || "null");
+  } catch {
+    return null;
+  }
+}
+
+function redirectToAuthorizedPageOnce() {
+  const target = firstAuthorizedPath(readCurrentUser());
+  if (target && window.location.pathname !== target) {
+    safeSpaRedirect(target, "forbidden");
+  }
+}
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("access_token");
 
@@ -121,6 +137,10 @@ api.interceptors.response.use(
 
     if (status === 403 && accountStatuses.has(detailStatus) && !skipAuthRedirect) {
       redirectToAccountDisabledOnce(detailStatus, detail.message);
+    }
+
+    if (status === 403 && detailStatus === "forbidden" && !skipAuthRedirect) {
+      redirectToAuthorizedPageOnce();
     }
 
     if (status === 401 && shouldRedirectFor401(error)) {

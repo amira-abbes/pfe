@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_admin_or_super_admin
@@ -32,7 +32,7 @@ def create_user(
         email=str(payload.email),
         nom_complet=payload.nom_complet,
         departement_nom=payload.departement_nom,
-        role="USER",
+        role=payload.role or "USER",
         admin_user=current_user,
     )
 
@@ -75,18 +75,10 @@ def update_user_profile_by_email(
     current_user: Utilisateur = Depends(require_admin_or_super_admin),
     service: AdminService = Depends(get_admin_service),
 ):
-    fields_set = getattr(payload, "model_fields_set", getattr(payload, "__fields_set__", set()))
-    if "role" in fields_set:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "status": "role_update_forbidden",
-                "message": "Le rôle n’est pas modifiable depuis cette API.",
-            },
-        )
     return service.update_user_profile_by_email(
         email=email,
         departement_nom=payload.departement_nom,
+        role=payload.role,
         admin_user=current_user,
     )
 
@@ -98,6 +90,18 @@ def delete_user_by_email(
     service: AdminService = Depends(get_admin_service),
 ):
     return service.delete_user_by_email(
+        email=email,
+        admin_user=current_user,
+    )
+
+
+@router.post("/users/by-email/{email:path}/recovery-codes/regenerate", response_model=SimpleAdminMessageResponse)
+def regenerate_user_recovery_codes_by_email(
+    email: str,
+    current_user: Utilisateur = Depends(require_admin_or_super_admin),
+    service: AdminService = Depends(get_admin_service),
+):
+    return service.regenerate_user_recovery_codes_by_email(
         email=email,
         admin_user=current_user,
     )

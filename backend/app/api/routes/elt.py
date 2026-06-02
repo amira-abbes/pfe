@@ -3,8 +3,8 @@ import csv
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse, Response
 
-from app.api.deps import get_current_user, get_user_permissions
-from app.core.constants import ROLE_SUPER_ADMIN
+from app.api.deps import get_current_user, get_user_permissions, require_permission
+from app.core.constants import PERMISSION_DASHBOARD_SERVICE_SOS, PERMISSION_LANCER_ELT
 from app.models.utilisateur import Utilisateur
 from app.services.elt_service import (
     build_pdf_report,
@@ -51,9 +51,6 @@ def _response_summary(response: dict) -> str:
 
 def require_any_right(*rights: str):
     def checker(current_user: Utilisateur = Depends(get_current_user)) -> Utilisateur:
-        if str(current_user.role or "").upper() == ROLE_SUPER_ADMIN:
-            return current_user
-
         permissions = set(get_user_permissions(current_user))
         if not any(right in permissions for right in rights):
             raise HTTPException(
@@ -66,8 +63,8 @@ def require_any_right(*rights: str):
     return checker
 
 
-require_lancer_elt = require_any_right("lancer_elt")
-require_elt_report_access = require_any_right("dashboard_service_sos", "lancer_elt")
+require_lancer_elt = require_permission(PERMISSION_LANCER_ELT)
+require_elt_report_access = require_any_right(PERMISSION_DASHBOARD_SERVICE_SOS, PERMISSION_LANCER_ELT)
 
 
 @router.post("/jobs/start")
