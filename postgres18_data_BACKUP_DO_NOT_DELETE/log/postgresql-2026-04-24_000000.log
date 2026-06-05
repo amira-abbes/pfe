@@ -1,0 +1,310 @@
+2026-04-24 12:29:21 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-04-24 12:33:50 WAT LOG:  début du checkpoint : time
+2026-04-24 12:33:51 WAT LOG:  checkpoint complete: wrote 10 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.089 s, sync=0.008 s, total=1.115 s; sync files=11, longest=0.003 s, average=0.001 s; distance=29 kB, estimate=62 kB; lsn=0/2184018, redo lsn=0/2183FA8
+2026-04-24 12:43:50 WAT LOG:  début du checkpoint : time
+2026-04-24 12:43:52 WAT LOG:  checkpoint complete: wrote 22 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.394 s, sync=0.011 s, total=2.411 s; sync files=23, longest=0.003 s, average=0.001 s; distance=52 kB, estimate=61 kB; lsn=0/21911A8, redo lsn=0/2191150
+2026-04-24 12:48:51 WAT LOG:  début du checkpoint : time
+2026-04-24 12:48:53 WAT LOG:  checkpoint complete: wrote 26 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.829 s, sync=0.021 s, total=2.858 s; sync files=27, longest=0.011 s, average=0.001 s; distance=58 kB, estimate=60 kB; lsn=0/219FB10, redo lsn=0/219FA80
+2026-04-24 12:56:19 WAT ERREUR:  relation "tentatives_connexion" does not exist au caractÃ¨re 15
+2026-04-24 12:56:19 WAT INSTRUCTION :  select * from tentatives_connexion;
+2026-04-24 12:58:51 WAT LOG:  début du checkpoint : time
+2026-04-24 12:58:52 WAT LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.112 s, sync=0.003 s, total=0.127 s; sync files=1, longest=0.003 s, average=0.003 s; distance=8 kB, estimate=55 kB; lsn=0/21A1CD0, redo lsn=0/21A1C78
+2026-04-24 13:29:52 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-04-24 13:29:52 WAT LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-24 13:29:52 WAT LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-24 13:33:51 WAT LOG:  début du checkpoint : time
+2026-04-24 13:33:52 WAT LOG:  checkpoint complete: wrote 10 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.083 s, sync=0.007 s, total=1.098 s; sync files=11, longest=0.003 s, average=0.001 s; distance=30 kB, estimate=53 kB; lsn=0/21A9540, redo lsn=0/21A94E8
+2026-04-24 13:38:51 WAT LOG:  début du checkpoint : time
+2026-04-24 13:38:52 WAT LOG:  checkpoint complete: wrote 10 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.087 s, sync=0.007 s, total=1.100 s; sync files=11, longest=0.003 s, average=0.001 s; distance=33 kB, estimate=51 kB; lsn=0/21B19E0, redo lsn=0/21B1988
+2026-04-24 13:43:51 WAT LOG:  début du checkpoint : time
+2026-04-24 13:43:51 WAT LOG:  checkpoint complete: wrote 6 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.646 s, sync=0.007 s, total=0.660 s; sync files=7, longest=0.002 s, average=0.001 s; distance=23 kB, estimate=48 kB; lsn=0/21B7818, redo lsn=0/21B77C0
+2026-04-24 13:53:51 WAT LOG:  début du checkpoint : time
+2026-04-24 13:53:53 WAT LOG:  checkpoint complete: wrote 10 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.082 s, sync=0.008 s, total=1.096 s; sync files=11, longest=0.003 s, average=0.001 s; distance=32 kB, estimate=46 kB; lsn=0/21BFAB8, redo lsn=0/21BFA60
+2026-04-24 14:12:31 WAT ERREUR:  check constraint "chk_tentatives_connexion_niveau_risque" of relation "tentatives_connexion" is violated by some row
+2026-04-24 14:12:31 WAT CONTEXTE :  SQL statement "ALTER TABLE app.tentatives_connexion
+	        ADD CONSTRAINT chk_tentatives_connexion_niveau_risque
+	        CHECK (
+	            niveau_risque IS NULL
+	            OR niveau_risque IN ('FAIBLE', 'MOYEN', 'ELEVE', 'CRITIQUE')
+	        )"
+	PL/pgSQL function inline_code_block line 8 at SQL statement
+2026-04-24 14:12:31 WAT INSTRUCTION :  DO $$
+	BEGIN
+	    IF NOT EXISTS (
+	        SELECT 1
+	        FROM pg_constraint
+	        WHERE conname = 'chk_tentatives_connexion_niveau_risque'
+	    ) THEN
+	        ALTER TABLE app.tentatives_connexion
+	        ADD CONSTRAINT chk_tentatives_connexion_niveau_risque
+	        CHECK (
+	            niveau_risque IS NULL
+	            OR niveau_risque IN ('FAIBLE', 'MOYEN', 'ELEVE', 'CRITIQUE')
+	        );
+	    END IF;
+	END $$;
+2026-04-24 14:13:51 WAT LOG:  début du checkpoint : time
+2026-04-24 14:13:59 WAT LOG:  checkpoint complete: wrote 74 buffers (0.5%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=8.067 s, sync=0.021 s, total=8.095 s; sync files=51, longest=0.003 s, average=0.001 s; distance=437 kB, estimate=437 kB; lsn=0/222D048, redo lsn=0/222CFF0
+2026-04-24 14:18:51 WAT LOG:  début du checkpoint : time
+2026-04-24 14:18:54 WAT LOG:  checkpoint complete: wrote 33 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.625 s, sync=0.054 s, total=3.694 s; sync files=35, longest=0.008 s, average=0.002 s; distance=204 kB, estimate=414 kB; lsn=0/2260200, redo lsn=0/22601A8
+2026-04-24 14:23:51 WAT LOG:  début du checkpoint : time
+2026-04-24 14:23:55 WAT LOG:  checkpoint complete: wrote 29 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.160 s, sync=0.011 s, total=3.179 s; sync files=23, longest=0.003 s, average=0.001 s; distance=198 kB, estimate=392 kB; lsn=0/2291CF8, redo lsn=0/2291CA0
+2026-04-24 15:03:51 WAT LOG:  début du checkpoint : time
+2026-04-24 15:03:53 WAT LOG:  checkpoint complete: wrote 24 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.614 s, sync=0.012 s, total=2.634 s; sync files=25, longest=0.003 s, average=0.001 s; distance=49 kB, estimate=358 kB; lsn=0/229E480, redo lsn=0/229E428
+2026-04-24 15:08:51 WAT LOG:  début du checkpoint : time
+2026-04-24 15:08:55 WAT LOG:  checkpoint complete: wrote 36 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.919 s, sync=0.013 s, total=3.939 s; sync files=28, longest=0.003 s, average=0.001 s; distance=142 kB, estimate=336 kB; lsn=0/22C1EA8, redo lsn=0/22C1E18
+2026-04-24 15:13:51 WAT LOG:  début du checkpoint : time
+2026-04-24 15:13:51 WAT LOG:  checkpoint complete: wrote 2 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.213 s, sync=0.003 s, total=0.223 s; sync files=1, longest=0.003 s, average=0.003 s; distance=16 kB, estimate=304 kB; lsn=0/22C5FE8, redo lsn=0/22C5F90
+2026-04-24 15:18:51 WAT LOG:  début du checkpoint : time
+2026-04-24 15:18:55 WAT LOG:  checkpoint complete: wrote 29 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.161 s, sync=0.013 s, total=3.181 s; sync files=26, longest=0.003 s, average=0.001 s; distance=106 kB, estimate=284 kB; lsn=0/22E0938, redo lsn=0/22E08E0
+2026-04-24 15:28:51 WAT LOG:  début du checkpoint : time
+2026-04-24 15:28:56 WAT LOG:  checkpoint complete: wrote 50 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=5.452 s, sync=0.093 s, total=5.552 s; sync files=38, longest=0.009 s, average=0.003 s; distance=60 kB, estimate=262 kB; lsn=0/22EFCF0, redo lsn=0/22EFC60
+2026-04-24 16:13:51 WAT LOG:  début du checkpoint : time
+2026-04-24 16:13:55 WAT LOG:  checkpoint complete: wrote 37 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=4.056 s, sync=0.018 s, total=4.090 s; sync files=38, longest=0.003 s, average=0.001 s; distance=63 kB, estimate=242 kB; lsn=0/22FFBD8, redo lsn=0/22FFB80
+2026-04-24 16:18:51 WAT LOG:  début du checkpoint : time
+2026-04-24 16:18:56 WAT LOG:  checkpoint complete: wrote 38 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=4.152 s, sync=0.019 s, total=4.179 s; sync files=38, longest=0.003 s, average=0.001 s; distance=70 kB, estimate=225 kB; lsn=0/23114A8, redo lsn=0/2311450
+2026-04-24 17:03:51 WAT LOG:  début du checkpoint : time
+2026-04-24 17:03:53 WAT LOG:  checkpoint complete: wrote 21 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.279 s, sync=0.010 s, total=2.297 s; sync files=22, longest=0.003 s, average=0.001 s; distance=47 kB, estimate=207 kB; lsn=0/231D4A0, redo lsn=0/231D448
+2026-04-24 17:08:51 WAT LOG:  début du checkpoint : time
+2026-04-24 17:08:53 WAT LOG:  checkpoint complete: wrote 22 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.403 s, sync=0.061 s, total=2.478 s; sync files=23, longest=0.009 s, average=0.003 s; distance=50 kB, estimate=191 kB; lsn=0/2329DB8, redo lsn=0/2329D28
+2026-04-24 17:13:51 WAT LOG:  début du checkpoint : time
+2026-04-24 17:13:55 WAT LOG:  checkpoint complete: wrote 36 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.920 s, sync=0.016 s, total=3.942 s; sync files=37, longest=0.003 s, average=0.001 s; distance=59 kB, estimate=178 kB; lsn=0/2338BC8, redo lsn=0/2338B70
+2026-04-24 18:23:53 WAT LOG:  début du checkpoint : time
+2026-04-24 18:23:58 WAT LOG:  checkpoint complete: wrote 47 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=5.135 s, sync=0.016 s, total=5.156 s; sync files=36, longest=0.003 s, average=0.001 s; distance=235 kB, estimate=235 kB; lsn=0/23739E8, redo lsn=0/2373990
+2026-04-24 18:28:53 WAT LOG:  début du checkpoint : time
+2026-04-24 18:28:56 WAT LOG:  checkpoint complete: wrote 31 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.378 s, sync=0.014 s, total=3.400 s; sync files=26, longest=0.003 s, average=0.001 s; distance=179 kB, estimate=229 kB; lsn=0/23A0830, redo lsn=0/23A07D8
+2026-04-24 18:38:53 WAT LOG:  début du checkpoint : time
+2026-04-24 18:38:59 WAT LOG:  checkpoint complete: wrote 51 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=5.560 s, sync=0.013 s, total=5.581 s; sync files=33, longest=0.003 s, average=0.001 s; distance=261 kB, estimate=261 kB; lsn=0/23E4858, redo lsn=0/23E1D88
+2026-04-24 18:43:05 WAT ERREUR:  types incohÃ©rents dÃ©duit pour le paramÃ¨tre $5 au caractÃ¨re 644
+2026-04-24 18:43:05 WAT DÃ‰TAIL:  text versus character varying
+2026-04-24 18:43:05 WAT INSTRUCTION :  
+	                INSERT INTO app.notifications_securite (
+	                    id,
+	                    utilisateur_id,
+	                    type_notification,
+	                    email_destinataire,
+	                    sujet,
+	                    statut,
+	                    date_creation,
+	                    date_envoi,
+	                    erreur_envoi,
+	                    adresse_ip,
+	                    user_agent,
+	                    details
+	                )
+	                VALUES (
+	                    gen_random_uuid(),
+	                    $1,
+	                    $2,
+	                    $3,
+	                    $4,
+	                    $5,
+	                    now(),
+	                    CASE WHEN $5 = 'ENVOYE' THEN now() ELSE NULL END,
+	                    $6,
+	                    CAST($7 AS inet),
+	                    $8,
+	                    CAST($9 AS jsonb)
+	                )
+	            
+2026-04-24 18:43:19 WAT ERREUR:  types incohÃ©rents dÃ©duit pour le paramÃ¨tre $5 au caractÃ¨re 644
+2026-04-24 18:43:19 WAT DÃ‰TAIL:  text versus character varying
+2026-04-24 18:43:19 WAT INSTRUCTION :  
+	                INSERT INTO app.notifications_securite (
+	                    id,
+	                    utilisateur_id,
+	                    type_notification,
+	                    email_destinataire,
+	                    sujet,
+	                    statut,
+	                    date_creation,
+	                    date_envoi,
+	                    erreur_envoi,
+	                    adresse_ip,
+	                    user_agent,
+	                    details
+	                )
+	                VALUES (
+	                    gen_random_uuid(),
+	                    $1,
+	                    $2,
+	                    $3,
+	                    $4,
+	                    $5,
+	                    now(),
+	                    CASE WHEN $5 = 'ENVOYE' THEN now() ELSE NULL END,
+	                    $6,
+	                    CAST($7 AS inet),
+	                    $8,
+	                    CAST($9 AS jsonb)
+	                )
+	            
+2026-04-24 18:43:53 WAT LOG:  début du checkpoint : time
+2026-04-24 18:43:55 WAT LOG:  checkpoint complete: wrote 23 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.494 s, sync=0.010 s, total=2.511 s; sync files=24, longest=0.003 s, average=0.001 s; distance=52 kB, estimate=240 kB; lsn=0/23EEF08, redo lsn=0/23EEEB0
+2026-04-24 18:44:22 WAT ERREUR:  types incohÃ©rents dÃ©duit pour le paramÃ¨tre $5 au caractÃ¨re 644
+2026-04-24 18:44:22 WAT DÃ‰TAIL:  text versus character varying
+2026-04-24 18:44:22 WAT INSTRUCTION :  
+	                INSERT INTO app.notifications_securite (
+	                    id,
+	                    utilisateur_id,
+	                    type_notification,
+	                    email_destinataire,
+	                    sujet,
+	                    statut,
+	                    date_creation,
+	                    date_envoi,
+	                    erreur_envoi,
+	                    adresse_ip,
+	                    user_agent,
+	                    details
+	                )
+	                VALUES (
+	                    gen_random_uuid(),
+	                    $1,
+	                    $2,
+	                    $3,
+	                    $4,
+	                    $5,
+	                    now(),
+	                    CASE WHEN $5 = 'ENVOYE' THEN now() ELSE NULL END,
+	                    $6,
+	                    CAST($7 AS inet),
+	                    $8,
+	                    CAST($9 AS jsonb)
+	                )
+	            
+2026-04-24 18:48:53 WAT LOG:  début du checkpoint : time
+2026-04-24 18:48:56 WAT LOG:  checkpoint complete: wrote 22 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.412 s, sync=0.011 s, total=2.430 s; sync files=23, longest=0.003 s, average=0.001 s; distance=48 kB, estimate=221 kB; lsn=0/23FAFD0, redo lsn=0/23FAF78
+2026-04-24 19:03:53 WAT LOG:  début du checkpoint : time
+2026-04-24 19:03:56 WAT LOG:  checkpoint complete: wrote 25 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.723 s, sync=0.010 s, total=2.739 s; sync files=25, longest=0.001 s, average=0.001 s; distance=69 kB, estimate=206 kB; lsn=0/240C778, redo lsn=0/240C720
+2026-04-24 19:08:53 WAT LOG:  début du checkpoint : time
+2026-04-24 19:08:54 WAT LOG:  checkpoint complete: wrote 15 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.633 s, sync=0.007 s, total=1.647 s; sync files=16, longest=0.001 s, average=0.001 s; distance=39 kB, estimate=189 kB; lsn=0/24165A8, redo lsn=0/2416550
+2026-04-24 19:13:53 WAT LOG:  début du checkpoint : time
+2026-04-24 19:13:56 WAT LOG:  checkpoint complete: wrote 22 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.396 s, sync=0.010 s, total=2.414 s; sync files=23, longest=0.003 s, average=0.001 s; distance=41 kB, estimate=174 kB; lsn=0/2420C70, redo lsn=0/2420C18
+2026-04-24 19:18:53 WAT LOG:  début du checkpoint : time
+2026-04-24 19:18:59 WAT LOG:  checkpoint complete: wrote 59 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=6.446 s, sync=0.019 s, total=6.473 s; sync files=43, longest=0.003 s, average=0.001 s; distance=174 kB, estimate=174 kB; lsn=0/244C6D0, redo lsn=0/244C640
+2026-04-24 19:20:26 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-04-24 19:20:33 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-04-24 19:20:33 WAT LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-24 19:20:33 WAT LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-24 21:09:06 WAT LOG:  début du checkpoint : time
+2026-04-24 21:09:06 WAT LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.113 s, sync=0.003 s, total=0.129 s; sync files=1, longest=0.003 s, average=0.003 s; distance=7 kB, estimate=157 kB; lsn=0/244E5D8, redo lsn=0/244E580
+2026-04-24 21:19:06 WAT LOG:  début du checkpoint : time
+2026-04-24 21:19:07 WAT LOG:  checkpoint complete: wrote 3 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.320 s, sync=0.003 s, total=0.331 s; sync files=1, longest=0.003 s, average=0.003 s; distance=24 kB, estimate=144 kB; lsn=0/24545E0, redo lsn=0/2454588
+2026-04-24 22:09:06 WAT LOG:  début du checkpoint : time
+2026-04-24 22:09:10 WAT LOG:  checkpoint complete: wrote 41 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=4.500 s, sync=0.014 s, total=4.529 s; sync files=38, longest=0.003 s, average=0.001 s; distance=206 kB, estimate=206 kB; lsn=0/2488090, redo lsn=0/2488038
+2026-04-24 22:19:06 WAT LOG:  début du checkpoint : time
+2026-04-24 22:19:09 WAT LOG:  checkpoint complete: wrote 22 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.405 s, sync=0.012 s, total=2.423 s; sync files=23, longest=0.003 s, average=0.001 s; distance=43 kB, estimate=190 kB; lsn=0/2493000, redo lsn=0/2492FA8
+2026-04-24 22:59:06 WAT LOG:  début du checkpoint : time
+2026-04-24 22:59:14 WAT LOG:  checkpoint complete: wrote 73 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=7.984 s, sync=0.020 s, total=8.011 s; sync files=44, longest=0.003 s, average=0.001 s; distance=467 kB, estimate=467 kB; lsn=0/2507D48, redo lsn=0/2507CB8
+2026-04-24 23:42:50 WAT ERREUR:  types incohÃ©rents dÃ©duit pour le paramÃ¨tre $5 au caractÃ¨re 434
+2026-04-24 23:42:50 WAT DÃ‰TAIL:  text versus character varying
+2026-04-24 23:42:50 WAT INSTRUCTION :  
+	                INSERT INTO app.notifications_securite (
+	                    id, utilisateur_id, type_notification, email_destinataire,
+	                    sujet, statut, date_creation, date_envoi, erreur_envoi,
+	                    adresse_ip, user_agent, details
+	                )
+	                VALUES (
+	                    gen_random_uuid(), CAST($1 AS uuid),
+	                    $2, CAST($3 AS citext),
+	                    $4, $5, now(),
+	                    CASE WHEN $5 = 'ENVOYE' THEN now() ELSE NULL END,
+	                    $6, CAST($7 AS inet), $8,
+	                    CAST($9 AS jsonb)
+	                )
+	            
+2026-04-24 23:43:25 WAT ERREUR:  types incohÃ©rents dÃ©duit pour le paramÃ¨tre $5 au caractÃ¨re 434
+2026-04-24 23:43:25 WAT DÃ‰TAIL:  text versus character varying
+2026-04-24 23:43:25 WAT INSTRUCTION :  
+	                INSERT INTO app.notifications_securite (
+	                    id, utilisateur_id, type_notification, email_destinataire,
+	                    sujet, statut, date_creation, date_envoi, erreur_envoi,
+	                    adresse_ip, user_agent, details
+	                )
+	                VALUES (
+	                    gen_random_uuid(), CAST($1 AS uuid),
+	                    $2, CAST($3 AS citext),
+	                    $4, $5, now(),
+	                    CASE WHEN $5 = 'ENVOYE' THEN now() ELSE NULL END,
+	                    $6, CAST($7 AS inet), $8,
+	                    CAST($9 AS jsonb)
+	                )
+	            
+2026-04-24 23:43:44 WAT ERREUR:  types incohÃ©rents dÃ©duit pour le paramÃ¨tre $5 au caractÃ¨re 434
+2026-04-24 23:43:44 WAT DÃ‰TAIL:  text versus character varying
+2026-04-24 23:43:44 WAT INSTRUCTION :  
+	                INSERT INTO app.notifications_securite (
+	                    id, utilisateur_id, type_notification, email_destinataire,
+	                    sujet, statut, date_creation, date_envoi, erreur_envoi,
+	                    adresse_ip, user_agent, details
+	                )
+	                VALUES (
+	                    gen_random_uuid(), CAST($1 AS uuid),
+	                    $2, CAST($3 AS citext),
+	                    $4, $5, now(),
+	                    CASE WHEN $5 = 'ENVOYE' THEN now() ELSE NULL END,
+	                    $6, CAST($7 AS inet), $8,
+	                    CAST($9 AS jsonb)
+	                )
+	            
+2026-04-24 23:44:06 WAT LOG:  début du checkpoint : time
+2026-04-24 23:44:07 WAT LOG:  checkpoint complete: wrote 15 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.657 s, sync=0.008 s, total=1.678 s; sync files=16, longest=0.001 s, average=0.001 s; distance=39 kB, estimate=424 kB; lsn=0/2511C50, redo lsn=0/2511BF8
+2026-04-24 23:45:11 WAT ERREUR:  types incohÃ©rents dÃ©duit pour le paramÃ¨tre $5 au caractÃ¨re 434
+2026-04-24 23:45:11 WAT DÃ‰TAIL:  text versus character varying
+2026-04-24 23:45:11 WAT INSTRUCTION :  
+	                INSERT INTO app.notifications_securite (
+	                    id, utilisateur_id, type_notification, email_destinataire,
+	                    sujet, statut, date_creation, date_envoi, erreur_envoi,
+	                    adresse_ip, user_agent, details
+	                )
+	                VALUES (
+	                    gen_random_uuid(), CAST($1 AS uuid),
+	                    $2, CAST($3 AS citext),
+	                    $4, $5, now(),
+	                    CASE WHEN $5 = 'ENVOYE' THEN now() ELSE NULL END,
+	                    $6, CAST($7 AS inet), $8,
+	                    CAST($9 AS jsonb)
+	                )
+	            
+2026-04-24 23:45:20 WAT ERREUR:  types incohÃ©rents dÃ©duit pour le paramÃ¨tre $5 au caractÃ¨re 434
+2026-04-24 23:45:20 WAT DÃ‰TAIL:  text versus character varying
+2026-04-24 23:45:20 WAT INSTRUCTION :  
+	                INSERT INTO app.notifications_securite (
+	                    id, utilisateur_id, type_notification, email_destinataire,
+	                    sujet, statut, date_creation, date_envoi, erreur_envoi,
+	                    adresse_ip, user_agent, details
+	                )
+	                VALUES (
+	                    gen_random_uuid(), CAST($1 AS uuid),
+	                    $2, CAST($3 AS citext),
+	                    $4, $5, now(),
+	                    CASE WHEN $5 = 'ENVOYE' THEN now() ELSE NULL END,
+	                    $6, CAST($7 AS inet), $8,
+	                    CAST($9 AS jsonb)
+	                )
+	            
+2026-04-25 00:10:09 WAT LOG:  début du checkpoint : time
+2026-04-25 00:10:14 WAT LOG:  checkpoint complete: wrote 43 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=4.705 s, sync=0.017 s, total=4.727 s; sync files=40, longest=0.001 s, average=0.001 s; distance=123 kB, estimate=394 kB; lsn=0/2530AD0, redo lsn=0/2530A78
+2026-04-25 01:50:09 WAT LOG:  début du checkpoint : time
+2026-04-25 01:50:12 WAT LOG:  checkpoint complete: wrote 22 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.412 s, sync=0.012 s, total=2.439 s; sync files=23, longest=0.002 s, average=0.001 s; distance=52 kB, estimate=360 kB; lsn=0/253DD88, redo lsn=0/253DD30
+2026-04-25 01:55:09 WAT LOG:  début du checkpoint : time
+2026-04-25 01:55:12 WAT LOG:  checkpoint complete: wrote 27 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.028 s, sync=0.010 s, total=3.050 s; sync files=25, longest=0.001 s, average=0.001 s; distance=138 kB, estimate=338 kB; lsn=0/25608F0, redo lsn=0/2560898
+2026-04-25 02:20:09 WAT LOG:  début du checkpoint : time
+2026-04-25 02:20:11 WAT LOG:  checkpoint complete: wrote 25 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.743 s, sync=0.010 s, total=2.769 s; sync files=22, longest=0.001 s, average=0.001 s; distance=109 kB, estimate=315 kB; lsn=0/257BD18, redo lsn=0/257BCC0
+2026-04-25 02:25:09 WAT LOG:  début du checkpoint : time
+2026-04-25 02:25:14 WAT LOG:  checkpoint complete: wrote 45 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=4.941 s, sync=0.020 s, total=4.968 s; sync files=42, longest=0.002 s, average=0.001 s; distance=137 kB, estimate=297 kB; lsn=0/259E3D0, redo lsn=0/259E378
+2026-04-25 02:26:39 WAT LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-25 02:26:39 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-04-25 02:26:39 WAT LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	

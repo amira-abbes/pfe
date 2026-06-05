@@ -1,0 +1,10 @@
+2026-05-22 00:01:33 WAT LOG:  dÈbut du checkpoint : time
+2026-05-22 00:01:35 WAT LOG:  checkpoint complete: wrote 18 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.947 s, sync=0.010 s, total=1.964 s; sync files=13, longest=0.003 s, average=0.001 s; distance=93 kB, estimate=1001 kB; lsn=0/112DE1C0, redo lsn=0/112DE168
+2026-05-22 00:06:33 WAT LOG:  dÈbut du checkpoint : time
+2026-05-22 00:06:35 WAT LOG:  checkpoint complete: wrote 18 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.955 s, sync=0.007 s, total=1.970 s; sync files=13, longest=0.003 s, average=0.001 s; distance=98 kB, estimate=911 kB; lsn=0/112F6AC8, redo lsn=0/112F6A70
+2026-05-22 02:49:03 WAT LOG:  n'a pas pu recevoir les donn√©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-05-22 02:49:03 WAT LOG:  n'a pas pu recevoir les donn√©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-05-22 02:49:03 WAT LOG:  n'a pas pu recevoir les donn√©es du client : An existing connection was forcibly closed by the remote host.
+	

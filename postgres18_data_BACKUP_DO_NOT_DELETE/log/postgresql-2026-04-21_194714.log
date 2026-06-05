@@ -1,0 +1,5 @@
+2026-04-21 19:47:14 WAT LOG:  le système de bases de données a été arrêté à 2026-04-21 19:47:06 WAT
+2026-04-21 19:52:14 WAT LOG:  début du checkpoint : time
+2026-04-21 19:52:19 WAT LOG:  checkpoint complete: wrote 43 buffers (0.3%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=4.690 s, sync=0.008 s, total=4.707 s; sync files=11, longest=0.003 s, average=0.001 s; distance=333 kB, estimate=333 kB; lsn=0/1844BE8, redo lsn=0/1844B90
+2026-04-21 20:07:14 WAT LOG:  début du checkpoint : time
+2026-04-21 20:07:14 WAT LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.102 s, sync=0.003 s, total=0.113 s; sync files=1, longest=0.003 s, average=0.003 s; distance=0 kB, estimate=300 kB; lsn=0/1844E58, redo lsn=0/1844E00

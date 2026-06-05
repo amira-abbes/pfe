@@ -1,0 +1,5 @@
+2026-05-14 08:00:14 WAT LOG:  le système de bases de données a été arrêté à 2026-05-14 07:59:19 WAT
+2026-05-14 08:01:45 WAT LOG:  arrêt en cours
+2026-05-14 08:01:45 WAT LOG:  début du checkpoint : shutdown immediate
+2026-05-14 08:01:45 WAT ERREUR:  annulation de la requête à la demande de l'utilisateur
+2026-05-14 08:01:46 WAT LOG:  checkpoint complete: wrote 0 buffers (0.0%), wrote 2 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.004 s, sync=0.011 s, total=0.061 s; sync files=3, longest=0.009 s, average=0.004 s; distance=0 kB, estimate=0 kB; lsn=0/B540DF8, redo lsn=0/B540DF8

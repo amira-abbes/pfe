@@ -1,0 +1,224 @@
+2026-04-22 01:17:09 WAT LOG:  d�but du checkpoint : time
+2026-04-22 01:18:58 WAT LOG:  checkpoint complete: wrote 994 buffers (6.1%), wrote 1 SLRU buffers; 1 WAL file(s) added, 0 removed, 0 recycled; write=108.537 s, sync=0.086 s, total=108.666 s; sync files=302, longest=0.003 s, average=0.001 s; distance=4672 kB, estimate=4672 kB; lsn=0/1CD56F8, redo lsn=0/1CD5130
+2026-04-22 01:19:18 WAT ERREUR:  schema "app" already exists
+2026-04-22 01:19:18 WAT INSTRUCTION :  CREATE SCHEMA app;
+	CREATE EXTENSION IF NOT EXISTS citext;
+2026-04-22 01:19:25 WAT ERREUR:  le schéma « app » existe déjà
+2026-04-22 01:19:25 WAT INSTRUCTION :  CREATE SCHEMA app;
+	CREATE EXTENSION IF NOT EXISTS citext;
+2026-04-22 01:22:09 WAT LOG:  d�but du checkpoint : time
+2026-04-22 01:22:23 WAT LOG:  checkpoint complete: wrote 128 buffers (0.8%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=13.984 s, sync=0.021 s, total=14.013 s; sync files=57, longest=0.003 s, average=0.001 s; distance=827 kB, estimate=4288 kB; lsn=0/1DA4040, redo lsn=0/1DA3F98
+2026-04-22 01:25:09 WAT LOG:  n'a pas pu recevoir les données du client : An existing connection was forcibly closed by the remote host.
+	
+2026-04-22 02:16:29 WAT LOG:  n'a pas pu recevoir les données du client : An existing connection was forcibly closed by the remote host.
+	
+2026-04-22 03:37:48 WAT LOG:  n'a pas pu recevoir les données du client : An existing connection was forcibly closed by the remote host.
+	
+2026-04-22 11:30:53 WAT LOG:  d�but du checkpoint : time
+2026-04-22 11:30:58 WAT LOG:  checkpoint complete: wrote 49 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=5.339 s, sync=0.015 s, total=5.362 s; sync files=43, longest=0.002 s, average=0.001 s; distance=237 kB, estimate=3883 kB; lsn=0/1DDF640, redo lsn=0/1DDF5E8
+2026-04-22 11:35:53 WAT LOG:  d�but du checkpoint : time
+2026-04-22 11:35:54 WAT LOG:  checkpoint complete: wrote 12 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.301 s, sync=0.007 s, total=1.315 s; sync files=11, longest=0.003 s, average=0.001 s; distance=59 kB, estimate=3500 kB; lsn=0/1DEE510, redo lsn=0/1DEE4B8
+2026-04-22 11:40:53 WAT LOG:  d�but du checkpoint : time
+2026-04-22 11:40:55 WAT LOG:  checkpoint complete: wrote 12 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.300 s, sync=0.007 s, total=1.314 s; sync files=13, longest=0.003 s, average=0.001 s; distance=56 kB, estimate=3156 kB; lsn=0/1DFC5A8, redo lsn=0/1DFC518
+2026-04-22 11:41:49 WAT ERREUR:  la colonne « type_utilisateur » de la relation « utilisateurs » n'existe pas
+2026-04-22 11:41:49 WAT INSTRUCTION :  ALTER TABLE app.utilisateurs
+	DROP COLUMN type_utilisateur;
+2026-04-22 11:42:17 WAT ERREUR:  le schéma « app » existe déjà
+2026-04-22 11:42:17 WAT INSTRUCTION :  CREATE SCHEMA app;
+	CREATE EXTENSION IF NOT EXISTS citext;
+	
+	CREATE TABLE app.utilisateurs (
+	    id uuid PRIMARY KEY,
+	    email citext NOT NULL UNIQUE,
+	    nom_complet varchar(150) NOT NULL,
+	    departement varchar(100),
+	    poste varchar(100),
+	
+	    mot_de_passe_hash text,
+	    mot_de_passe_temporaire_hash text,
+	
+	    est_actif boolean NOT NULL DEFAULT true,
+	    premiere_connexion boolean NOT NULL DEFAULT true,
+	    compte_active boolean NOT NULL DEFAULT false,
+	
+	    nombre_echecs_connexion integer NOT NULL DEFAULT 0,
+	    date_dernier_echec_connexion timestamptz,
+	    blocage_jusqu_a timestamptz,
+	
+	    date_derniere_connexion timestamptz,
+	    date_dernier_changement_mot_de_passe timestamptz,
+	
+	    date_creation timestamptz NOT NULL DEFAULT now(),
+	    date_modification timestamptz NOT NULL DEFAULT now(),
+	    cree_par uuid
+	);
+	
+	ALTER TABLE app.utilisateurs
+	ALTER COLUMN id SET DEFAULT gen_random_uuid();
+	
+	ALTER TABLE app.utilisateurs
+	ADD CONSTRAINT chk_utilisateurs_nombre_echecs_connexion
+	CHECK (nombre_echecs_connexion >= 0);
+	
+	ALTER TABLE app.utilisateurs
+	DROP COLUMN poste;
+	
+	ALTER TABLE app.utilisateurs
+	DROP COLUMN departement;
+	
+	ALTER TABLE app.utilisateurs
+	ADD COLUMN departement_id uuid;
+	
+2026-04-22 11:45:53 WAT LOG:  d�but du checkpoint : time
+2026-04-22 11:45:56 WAT LOG:  checkpoint complete: wrote 32 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.486 s, sync=0.013 s, total=3.507 s; sync files=31, longest=0.003 s, average=0.001 s; distance=155 kB, estimate=2856 kB; lsn=0/1E233B8, redo lsn=0/1E23360
+2026-04-22 11:46:18 WAT ERREUR:  erreur de syntaxe sur ou près de « ) » au caractère 123
+2026-04-22 11:46:18 WAT INSTRUCTION :  
+	CREATE TABLE app.droits_acces (
+	    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+	
+	    nom_droit varchar(150) NOT NULL,
+	);
+2026-04-22 11:50:53 WAT LOG:  d�but du checkpoint : time
+2026-04-22 11:50:59 WAT LOG:  checkpoint complete: wrote 49 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=5.347 s, sync=0.015 s, total=5.370 s; sync files=39, longest=0.003 s, average=0.001 s; distance=223 kB, estimate=2593 kB; lsn=0/1E5B140, redo lsn=0/1E5B0E8
+2026-04-22 11:55:53 WAT LOG:  d�but du checkpoint : time
+2026-04-22 11:55:57 WAT LOG:  checkpoint complete: wrote 41 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=4.467 s, sync=0.016 s, total=4.492 s; sync files=40, longest=0.003 s, average=0.001 s; distance=232 kB, estimate=2356 kB; lsn=0/1E951E8, redo lsn=0/1E95190
+2026-04-22 12:00:53 WAT LOG:  d�but du checkpoint : time
+2026-04-22 12:00:57 WAT LOG:  checkpoint complete: wrote 40 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=4.360 s, sync=0.014 s, total=4.382 s; sync files=39, longest=0.001 s, average=0.001 s; distance=218 kB, estimate=2143 kB; lsn=0/1ECBA70, redo lsn=0/1ECBA18
+2026-04-22 12:05:53 WAT LOG:  d�but du checkpoint : time
+2026-04-22 12:06:00 WAT LOG:  checkpoint complete: wrote 62 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=6.746 s, sync=0.017 s, total=6.770 s; sync files=44, longest=0.003 s, average=0.001 s; distance=360 kB, estimate=1964 kB; lsn=0/1F25DE8, redo lsn=0/1F25D90
+2026-04-22 12:10:53 WAT LOG:  d�but du checkpoint : time
+2026-04-22 12:10:58 WAT LOG:  checkpoint complete: wrote 46 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=5.013 s, sync=0.015 s, total=5.036 s; sync files=37, longest=0.003 s, average=0.001 s; distance=210 kB, estimate=1789 kB; lsn=0/1F5A870, redo lsn=0/1F5A7E0
+2026-04-22 12:15:53 WAT LOG:  d�but du checkpoint : time
+2026-04-22 12:15:54 WAT LOG:  checkpoint complete: wrote 5 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.537 s, sync=0.005 s, total=0.550 s; sync files=4, longest=0.003 s, average=0.002 s; distance=2 kB, estimate=1610 kB; lsn=0/1F5B188, redo lsn=0/1F5B130
+2026-04-22 12:20:53 WAT LOG:  d�but du checkpoint : time
+2026-04-22 12:20:54 WAT LOG:  checkpoint complete: wrote 14 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.529 s, sync=0.006 s, total=1.543 s; sync files=9, longest=0.001 s, average=0.001 s; distance=57 kB, estimate=1455 kB; lsn=0/1F69698, redo lsn=0/1F69608
+2026-04-22 12:25:53 WAT LOG:  d�but du checkpoint : time
+2026-04-22 12:25:55 WAT LOG:  checkpoint complete: wrote 13 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.413 s, sync=0.006 s, total=1.427 s; sync files=10, longest=0.003 s, average=0.001 s; distance=49 kB, estimate=1314 kB; lsn=0/1F75BE8, redo lsn=0/1F75B90
+2026-04-22 12:30:53 WAT LOG:  d�but du checkpoint : time
+2026-04-22 12:30:53 WAT LOG:  checkpoint complete: wrote 5 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.555 s, sync=0.006 s, total=0.570 s; sync files=6, longest=0.004 s, average=0.001 s; distance=2 kB, estimate=1183 kB; lsn=0/1F76498, redo lsn=0/1F76440
+2026-04-22 12:35:53 WAT LOG:  d�but du checkpoint : time
+2026-04-22 12:35:54 WAT LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.104 s, sync=0.003 s, total=0.114 s; sync files=1, longest=0.003 s, average=0.003 s; distance=8 kB, estimate=1065 kB; lsn=0/1F785F8, redo lsn=0/1F785A0
+2026-04-22 12:40:53 WAT LOG:  d�but du checkpoint : time
+2026-04-22 12:40:56 WAT LOG:  checkpoint complete: wrote 30 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.260 s, sync=0.139 s, total=3.430 s; sync files=32, longest=0.051 s, average=0.005 s; distance=164 kB, estimate=975 kB; lsn=0/1FA1978, redo lsn=0/1FA1920
+2026-04-22 13:45:53 WAT LOG:  d�but du checkpoint : time
+2026-04-22 13:45:53 WAT LOG:  checkpoint complete: wrote 2 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.222 s, sync=0.004 s, total=0.237 s; sync files=3, longest=0.003 s, average=0.002 s; distance=3 kB, estimate=878 kB; lsn=0/1FA2620, redo lsn=0/1FA25C8
+2026-04-22 13:55:53 WAT LOG:  d�but du checkpoint : time
+2026-04-22 13:55:53 WAT LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.102 s, sync=0.004 s, total=0.114 s; sync files=2, longest=0.003 s, average=0.002 s; distance=3 kB, estimate=791 kB; lsn=0/1FA3480, redo lsn=0/1FA3428
+2026-04-22 16:05:54 WAT LOG:  d�but du checkpoint : time
+2026-04-22 16:05:54 WAT LOG:  checkpoint complete: wrote 3 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.331 s, sync=0.006 s, total=0.352 s; sync files=4, longest=0.003 s, average=0.002 s; distance=10 kB, estimate=713 kB; lsn=0/1FA5E00, redo lsn=0/1FA5DA8
+2026-04-22 16:16:56 WAT ERREUR:  la colonne « adresse_ip » est de type inet mais l'expression est de type character varying au caractère 170
+2026-04-22 16:16:56 WAT ASTUCE :  Vous devez réécrire l'expression ou lui appliquer une transformation de type.
+2026-04-22 16:16:56 WAT INSTRUCTION :  INSERT INTO app.sessions_utilisateur (utilisateur_id, jeton_session_hash, adresse_ip, user_agent, expire_a, revoque_a, raison_revocation) VALUES ($1::UUID, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::TIMESTAMP WITH TIME ZONE, $6::TIMESTAMP WITH TIME ZONE, $7::VARCHAR) RETURNING app.sessions_utilisateur.id, app.sessions_utilisateur.date_creation
+2026-04-22 16:17:00 WAT ERREUR:  la colonne « adresse_ip » est de type inet mais l'expression est de type character varying au caractère 170
+2026-04-22 16:17:00 WAT ASTUCE :  Vous devez réécrire l'expression ou lui appliquer une transformation de type.
+2026-04-22 16:17:00 WAT INSTRUCTION :  INSERT INTO app.sessions_utilisateur (utilisateur_id, jeton_session_hash, adresse_ip, user_agent, expire_a, revoque_a, raison_revocation) VALUES ($1::UUID, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::TIMESTAMP WITH TIME ZONE, $6::TIMESTAMP WITH TIME ZONE, $7::VARCHAR) RETURNING app.sessions_utilisateur.id, app.sessions_utilisateur.date_creation
+2026-04-22 16:20:54 WAT LOG:  d�but du checkpoint : time
+2026-04-22 16:20:55 WAT LOG:  checkpoint complete: wrote 8 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.865 s, sync=0.006 s, total=0.879 s; sync files=7, longest=0.003 s, average=0.001 s; distance=11 kB, estimate=642 kB; lsn=0/1FA8BE8, redo lsn=0/1FA8B90
+2026-04-22 16:25:35 WAT ERREUR:  la colonne « adresse_ip » est de type inet mais l'expression est de type character varying au caractère 170
+2026-04-22 16:25:35 WAT ASTUCE :  Vous devez réécrire l'expression ou lui appliquer une transformation de type.
+2026-04-22 16:25:35 WAT INSTRUCTION :  INSERT INTO app.sessions_utilisateur (utilisateur_id, jeton_session_hash, adresse_ip, user_agent, expire_a, revoque_a, raison_revocation) VALUES ($1::UUID, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::TIMESTAMP WITH TIME ZONE, $6::TIMESTAMP WITH TIME ZONE, $7::VARCHAR) RETURNING app.sessions_utilisateur.id, app.sessions_utilisateur.date_creation
+2026-04-22 16:25:41 WAT ERREUR:  la colonne « adresse_ip » est de type inet mais l'expression est de type character varying au caractère 170
+2026-04-22 16:25:41 WAT ASTUCE :  Vous devez réécrire l'expression ou lui appliquer une transformation de type.
+2026-04-22 16:25:41 WAT INSTRUCTION :  INSERT INTO app.sessions_utilisateur (utilisateur_id, jeton_session_hash, adresse_ip, user_agent, expire_a, revoque_a, raison_revocation) VALUES ($1::UUID, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::TIMESTAMP WITH TIME ZONE, $6::TIMESTAMP WITH TIME ZONE, $7::VARCHAR) RETURNING app.sessions_utilisateur.id, app.sessions_utilisateur.date_creation
+2026-04-22 16:25:54 WAT LOG:  d�but du checkpoint : time
+2026-04-22 16:25:54 WAT LOG:  checkpoint complete: wrote 4 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.427 s, sync=0.005 s, total=0.440 s; sync files=5, longest=0.003 s, average=0.001 s; distance=3 kB, estimate=578 kB; lsn=0/1FA98A0, redo lsn=0/1FA9848
+2026-04-22 16:28:35 WAT ERREUR:  la colonne « adresse_ip » est de type inet mais l'expression est de type character varying au caractère 170
+2026-04-22 16:28:35 WAT ASTUCE :  Vous devez réécrire l'expression ou lui appliquer une transformation de type.
+2026-04-22 16:28:35 WAT INSTRUCTION :  INSERT INTO app.sessions_utilisateur (utilisateur_id, jeton_session_hash, adresse_ip, user_agent, expire_a, revoque_a, raison_revocation) VALUES ($1::UUID, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::TIMESTAMP WITH TIME ZONE, $6::TIMESTAMP WITH TIME ZONE, $7::VARCHAR) RETURNING app.sessions_utilisateur.id, app.sessions_utilisateur.date_creation
+2026-04-22 16:29:40 WAT ERREUR:  la colonne « adresse_ip » est de type inet mais l'expression est de type character varying au caractère 170
+2026-04-22 16:29:40 WAT ASTUCE :  Vous devez réécrire l'expression ou lui appliquer une transformation de type.
+2026-04-22 16:29:40 WAT INSTRUCTION :  INSERT INTO app.sessions_utilisateur (utilisateur_id, jeton_session_hash, adresse_ip, user_agent, expire_a, revoque_a, raison_revocation) VALUES ($1::UUID, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::TIMESTAMP WITH TIME ZONE, $6::TIMESTAMP WITH TIME ZONE, $7::VARCHAR) RETURNING app.sessions_utilisateur.id, app.sessions_utilisateur.date_creation
+2026-04-22 16:30:54 WAT LOG:  d�but du checkpoint : time
+2026-04-22 16:30:55 WAT LOG:  checkpoint complete: wrote 4 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.429 s, sync=0.005 s, total=0.441 s; sync files=5, longest=0.002 s, average=0.001 s; distance=3 kB, estimate=521 kB; lsn=0/1FAA878, redo lsn=0/1FAA820
+2026-04-22 16:38:16 WAT ERREUR:  la colonne « adresse_ip » est de type inet mais l'expression est de type character varying au caractère 170
+2026-04-22 16:38:16 WAT ASTUCE :  Vous devez réécrire l'expression ou lui appliquer une transformation de type.
+2026-04-22 16:38:16 WAT INSTRUCTION :  INSERT INTO app.sessions_utilisateur (utilisateur_id, jeton_session_hash, adresse_ip, user_agent, expire_a, revoque_a, raison_revocation) VALUES ($1::UUID, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::TIMESTAMP WITH TIME ZONE, $6::TIMESTAMP WITH TIME ZONE, $7::VARCHAR) RETURNING app.sessions_utilisateur.id, app.sessions_utilisateur.date_creation
+2026-04-22 16:40:54 WAT LOG:  d�but du checkpoint : time
+2026-04-22 16:40:55 WAT LOG:  checkpoint complete: wrote 11 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.203 s, sync=0.007 s, total=1.219 s; sync files=10, longest=0.003 s, average=0.001 s; distance=14 kB, estimate=470 kB; lsn=0/1FAE178, redo lsn=0/1FAE120
+2026-04-22 17:10:54 WAT LOG:  d�but du checkpoint : time
+2026-04-22 17:10:55 WAT LOG:  checkpoint complete: wrote 12 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.308 s, sync=0.007 s, total=1.323 s; sync files=13, longest=0.003 s, average=0.001 s; distance=7 kB, estimate=424 kB; lsn=0/1FAFE20, redo lsn=0/1FAFDC8
+2026-04-22 17:20:54 WAT LOG:  d�but du checkpoint : time
+2026-04-22 17:20:55 WAT LOG:  checkpoint complete: wrote 7 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.757 s, sync=0.007 s, total=0.772 s; sync files=8, longest=0.003 s, average=0.001 s; distance=8 kB, estimate=382 kB; lsn=0/1FB2160, redo lsn=0/1FB2108
+2026-04-22 18:05:54 WAT LOG:  d�but du checkpoint : time
+2026-04-22 18:05:55 WAT LOG:  checkpoint complete: wrote 6 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.656 s, sync=0.006 s, total=0.675 s; sync files=7, longest=0.003 s, average=0.001 s; distance=4 kB, estimate=344 kB; lsn=0/1FB34A0, redo lsn=0/1FB3410
+2026-04-22 18:25:54 WAT LOG:  d�but du checkpoint : time
+2026-04-22 18:25:55 WAT LOG:  checkpoint complete: wrote 8 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.876 s, sync=0.023 s, total=0.915 s; sync files=9, longest=0.009 s, average=0.003 s; distance=10 kB, estimate=311 kB; lsn=0/1FB5C80, redo lsn=0/1FB5C28
+2026-04-22 18:50:54 WAT LOG:  d�but du checkpoint : time
+2026-04-22 18:50:55 WAT LOG:  checkpoint complete: wrote 11 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.190 s, sync=0.007 s, total=1.205 s; sync files=11, longest=0.003 s, average=0.001 s; distance=55 kB, estimate=285 kB; lsn=0/1FC38D8, redo lsn=0/1FC3880
+2026-04-22 19:25:54 WAT LOG:  d�but du checkpoint : time
+2026-04-22 19:25:55 WAT LOG:  checkpoint complete: wrote 10 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.084 s, sync=0.007 s, total=1.100 s; sync files=11, longest=0.003 s, average=0.001 s; distance=26 kB, estimate=259 kB; lsn=0/1FCA130, redo lsn=0/1FCA0D8
+2026-04-22 19:30:54 WAT LOG:  d�but du checkpoint : time
+2026-04-22 19:30:54 WAT LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.103 s, sync=0.004 s, total=0.115 s; sync files=2, longest=0.003 s, average=0.002 s; distance=6 kB, estimate=234 kB; lsn=0/1FCB9F0, redo lsn=0/1FCB998
+2026-04-22 19:35:55 WAT LOG:  d�but du checkpoint : time
+2026-04-22 19:35:55 WAT LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.117 s, sync=0.004 s, total=0.130 s; sync files=2, longest=0.003 s, average=0.002 s; distance=7 kB, estimate=211 kB; lsn=0/1FCD758, redo lsn=0/1FCD700
+2026-04-22 19:37:18 WAT ERREUR:  une valeur NULL viole la contrainte NOT NULL de la colonne « utilisateur_id » dans la relation « sessions_utilisateur »
+2026-04-22 19:37:18 WAT DÉTAIL:  La ligne en échec contient (1537308d-3a72-4781-b972-2b3c0710c0d7, null, cf1c5d19b9f131a5c34dc6e499d1f2db179d1b358252e9893dd27d2f3f3f691c, 127.0.0.1, Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KH..., 2026-04-22 17:18:31.609733+01, 2026-04-23 01:18:31.83341+01, null, null).
+2026-04-22 19:37:18 WAT INSTRUCTION :  UPDATE app.sessions_utilisateur SET utilisateur_id=$1::UUID WHERE app.sessions_utilisateur.id = $2::UUID
+2026-04-22 19:37:20 WAT ERREUR:  une valeur NULL viole la contrainte NOT NULL de la colonne « utilisateur_id » dans la relation « sessions_utilisateur »
+2026-04-22 19:37:20 WAT DÉTAIL:  La ligne en échec contient (1537308d-3a72-4781-b972-2b3c0710c0d7, null, cf1c5d19b9f131a5c34dc6e499d1f2db179d1b358252e9893dd27d2f3f3f691c, 127.0.0.1, Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KH..., 2026-04-22 17:18:31.609733+01, 2026-04-23 01:18:31.83341+01, null, null).
+2026-04-22 19:37:20 WAT INSTRUCTION :  UPDATE app.sessions_utilisateur SET utilisateur_id=$1::UUID WHERE app.sessions_utilisateur.id = $2::UUID
+2026-04-22 19:40:55 WAT LOG:  d�but du checkpoint : time
+2026-04-22 19:40:55 WAT LOG:  checkpoint complete: wrote 2 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.226 s, sync=0.004 s, total=0.238 s; sync files=2, longest=0.003 s, average=0.002 s; distance=4 kB, estimate=191 kB; lsn=0/1FCE860, redo lsn=0/1FCE808
+2026-04-22 20:05:55 WAT LOG:  d�but du checkpoint : time
+2026-04-22 20:05:56 WAT LOG:  checkpoint complete: wrote 7 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.756 s, sync=0.006 s, total=0.771 s; sync files=8, longest=0.003 s, average=0.001 s; distance=13 kB, estimate=173 kB; lsn=0/1FD1E78, redo lsn=0/1FD1E20
+2026-04-22 20:08:49 WAT ERREUR:  une valeur NULL viole la contrainte NOT NULL de la colonne « utilisateur_id » dans la relation « sessions_utilisateur »
+2026-04-22 20:08:49 WAT DÉTAIL:  La ligne en échec contient (1537308d-3a72-4781-b972-2b3c0710c0d7, null, cf1c5d19b9f131a5c34dc6e499d1f2db179d1b358252e9893dd27d2f3f3f691c, 127.0.0.1, Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KH..., 2026-04-22 17:18:31.609733+01, 2026-04-23 01:18:31.83341+01, null, null).
+2026-04-22 20:08:49 WAT INSTRUCTION :  UPDATE app.sessions_utilisateur SET utilisateur_id=$1::UUID WHERE app.sessions_utilisateur.id = $2::UUID
+2026-04-22 20:10:55 WAT LOG:  d�but du checkpoint : time
+2026-04-22 20:10:55 WAT LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.109 s, sync=0.016 s, total=0.141 s; sync files=2, longest=0.015 s, average=0.008 s; distance=8 kB, estimate=156 kB; lsn=0/1FD3EF8, redo lsn=0/1FD3EA0
+2026-04-22 20:20:55 WAT LOG:  d�but du checkpoint : time
+2026-04-22 20:20:58 WAT LOG:  checkpoint complete: wrote 32 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 1 recycled; write=3.473 s, sync=0.008 s, total=3.492 s; sync files=20, longest=0.001 s, average=0.001 s; distance=192 kB, estimate=192 kB; lsn=0/2003FA0, redo lsn=0/2003F48
+2026-04-22 20:55:05 WAT ERREUR:  une valeur NULL viole la contrainte NOT NULL de la colonne « utilisateur_id » dans la relation « sessions_utilisateur »
+2026-04-22 20:55:05 WAT DÉTAIL:  La ligne en échec contient (1537308d-3a72-4781-b972-2b3c0710c0d7, null, cf1c5d19b9f131a5c34dc6e499d1f2db179d1b358252e9893dd27d2f3f3f691c, 127.0.0.1, Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KH..., 2026-04-22 17:18:31.609733+01, 2026-04-23 01:18:31.83341+01, null, null).
+2026-04-22 20:55:05 WAT INSTRUCTION :  UPDATE app.sessions_utilisateur SET utilisateur_id=$1::UUID WHERE app.sessions_utilisateur.id = $2::UUID
+2026-04-22 20:55:55 WAT LOG:  d�but du checkpoint : time
+2026-04-22 20:55:56 WAT LOG:  checkpoint complete: wrote 7 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.755 s, sync=0.017 s, total=0.808 s; sync files=8, longest=0.010 s, average=0.003 s; distance=8 kB, estimate=173 kB; lsn=0/20062C0, redo lsn=0/2006230
+2026-04-22 21:05:55 WAT LOG:  d�but du checkpoint : time
+2026-04-22 21:05:56 WAT LOG:  checkpoint complete: wrote 10 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.086 s, sync=0.009 s, total=1.102 s; sync files=11, longest=0.003 s, average=0.001 s; distance=25 kB, estimate=158 kB; lsn=0/200C8B0, redo lsn=0/200C858
+2026-04-22 21:20:55 WAT LOG:  d�but du checkpoint : time
+2026-04-22 21:20:56 WAT LOG:  checkpoint complete: wrote 4 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.430 s, sync=0.008 s, total=0.447 s; sync files=5, longest=0.003 s, average=0.002 s; distance=3 kB, estimate=143 kB; lsn=0/200D568, redo lsn=0/200D510
+2026-04-22 21:25:55 WAT LOG:  d�but du checkpoint : time
+2026-04-22 21:25:56 WAT LOG:  checkpoint complete: wrote 8 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.863 s, sync=0.004 s, total=0.874 s; sync files=9, longest=0.001 s, average=0.001 s; distance=5 kB, estimate=129 kB; lsn=0/200EBD0, redo lsn=0/200EB78
+2026-04-22 21:30:55 WAT LOG:  d�but du checkpoint : time
+2026-04-22 21:30:55 WAT LOG:  checkpoint complete: wrote 3 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.320 s, sync=0.006 s, total=0.334 s; sync files=4, longest=0.004 s, average=0.002 s; distance=2 kB, estimate=116 kB; lsn=0/200F748, redo lsn=0/200F6F0
+2026-04-22 23:15:55 WAT LOG:  d�but du checkpoint : time
+2026-04-22 23:16:03 WAT LOG:  checkpoint complete: wrote 69 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=7.529 s, sync=0.020 s, total=7.557 s; sync files=39, longest=0.003 s, average=0.001 s; distance=423 kB, estimate=423 kB; lsn=0/20796E8, redo lsn=0/2079658
+2026-04-22 23:16:46 WAT ERREUR:  la valeur d'une clé dupliquée rompt la contrainte unique « utilisateurs_email_key »
+2026-04-22 23:16:46 WAT DÉTAIL:  La clé « (email)=(nourdebbabi0@gmail.com) » existe déjà.
+2026-04-22 23:16:46 WAT INSTRUCTION :  INSERT INTO app.utilisateurs (
+	    email,
+	    nom_complet,
+	    mot_de_passe_hash,
+	    mot_de_passe_temporaire_hash,
+	    est_actif,
+	    premiere_connexion,
+	    compte_active,
+	    departement_id
+	)
+	VALUES (
+	    'nourdebbabi0@gmail.com',
+	    'nour',
+	    NULL,
+	    '$2b$12$HASH_BCRYPT_REEL_ICI',
+	    true,
+	    true,
+	    false,
+	    'ea21168d-be75-4352-aa88-94e6bb659f06'
+	);
+2026-04-22 23:20:55 WAT LOG:  d�but du checkpoint : time
+2026-04-22 23:20:55 WAT LOG:  checkpoint complete: wrote 2 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.211 s, sync=0.003 s, total=0.222 s; sync files=3, longest=0.002 s, average=0.001 s; distance=2 kB, estimate=381 kB; lsn=0/207A128, redo lsn=0/207A0D0
+2026-04-22 23:25:55 WAT LOG:  d�but du checkpoint : time
+2026-04-22 23:25:56 WAT LOG:  checkpoint complete: wrote 9 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.978 s, sync=0.004 s, total=0.990 s; sync files=8, longest=0.001 s, average=0.001 s; distance=45 kB, estimate=348 kB; lsn=0/2085738, redo lsn=0/20856E0
+2026-04-22 23:35:55 WAT LOG:  d�but du checkpoint : time
+2026-04-22 23:35:56 WAT LOG:  checkpoint complete: wrote 7 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.760 s, sync=0.008 s, total=0.776 s; sync files=8, longest=0.003 s, average=0.001 s; distance=8 kB, estimate=314 kB; lsn=0/20877E0, redo lsn=0/2087788
+2026-04-22 23:40:55 WAT LOG:  d�but du checkpoint : time
+2026-04-22 23:40:56 WAT LOG:  checkpoint complete: wrote 6 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.644 s, sync=0.006 s, total=0.657 s; sync files=7, longest=0.003 s, average=0.001 s; distance=7 kB, estimate=283 kB; lsn=0/2089680, redo lsn=0/2089628
+2026-04-22 23:47:04 WAT ERREUR:  la colonne « adresse_ip » est de type inet mais l'expression est de type character varying au caractère 170
+2026-04-22 23:47:04 WAT ASTUCE :  Vous devez réécrire l'expression ou lui appliquer une transformation de type.
+2026-04-22 23:47:04 WAT INSTRUCTION :  INSERT INTO app.sessions_utilisateur (utilisateur_id, jeton_session_hash, adresse_ip, user_agent, expire_a, revoque_a, raison_revocation) VALUES ($1::UUID, $2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::TIMESTAMP WITH TIME ZONE, $6::TIMESTAMP WITH TIME ZONE, $7::VARCHAR) RETURNING app.sessions_utilisateur.id, app.sessions_utilisateur.date_creation
+2026-04-22 23:50:55 WAT LOG:  d�but du checkpoint : time
+2026-04-22 23:50:57 WAT LOG:  checkpoint complete: wrote 18 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.954 s, sync=0.010 s, total=1.972 s; sync files=16, longest=0.003 s, average=0.001 s; distance=15 kB, estimate=256 kB; lsn=0/208D2D8, redo lsn=0/208D280
+2026-04-23 00:01:13 WAT LOG:  n'a pas pu recevoir les données du client : An existing connection was forcibly closed by the remote host.
+	
+2026-04-23 09:43:14 WAT LOG:  n'a pas pu recevoir les données du client : An existing connection was forcibly closed by the remote host.
+	

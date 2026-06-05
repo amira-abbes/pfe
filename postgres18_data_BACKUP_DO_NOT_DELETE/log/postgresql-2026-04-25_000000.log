@@ -1,0 +1,44 @@
+2026-04-25 17:34:24 WAT LOG:  d�but du checkpoint : time
+2026-04-25 17:34:36 WAT LOG:  checkpoint complete: wrote 110 buffers (0.7%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=12.170 s, sync=0.037 s, total=12.232 s; sync files=72, longest=0.002 s, average=0.001 s; distance=787 kB, estimate=787 kB; lsn=0/2669C20, redo lsn=0/2663068
+2026-04-25 17:39:24 WAT LOG:  d�but du checkpoint : time
+2026-04-25 17:39:32 WAT LOG:  checkpoint complete: wrote 69 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=7.523 s, sync=0.016 s, total=7.558 s; sync files=18, longest=0.003 s, average=0.001 s; distance=517 kB, estimate=760 kB; lsn=0/26E47A8, redo lsn=0/26E4718
+2026-04-25 17:59:24 WAT LOG:  d�but du checkpoint : time
+2026-04-25 17:59:24 WAT LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.115 s, sync=0.003 s, total=0.133 s; sync files=1, longest=0.003 s, average=0.003 s; distance=8 kB, estimate=685 kB; lsn=0/26E68D8, redo lsn=0/26E6880
+2026-04-25 18:39:24 WAT LOG:  d�but du checkpoint : time
+2026-04-25 18:39:26 WAT LOG:  checkpoint complete: wrote 15 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.640 s, sync=0.008 s, total=1.658 s; sync files=11, longest=0.002 s, average=0.001 s; distance=76 kB, estimate=624 kB; lsn=0/26F9AF0, redo lsn=0/26F9A98
+2026-04-25 19:44:24 WAT LOG:  d�but du checkpoint : time
+2026-04-25 19:44:26 WAT LOG:  checkpoint complete: wrote 18 buffers (0.1%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.966 s, sync=0.009 s, total=1.994 s; sync files=12, longest=0.002 s, average=0.001 s; distance=103 kB, estimate=572 kB; lsn=0/27139D8, redo lsn=0/2713980
+2026-04-25 19:49:43 WAT ERREUR:  la colonne « date_dernier_echec_connexion » de la relation « utilisateurs » n'existe pas au caractère 182
+2026-04-25 19:49:43 WAT INSTRUCTION :  
+	                UPDATE app.utilisateurs
+	                SET
+	                    nombre_echecs_password = $1,
+	                    blocage_password_jusqu_a = $2,
+	                    date_dernier_echec_connexion = now(),
+	                    date_modification = now()
+	                WHERE id = CAST($3 AS uuid)
+	            
+2026-04-25 19:52:48 WAT ERREUR:  la colonne « date_dernier_echec_connexion » de la relation « utilisateurs » n'existe pas au caractère 182
+2026-04-25 19:52:48 WAT INSTRUCTION :  
+	                UPDATE app.utilisateurs
+	                SET
+	                    nombre_echecs_password = $1,
+	                    blocage_password_jusqu_a = $2,
+	                    date_dernier_echec_connexion = now(),
+	                    date_modification = now()
+	                WHERE id = CAST($3 AS uuid)
+	            
+2026-04-25 19:54:11 WAT ERREUR:  la colonne « date_dernier_echec_connexion » de la relation « utilisateurs » n'existe pas au caractère 182
+2026-04-25 19:54:11 WAT INSTRUCTION :  
+	                UPDATE app.utilisateurs
+	                SET
+	                    nombre_echecs_password = $1,
+	                    blocage_password_jusqu_a = $2,
+	                    date_dernier_echec_connexion = now(),
+	                    date_modification = now()
+	                WHERE id = CAST($3 AS uuid)
+	            
+2026-04-25 19:54:24 WAT LOG:  d�but du checkpoint : time
+2026-04-25 19:54:25 WAT LOG:  checkpoint complete: wrote 7 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.772 s, sync=0.009 s, total=0.791 s; sync files=8, longest=0.003 s, average=0.002 s; distance=20 kB, estimate=517 kB; lsn=0/2718D10, redo lsn=0/2718C80
+2026-04-25 20:29:24 WAT LOG:  d�but du checkpoint : time
+2026-04-25 20:29:31 WAT LOG:  checkpoint complete: wrote 66 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=7.250 s, sync=0.031 s, total=7.290 s; sync files=53, longest=0.003 s, average=0.001 s; distance=391 kB, estimate=504 kB; lsn=0/277ABF8, redo lsn=0/277AB68

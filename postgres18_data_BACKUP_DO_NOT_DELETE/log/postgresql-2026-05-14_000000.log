@@ -1,0 +1,4 @@
+2026-05-14 07:59:19 WAT LOG:  arrêt en cours
+2026-05-14 07:59:19 WAT LOG:  début du checkpoint : shutdown immediate
+2026-05-14 07:59:19 WAT ERREUR:  annulation de la requête à la demande de l'utilisateur
+2026-05-14 07:59:19 WAT LOG:  checkpoint complete: wrote 0 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.001 s, sync=0.001 s, total=0.044 s; sync files=0, longest=0.000 s, average=0.000 s; distance=0 kB, estimate=111 kB; lsn=0/B540D48, redo lsn=0/B540D48

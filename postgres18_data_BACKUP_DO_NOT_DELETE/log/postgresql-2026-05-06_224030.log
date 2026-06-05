@@ -1,0 +1,12 @@
+2026-05-06 22:40:30 WAT LOG:  le système de bases de données a été interrompu ; dernier lancement connu à 2026-05-06 13:15:36 WAT
+2026-05-06 22:40:30 WAT LOG:  le système de bases de données n'a pas été arrêté proprement ; restauration
+	automatique en cours
+2026-05-06 22:40:30 WAT LOG:  la ré-exécution commence à 0/6BE5EC8
+2026-05-06 22:40:30 WAT LOG:  longueur invalide de l'enregistrement à 0/6BE5F00 : attendait au moins 24, a eu 0
+2026-05-06 22:40:30 WAT LOG:  rejeu exécuté à 0/6BE5EC8 utilisation système : CPU : utilisateur : 0.00 s, système : 0.00 s, temps passé : 0.00 s
+2026-05-06 22:40:30 WAT LOG:  début du checkpoint : end-of-recovery immediate wait
+2026-05-06 22:40:30 WAT LOG:  checkpoint complete: wrote 0 buffers (0.0%), wrote 2 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.002 s, sync=0.002 s, total=0.011 s; sync files=3, longest=0.001 s, average=0.001 s; distance=0 kB, estimate=0 kB; lsn=0/6BE5F00, redo lsn=0/6BE5F00
+2026-05-06 23:20:31 WAT LOG:  début du checkpoint : time
+2026-05-06 23:20:31 WAT LOG:  checkpoint complete: wrote 2 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.218 s, sync=0.003 s, total=0.242 s; sync files=1, longest=0.003 s, average=0.003 s; distance=15 kB, estimate=15 kB; lsn=0/6BE9D08, redo lsn=0/6BE9C78
+2026-05-06 23:25:31 WAT LOG:  début du checkpoint : time
+2026-05-06 23:25:37 WAT LOG:  checkpoint complete: wrote 53 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=5.797 s, sync=0.018 s, total=5.825 s; sync files=34, longest=0.001 s, average=0.001 s; distance=258 kB, estimate=258 kB; lsn=0/6C2A798, redo lsn=0/6C2A740

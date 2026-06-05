@@ -1,6 +1,5 @@
 import {
   AlertTriangle,
-  Bot,
   CheckCircle2,
   CloudUpload,
   FileDown,
@@ -709,19 +708,15 @@ function RiskClientsPage({
   return (
     <div className="bdx-view bad-debts-page">
       <h2 className="bad-debts-page-title">Clients à risque</h2>
-      <BadDebtsFiltersCard filters={filters} actionOptions={clientActionFilterOptions(clients)} onChange={updateFilter} onReset={resetFilters} />
-      <div className="bad-debts-global-report-bar no-print">
-        <button
-          className="bad-debts-btn primary global-report-btn"
-          type="button"
-          onClick={handleGenerateGlobalReport}
-          disabled={globalReportLoading}
-        >
-          {globalReportLoading ? <Loader2 className="spin" size={16} /> : <FileText size={16} />}
-          {globalReportLoading ? "Génération en cours..." : "Générer rapport global"}
-        </button>
-        {activeFilters && <span className="bad-debts-filter-scope-hint">{activeFilters}</span>}
-      </div>
+      <BadDebtsFiltersCard
+        filters={filters}
+        actionOptions={clientActionFilterOptions(clients)}
+        onChange={updateFilter}
+        onReset={resetFilters}
+        onGenerateReport={handleGenerateGlobalReport}
+        globalReportLoading={globalReportLoading}
+        activeFilters={activeFilters}
+      />
       <BadDebtsClientsKpis summary={clientsSummaryValue(clients)} />
       <BadDebtsClientsTable
         rows={visibleRows}
@@ -733,6 +728,7 @@ function RiskClientsPage({
         totalPages={totalPages}
         onPrev={() => goToPage(page - 1)}
         onNext={() => goToPage(page + 1)}
+        onPageChange={goToPage}
         onReset={resetFilters}
         onRunAgent={launchAgent}
         loadingMsisdn={agentLoadingMsisdn}
@@ -775,21 +771,30 @@ function RiskClientsPage({
   );
 }
 
-function BadDebtsFiltersCard({ filters, actionOptions, onChange, onReset }) {
+function BadDebtsFiltersCard({ filters, actionOptions, onChange, onReset, onGenerateReport, globalReportLoading, activeFilters }) {
+  function handleSearchChange(event) {
+    onChange("search", event.target.value.replace(/\D/g, ""));
+  }
+
   return (
     <section className="bad-debts-filters-card">
       <div className="bad-debts-card-head">
-        <div><h3>Filtres avancés</h3></div>
+        <div><h3>Filtres</h3></div>
       </div>
       <div className="bad-debts-filter-grid">
         <label>Niveau de risque<select value={filters.risk_tier} onChange={(event) => onChange("risk_tier", event.target.value)}><option value="">Tous les niveaux</option><option value="low">Faible</option><option value="medium">Moyen</option><option value="high">Élevé</option></select></label>
         <label>Segment client<select value={filters.cluster_name} onChange={(event) => onChange("cluster_name", event.target.value)}>{SEGMENT_OPTIONS.map(([value, label]) => <option key={value || "all"} value={value}>{label}</option>)}</select></label>
         <label>Situation<select value={filters.is_anomaly} onChange={(event) => onChange("is_anomaly", event.target.value)}><option value="">Toutes les situations</option><option value="true">Avec anomalie</option><option value="false">Sans anomalie</option></select></label>
         <label>Action recommandée<select value={filters.action_type} onChange={(event) => onChange("action_type", event.target.value)}><option value="">Toutes les actions</option>{actionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-        <label>Recherche MSISDN<span className="bad-debts-search"><Search size={16} /><input value={filters.search} onChange={(event) => onChange("search", event.target.value)} placeholder="2169..." /></span></label>
+        <label>Recherche MSISDN<span className="bad-debts-search"><Search size={18} /><input inputMode="numeric" pattern="[0-9]*" value={filters.search} onChange={handleSearchChange} placeholder="2169..." /></span></label>
       </div>
       <div className="bad-debts-filter-actions">
+        {activeFilters && <span className="bad-debts-filter-scope-hint">{activeFilters}</span>}
         <button className="bad-debts-btn secondary" type="button" onClick={onReset}><RotateCcw size={16} />Réinitialiser</button>
+        <button className="bad-debts-btn primary global-report-btn" type="button" onClick={onGenerateReport} disabled={globalReportLoading}>
+          {globalReportLoading ? <Loader2 className="spin" size={18} /> : <FileText size={18} />}
+          {globalReportLoading ? "Génération..." : "Générer rapport"}
+        </button>
       </div>
     </section>
   );
@@ -805,17 +810,17 @@ function BadDebtsClientsKpis({ summary }) {
   ];
   return (
     <section className="bad-debts-stats">
-      {cards.map(([label, value, Icon, tone, hint]) => (
+      {cards.map(([label, value, Icon, tone]) => (
         <article className={`bad-debts-stat-card ${tone}`} key={label}>
           <span className="bad-debts-stat-icon"><Icon size={19} /></span>
-          <div><p>{label}</p><strong>{value}</strong><small>{hint}</small></div>
+          <div><p>{label}</p><strong>{value}</strong></div>
         </article>
       ))}
     </section>
   );
 }
 
-function BadDebtsClientsTable({ rows, loading, title, meta, activeFilters, page, totalPages, onPrev, onNext, onReset, onRunAgent, loadingMsisdn }) {
+function BadDebtsClientsTable({ rows, loading, title, meta, activeFilters, page, totalPages, onPrev, onNext, onPageChange, onReset, onRunAgent, loadingMsisdn }) {
   return (
     <section className="bad-debts-table-card">
       <div className="bad-debts-card-head table-head">
@@ -842,13 +847,21 @@ function BadDebtsClientsTable({ rows, loading, title, meta, activeFilters, page,
                       <td><AnomalyBadge value={client.is_anomaly} /></td>
                       <td>{client.recommended_action_label || actionLabel(actionType)}</td>
                       <td><PriorityBadge priority={priority} label={client.priority_label} /></td>
-                      <td><div className="bad-debts-row-actions"><button className="bad-debts-btn primary small" type="button" onClick={() => onRunAgent(client.msisdn)} disabled={isLoading}>{isLoading ? <Loader2 className="spin" size={15} /> : <Bot size={15} />}{isLoading ? "Analyse en cours..." : "Analyser"}</button></div></td>
+                      <td><div className="bad-debts-row-actions"><button className="bad-debts-btn primary small" type="button" onClick={() => onRunAgent(client.msisdn)} disabled={isLoading}>{isLoading ? <Loader2 className="spin" size={15} /> : <Search size={15} />}{isLoading ? "Analyse en cours..." : "Analyser"}</button></div></td>
                     </tr>
                   );
                 })}</tbody>
               </table>
             </div>
-            <div className="bad-debts-pagination"><button className="bad-debts-btn secondary" type="button" onClick={onPrev} disabled={page <= 1}>Précédent</button><span>Page {formatNumber(page)} / {formatNumber(totalPages)}</span><button className="bad-debts-btn secondary" type="button" onClick={onNext} disabled={page >= totalPages}>Suivant</button></div>
+            <div className="bad-debts-pagination">
+              <button className="bad-debts-page-dot nav" type="button" onClick={onPrev} disabled={page <= 1} aria-label="Page précédente">‹</button>
+              {paginationItems(page, totalPages).map((item, index) => (
+                item === "ellipsis"
+                  ? <span className="bad-debts-page-ellipsis" key={`ellipsis-${index}`}>…</span>
+                  : <button className={`bad-debts-page-dot ${item === page ? "is-active" : ""}`} type="button" key={item} onClick={() => onPageChange(item)} disabled={item === page}>{formatNumber(item)}</button>
+              ))}
+              <button className="bad-debts-page-dot nav" type="button" onClick={onNext} disabled={page >= totalPages} aria-label="Page suivante">›</button>
+            </div>
           </>
         ) : <div className="bad-debts-empty-state"><h3>Aucun client ne correspond aux filtres sélectionnés.</h3><button className="bad-debts-btn secondary" type="button" onClick={onReset}>Réinitialiser les filtres</button></div>
       )}
@@ -1408,7 +1421,7 @@ function VerticalBars({ rows, active, onActiveChange, onSelect }) {
           const height = Math.max(Number(row.percent || 0), Number(row.value) > 0 ? 3 : 0);
           const share = (Number(row.value || 0) / total) * 100;
           return (
-            <button className={`cluster-bar-item ${active === row.label ? "is-active" : ""}`} key={row.label} type="button" onMouseEnter={() => onActiveChange(row.label)} onClick={() => onSelect?.(row)}>
+            <button className={`cluster-bar-item ${segmentToneClass(row.label)} ${active === row.label ? "is-active" : ""}`} key={row.label} type="button" onMouseEnter={() => onActiveChange(row.label)} onClick={() => onSelect?.(row)}>
               <span className="cluster-bar-value">{formatNumber(row.value)}</span>
               <span className="bdx-vbar-track cluster-bar">
                 <i className="cluster-bar-fill" style={{ height: `${height}%`, "--delay": `${index * 70}ms` }} />
@@ -1431,7 +1444,7 @@ function HorizontalBars({ rows, active, onActiveChange }) {
   return (
     <div className="bdx-hbars score-cluster-list" onMouseLeave={() => onActiveChange(null)}>
       {rows.map((row, index) => (
-        <button className={`score-cluster-row ${active === row.label ? "is-active" : ""}`} type="button" key={row.label} onMouseEnter={() => onActiveChange(row.label)}>
+        <button className={`score-cluster-row ${segmentToneClass(row.label)} ${active === row.label ? "is-active" : ""}`} type="button" key={row.label} onMouseEnter={() => onActiveChange(row.label)}>
           <span className="score-cluster-label">{row.label}</span>
           <span className="score-cluster-track"><i className="score-cluster-fill" style={{ width: `${row.percent}%`, "--delay": `${index * 60}ms` }} /></span>
           <strong className="score-cluster-value">{Number(row.value).toFixed(3)}</strong>
@@ -1502,7 +1515,29 @@ function RadialDebt({ active, onActiveChange }) {
 }
 
 function ClientCell({ value }) {
-  return <div className="bdx-client-cell"><strong>{value}</strong><small>MSISDN</small></div>;
+  return <div className="bdx-client-cell"><strong>{value}</strong></div>;
+}
+
+function paginationItems(page, totalPages) {
+  const safeTotal = Math.max(Number(totalPages || 1), 1);
+  const safePage = Math.min(Math.max(Number(page || 1), 1), safeTotal);
+  const items = new Set([1, safeTotal, safePage - 1, safePage, safePage + 1].filter((item) => item >= 1 && item <= safeTotal));
+  const sorted = [...items].sort((a, b) => a - b);
+  return sorted.reduce((acc, item, index) => {
+    if (index > 0 && item - sorted[index - 1] > 1) acc.push("ellipsis");
+    acc.push(item);
+    return acc;
+  }, []);
+}
+
+function segmentToneClass(label = "") {
+  const normalized = String(label).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (normalized.includes("standard")) return "segment-standard";
+  if (normalized.includes("bon")) return "segment-good";
+  if (normalized.includes("suspend")) return "segment-suspended";
+  if (normalized.includes("deconnect") || normalized.includes("disconnect")) return "segment-disconnected";
+  if (normalized.includes("attente") || normalized.includes("hold")) return "segment-pending";
+  return "segment-default";
 }
 
 function Badge({ tone = "neutral", children }) {

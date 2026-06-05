@@ -3433,6 +3433,285 @@ button.bdx-kpi {
   }
 }
 
+/* Bad debts ML polish applied after Sprint 7 merge */
+.bad-debts-page {
+  padding-top: 18px;
+}
+
+.bad-debts-page-title {
+  position: relative;
+  margin-bottom: 22px;
+  padding-left: 18px;
+  font-size: clamp(30px, 3.2vw, 44px);
+  line-height: 1.08;
+}
+
+.bad-debts-page-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 7px;
+  border-radius: 999px;
+  background: #4f46e5;
+}
+
+.bad-debts-page > .bad-debts-global-report-bar {
+  display: none;
+}
+
+.bad-debts-filters-card {
+  border-radius: 22px;
+  padding: 30px;
+  background:
+    radial-gradient(circle at 92% -10%, rgba(79, 70, 229, 0.08), transparent 34%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 255, 0.94));
+  box-shadow: 0 22px 58px rgba(45, 62, 110, 0.11);
+}
+
+.bad-debts-card-head h3 {
+  color: #081633;
+  font-size: 25px;
+  font-weight: 950;
+}
+
+.bad-debts-filter-grid {
+  grid-template-columns: repeat(5, minmax(170px, 1fr));
+  gap: 18px;
+}
+
+.bad-debts-filter-grid label {
+  gap: 10px;
+  color: #34416a;
+  font-size: 13.5px;
+}
+
+.bad-debts-filter-grid select,
+.bad-debts-search {
+  min-height: 58px;
+  border-radius: 14px;
+  border-color: #dbe3ff;
+  background: #fff;
+  box-shadow: 0 10px 24px rgba(72, 89, 148, 0.06);
+}
+
+.bad-debts-filter-grid input {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.bad-debts-search input:focus {
+  box-shadow: none;
+}
+
+.bad-debts-search {
+  padding: 0 16px;
+}
+
+.bad-debts-search svg {
+  color: #111b3d;
+  flex: 0 0 auto;
+}
+
+.bad-debts-filter-actions {
+  justify-content: flex-end;
+  gap: 14px;
+  margin-top: 26px;
+}
+
+.bad-debts-filter-scope-hint {
+  margin-right: auto;
+  color: #647096;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.bad-debts-btn.primary,
+.bad-debts-btn.global-report-btn {
+  border: 0;
+  background: #6d5dfc;
+  color: #fff;
+  box-shadow: 0 16px 30px rgba(109, 93, 252, 0.28);
+}
+
+.bad-debts-btn.primary:hover:not(:disabled),
+.bad-debts-btn.global-report-btn:hover:not(:disabled) {
+  background: #5b4cf0;
+  box-shadow: 0 18px 34px rgba(91, 76, 240, 0.32);
+}
+
+.bad-debts-btn.secondary {
+  min-height: 54px;
+  border-color: #dfe6ff;
+  border-radius: 13px;
+  background: #fff;
+  color: #4f46e5;
+  box-shadow: 0 10px 22px rgba(72, 89, 148, 0.08);
+}
+
+.bad-debts-stats {
+  gap: 18px;
+}
+
+.bad-debts-stat-card {
+  min-height: 112px;
+  border-radius: 17px;
+  padding: 22px;
+}
+
+.bad-debts-stat-card small,
+.bad-debts-page .bdx-client-cell small {
+  display: none;
+}
+
+.bad-debts-page .bdx-client-cell {
+  gap: 0;
+}
+
+.bad-debts-pagination {
+  justify-content: center;
+  gap: 18px;
+  padding-top: 18px;
+}
+
+.bad-debts-page-dot {
+  display: inline-grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  border: 0;
+  border-radius: 50%;
+  background: #f3f5fa;
+  color: #0a1733;
+  font-size: 19px;
+  font-weight: 900;
+  box-shadow: 0 12px 24px rgba(31, 41, 72, 0.08);
+  cursor: pointer;
+  transition: transform 160ms ease, background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+
+.bad-debts-page-dot.nav {
+  font-size: 32px;
+}
+
+.bad-debts-page-dot.is-active {
+  background: #f04486;
+  color: #fff;
+  box-shadow: 0 14px 28px rgba(240, 68, 134, 0.34);
+}
+
+.bad-debts-page-dot:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.bad-debts-page-dot:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.bad-debts-page-ellipsis {
+  color: #7b849e;
+  font-weight: 900;
+}
+
+.bdx-overview {
+  grid-template-columns: clamp(300px, 21vw, 370px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: stretch;
+}
+
+.bdx-overview-kpi-grid {
+  grid-template-rows: repeat(5, 112px);
+  align-content: start;
+  gap: 12px;
+  height: auto;
+}
+
+.bdx-overview .bdx-kpi {
+  min-height: 0;
+  border-radius: 20px;
+  padding: 18px 24px;
+  grid-template-columns: 56px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  column-gap: 20px;
+  align-items: center;
+  border-color: rgba(205, 216, 232, 0.85);
+  background:
+    radial-gradient(circle at 92% 22%, color-mix(in srgb, var(--kpi-accent) 16%, transparent), transparent 42%),
+    radial-gradient(circle at 10% 102%, color-mix(in srgb, var(--kpi-accent) 8%, transparent), transparent 34%),
+    linear-gradient(135deg, #ffffff 0%, #ffffff 55%, color-mix(in srgb, var(--kpi-accent) 10%, #ffffff) 100%);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+}
+
+.bdx-overview .bdx-kpi-icon {
+  grid-row: 1 / 3;
+  grid-column: 1;
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+}
+
+.bdx-overview .bdx-kpi strong {
+  grid-column: 2;
+  margin-top: 8px;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.bdx-overview .bdx-kpi span {
+  grid-column: 2;
+  white-space: normal;
+  line-height: 1.18;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.bad-debts-filters-card .bad-debts-filter-scope-hint {
+  display: none;
+}
+
+.bdx-overview .bdx-chart-grid {
+  gap: 16px;
+  height: 100%;
+}
+
+.bdx-overview .bdx-chart-grid .bdx-panel {
+  min-height: 0;
+  border-radius: 20px;
+}
+
+.cluster-bar-item.segment-standard .cluster-bar-fill,
+.score-cluster-row.segment-standard .score-cluster-fill {
+  background: linear-gradient(180deg, #1677ee, #1269d8);
+}
+
+.cluster-bar-item.segment-good .cluster-bar-fill,
+.score-cluster-row.segment-good .score-cluster-fill {
+  background: linear-gradient(180deg, #11c5bd, #0baa9f);
+}
+
+.cluster-bar-item.segment-suspended .cluster-bar-fill,
+.score-cluster-row.segment-suspended .score-cluster-fill {
+  background: linear-gradient(180deg, #8b5cf6, #7c3aed);
+}
+
+.cluster-bar-item.segment-disconnected .cluster-bar-fill,
+.score-cluster-row.segment-disconnected .score-cluster-fill {
+  background: linear-gradient(180deg, #e6007e, #d00073);
+}
+
+.cluster-bar-item.segment-pending .cluster-bar-fill,
+.score-cluster-row.segment-pending .score-cluster-fill {
+  background: linear-gradient(180deg, #f59e0b, #f08a00);
+}
+
+.cluster-bar-item.segment-default .cluster-bar-fill,
+.score-cluster-row.segment-default .score-cluster-fill {
+  background: linear-gradient(180deg, #64748b, #475569);
+}
+
 /* --- Nouvelles sections et Graphes --- */
 .bdx-mini-charts-grid {
   display: grid;

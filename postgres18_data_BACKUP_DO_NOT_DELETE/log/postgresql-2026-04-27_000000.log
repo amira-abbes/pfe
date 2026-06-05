@@ -1,0 +1,45 @@
+2026-04-29 01:57:04 WAT LOG:  d�but du checkpoint : time
+2026-04-29 01:57:09 WAT LOG:  checkpoint complete: wrote 51 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=5.636 s, sync=0.021 s, total=5.667 s; sync files=44, longest=0.002 s, average=0.001 s; distance=260 kB, estimate=260 kB; lsn=0/35FA8E0, redo lsn=0/35FA888
+2026-04-29 02:00:39 WAT ERREUR:  column "utilisateur_id" does not exist au caractère 37
+2026-04-29 02:00:39 WAT INSTRUCTION :  DELETE FROM app.journal_audit
+	WHERE utilisateur_id IN (
+	  SELECT id FROM app.utilisateurs
+	  WHERE email <> 'plateforme.tt.systemeadmin@gmail.com'
+	);
+2026-04-29 02:01:45 WAT ERREUR:  la colonne « utilisateur_id » n'existe pas au caractère 37
+2026-04-29 02:01:45 WAT INSTRUCTION :  DELETE FROM app.journal_audit
+	WHERE utilisateur_id IN (
+	  SELECT id FROM app.utilisateurs
+	  WHERE email <> 'plateforme.tt.systemeadmin@gmail.com'
+	);
+2026-04-29 02:01:50 WAT ERREUR:  la colonne « utilisateur_id » n'existe pas au caractère 37
+2026-04-29 02:01:50 WAT INSTRUCTION :  DELETE FROM app.journal_audit
+	WHERE utilisateur_id IN (
+	  SELECT id FROM app.utilisateurs
+	  WHERE email <> 'plateforme.tt.systemeadmin@gmail.com'
+	);
+2026-04-29 02:02:04 WAT LOG:  d�but du checkpoint : time
+2026-04-29 02:02:27 WAT LOG:  checkpoint complete: wrote 204 buffers (1.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=22.486 s, sync=0.029 s, total=22.526 s; sync files=57, longest=0.002 s, average=0.001 s; distance=2104 kB, estimate=2104 kB; lsn=0/3907EE0, redo lsn=0/3808BF8
+2026-04-29 02:05:53 WAT ERREUR:  la valeur d'une clé dupliquée rompt la contrainte unique « identifiants_totp_utilisateur_id_key »
+2026-04-29 02:05:53 WAT DÉTAIL:  La clé « (utilisateur_id)=(8ff88a29-6218-446b-9003-a99923bd5012) » existe déjà.
+2026-04-29 02:05:53 WAT INSTRUCTION :  INSERT INTO app.identifiants_totp (utilisateur_id, secret_chiffre, est_actif, dernier_pas_utilise, date_creation, date_activation, date_derniere_utilisation, date_revocation, date_modification) VALUES ($1::UUID, $2::VARCHAR, $3, $4::VARCHAR, $5::TIMESTAMP WITH TIME ZONE, $6::TIMESTAMP WITH TIME ZONE, $7::TIMESTAMP WITH TIME ZONE, $8::TIMESTAMP WITH TIME ZONE, $9::TIMESTAMP WITH TIME ZONE) RETURNING app.identifiants_totp.id
+2026-04-29 02:07:04 WAT LOG:  d�but du checkpoint : time
+2026-04-29 02:07:29 WAT LOG:  checkpoint complete: wrote 224 buffers (1.4%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=24.712 s, sync=0.045 s, total=24.768 s; sync files=85, longest=0.002 s, average=0.001 s; distance=1075 kB, estimate=2001 kB; lsn=0/3915888, redo lsn=0/39157F8
+2026-04-29 02:12:04 WAT LOG:  d�but du checkpoint : time
+2026-04-29 02:12:12 WAT LOG:  checkpoint complete: wrote 79 buffers (0.5%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=8.701 s, sync=0.031 s, total=8.741 s; sync files=61, longest=0.002 s, average=0.001 s; distance=132 kB, estimate=1814 kB; lsn=0/3936AC8, redo lsn=0/3936A38
+2026-04-29 02:17:05 WAT LOG:  d�but du checkpoint : time
+2026-04-29 02:17:12 WAT LOG:  checkpoint complete: wrote 72 buffers (0.4%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=7.945 s, sync=0.030 s, total=7.984 s; sync files=58, longest=0.002 s, average=0.001 s; distance=178 kB, estimate=1651 kB; lsn=0/3963448, redo lsn=0/39633F0
+2026-04-29 02:22:06 WAT LOG:  d�but du checkpoint : time
+2026-04-29 02:22:08 WAT LOG:  checkpoint complete: wrote 21 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.319 s, sync=0.014 s, total=2.343 s; sync files=22, longest=0.002 s, average=0.001 s; distance=52 kB, estimate=1491 kB; lsn=0/3970798, redo lsn=0/3970740
+2026-04-29 02:23:28 WAT LOG:  n'a pas pu recevoir les données du client : An existing connection was forcibly closed by the remote host.
+	
+2026-04-29 02:23:28 WAT LOG:  n'a pas pu recevoir les données du client : An existing connection was forcibly closed by the remote host.
+	
+2026-04-29 02:23:28 WAT LOG:  n'a pas pu recevoir les données du client : An existing connection was forcibly closed by the remote host.
+	
+2026-04-29 02:23:31 WAT LOG:  n'a pas pu recevoir les données du client : An existing connection was forcibly closed by the remote host.
+	
+2026-04-29 02:23:31 WAT LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-04-29 02:23:31 WAT LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	

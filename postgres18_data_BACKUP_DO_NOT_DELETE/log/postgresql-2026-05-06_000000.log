@@ -1,0 +1,108 @@
+2026-05-06 02:46:09 WAT LOG:  début du checkpoint : time
+2026-05-06 02:46:17 WAT LOG:  checkpoint complete: wrote 72 buffers (0.4%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=7.836 s, sync=0.021 s, total=7.869 s; sync files=42, longest=0.002 s, average=0.001 s; distance=443 kB, estimate=443 kB; lsn=0/5990B48, redo lsn=0/5990AB8
+2026-05-06 02:51:09 WAT LOG:  début du checkpoint : time
+2026-05-06 02:51:10 WAT LOG:  checkpoint complete: wrote 13 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.417 s, sync=0.012 s, total=1.439 s; sync files=13, longest=0.003 s, average=0.001 s; distance=72 kB, estimate=406 kB; lsn=0/59A2EA0, redo lsn=0/59A2E10
+2026-05-06 03:01:09 WAT LOG:  début du checkpoint : time
+2026-05-06 03:01:22 WAT LOG:  checkpoint complete: wrote 114 buffers (0.7%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=12.424 s, sync=0.019 s, total=12.459 s; sync files=29, longest=0.002 s, average=0.001 s; distance=679 kB, estimate=679 kB; lsn=0/5A4CCC8, redo lsn=0/5A4CC38
+2026-05-06 03:06:09 WAT LOG:  début du checkpoint : time
+2026-05-06 03:06:11 WAT LOG:  checkpoint complete: wrote 22 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.396 s, sync=0.012 s, total=2.419 s; sync files=15, longest=0.003 s, average=0.001 s; distance=144 kB, estimate=626 kB; lsn=0/5A849F0, redo lsn=0/5A70D60
+2026-05-06 03:11:09 WAT LOG:  début du checkpoint : time
+2026-05-06 03:11:13 WAT LOG:  checkpoint complete: wrote 38 buffers (0.2%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=4.147 s, sync=0.016 s, total=4.174 s; sync files=25, longest=0.002 s, average=0.001 s; distance=220 kB, estimate=585 kB; lsn=0/5AA8080, redo lsn=0/5AA8028
+2026-05-06 03:16:09 WAT LOG:  début du checkpoint : time
+2026-05-06 03:16:12 WAT LOG:  checkpoint complete: wrote 24 buffers (0.1%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.622 s, sync=0.012 s, total=2.645 s; sync files=16, longest=0.003 s, average=0.001 s; distance=125 kB, estimate=539 kB; lsn=0/5AC7638, redo lsn=0/5AC75A8
+2026-05-06 03:23:17 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-05-06 03:23:17 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-05-06 03:23:17 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-05-06 03:26:09 WAT LOG:  début du checkpoint : time
+2026-05-06 03:26:21 WAT LOG:  checkpoint complete: wrote 107 buffers (0.7%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=11.722 s, sync=0.026 s, total=11.757 s; sync files=45, longest=0.002 s, average=0.001 s; distance=635 kB, estimate=635 kB; lsn=0/5B66238, redo lsn=0/5B661A8
+2026-05-06 03:36:09 WAT LOG:  début du checkpoint : time
+2026-05-06 03:36:18 WAT LOG:  checkpoint complete: wrote 82 buffers (0.5%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=8.978 s, sync=0.026 s, total=9.014 s; sync files=43, longest=0.002 s, average=0.001 s; distance=485 kB, estimate=620 kB; lsn=0/5BDF8C8, redo lsn=0/5BDF838
+2026-05-06 03:41:09 WAT LOG:  début du checkpoint : time
+2026-05-06 03:41:16 WAT LOG:  checkpoint complete: wrote 66 buffers (0.4%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=7.246 s, sync=0.039 s, total=7.295 s; sync files=39, longest=0.003 s, average=0.001 s; distance=399 kB, estimate=597 kB; lsn=0/5C43640, redo lsn=0/5C435B0
+2026-05-06 03:46:09 WAT LOG:  début du checkpoint : time
+2026-05-06 03:46:20 WAT LOG:  checkpoint complete: wrote 95 buffers (0.6%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=10.460 s, sync=0.014 s, total=10.484 s; sync files=24, longest=0.002 s, average=0.001 s; distance=609 kB, estimate=609 kB; lsn=0/5CDBCE0, redo lsn=0/5CDBC50
+2026-05-06 03:51:09 WAT LOG:  début du checkpoint : time
+2026-05-06 03:51:10 WAT LOG:  checkpoint complete: wrote 12 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.313 s, sync=0.060 s, total=1.411 s; sync files=13, longest=0.017 s, average=0.005 s; distance=80 kB, estimate=556 kB; lsn=0/5CEFDD0, redo lsn=0/5CEFD40
+2026-05-06 04:31:09 WAT LOG:  début du checkpoint : time
+2026-05-06 04:31:20 WAT LOG:  checkpoint complete: wrote 99 buffers (0.6%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=10.925 s, sync=0.037 s, total=10.988 s; sync files=44, longest=0.002 s, average=0.001 s; distance=604 kB, estimate=604 kB; lsn=0/5D86FB8, redo lsn=0/5D86F28
+2026-05-06 05:36:09 WAT LOG:  début du checkpoint : time
+2026-05-06 05:36:16 WAT LOG:  checkpoint complete: wrote 62 buffers (0.4%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=6.784 s, sync=0.125 s, total=6.947 s; sync files=36, longest=0.016 s, average=0.004 s; distance=349 kB, estimate=578 kB; lsn=0/5DDE3E0, redo lsn=0/5DDE350
+2026-05-06 05:56:09 WAT LOG:  début du checkpoint : time
+2026-05-06 05:56:11 WAT LOG:  checkpoint complete: wrote 20 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.191 s, sync=0.013 s, total=2.214 s; sync files=21, longest=0.001 s, average=0.001 s; distance=103 kB, estimate=531 kB; lsn=0/5DF8310, redo lsn=0/5DF82B8
+2026-05-06 06:50:40 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-05-06 06:50:40 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-05-06 06:50:40 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-05-06 06:50:40 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-05-06 06:50:40 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-05-06 06:50:40 WAT LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-05-06 06:50:40 WAT LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-05-06 06:50:40 WAT LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-05-06 11:01:10 WAT LOG:  début du checkpoint : time
+2026-05-06 11:01:19 WAT LOG:  checkpoint complete: wrote 77 buffers (0.5%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=8.406 s, sync=0.024 s, total=8.459 s; sync files=42, longest=0.002 s, average=0.001 s; distance=455 kB, estimate=523 kB; lsn=0/5E6A2F8, redo lsn=0/5E6A2A0
+2026-05-06 11:11:10 WAT LOG:  début du checkpoint : time
+2026-05-06 11:11:18 WAT LOG:  checkpoint complete: wrote 71 buffers (0.4%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=7.737 s, sync=0.012 s, total=7.759 s; sync files=22, longest=0.002 s, average=0.001 s; distance=390 kB, estimate=510 kB; lsn=0/5ECBC08, redo lsn=0/5ECBBB0
+2026-05-06 11:16:10 WAT LOG:  début du checkpoint : time
+2026-05-06 11:16:13 WAT LOG:  checkpoint complete: wrote 36 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.919 s, sync=0.015 s, total=3.945 s; sync files=22, longest=0.002 s, average=0.001 s; distance=184 kB, estimate=477 kB; lsn=0/5EF9F98, redo lsn=0/5EF9F08
+2026-05-06 11:21:11 WAT LOG:  début du checkpoint : time
+2026-05-06 11:21:18 WAT LOG:  checkpoint complete: wrote 64 buffers (0.4%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=7.095 s, sync=0.086 s, total=7.278 s; sync files=37, longest=0.009 s, average=0.003 s; distance=383 kB, estimate=468 kB; lsn=0/5F59E40, redo lsn=0/5F59DB0
+2026-05-06 11:26:11 WAT LOG:  début du checkpoint : time
+2026-05-06 11:26:17 WAT LOG:  checkpoint complete: wrote 53 buffers (0.3%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=5.796 s, sync=0.012 s, total=5.818 s; sync files=21, longest=0.002 s, average=0.001 s; distance=305 kB, estimate=452 kB; lsn=0/5FA63F0, redo lsn=0/5FA6360
+2026-05-06 11:31:11 WAT LOG:  début du checkpoint : time
+2026-05-06 11:31:19 WAT LOG:  checkpoint complete: wrote 78 buffers (0.5%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 1 recycled; write=8.521 s, sync=0.014 s, total=8.550 s; sync files=22, longest=0.002 s, average=0.001 s; distance=499 kB, estimate=499 kB; lsn=0/60231A8, redo lsn=0/6023150
+2026-05-06 11:41:11 WAT LOG:  début du checkpoint : time
+2026-05-06 11:41:14 WAT LOG:  checkpoint complete: wrote 30 buffers (0.2%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.256 s, sync=0.013 s, total=3.286 s; sync files=24, longest=0.002 s, average=0.001 s; distance=167 kB, estimate=466 kB; lsn=0/604D158, redo lsn=0/604D0C8
+2026-05-06 11:46:11 WAT LOG:  début du checkpoint : time
+2026-05-06 11:46:15 WAT LOG:  checkpoint complete: wrote 29 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.158 s, sync=0.030 s, total=3.229 s; sync files=14, longest=0.008 s, average=0.003 s; distance=184 kB, estimate=438 kB; lsn=0/607B420, redo lsn=0/607B3C8
+2026-05-06 11:54:26 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-05-06 11:54:26 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-05-06 11:56:11 WAT LOG:  début du checkpoint : time
+2026-05-06 11:56:17 WAT LOG:  checkpoint complete: wrote 62 buffers (0.4%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=6.737 s, sync=0.018 s, total=6.765 s; sync files=37, longest=0.002 s, average=0.001 s; distance=369 kB, estimate=431 kB; lsn=0/60D7B00, redo lsn=0/60D7AA8
+2026-05-06 12:01:12 WAT LOG:  début du checkpoint : time
+2026-05-06 12:01:18 WAT LOG:  checkpoint complete: wrote 51 buffers (0.3%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=5.534 s, sync=1.161 s, total=6.735 s; sync files=20, longest=0.114 s, average=0.059 s; distance=303 kB, estimate=418 kB; lsn=0/61238A0, redo lsn=0/6123810
+2026-05-06 12:06:12 WAT LOG:  début du checkpoint : time
+2026-05-06 12:06:19 WAT LOG:  checkpoint complete: wrote 61 buffers (0.4%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=6.639 s, sync=0.015 s, total=6.667 s; sync files=31, longest=0.001 s, average=0.001 s; distance=397 kB, estimate=416 kB; lsn=0/6186DC8, redo lsn=0/6186D70
+2026-05-06 12:11:12 WAT LOG:  début du checkpoint : time
+2026-05-06 12:11:16 WAT LOG:  checkpoint complete: wrote 33 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.595 s, sync=0.013 s, total=3.618 s; sync files=21, longest=0.002 s, average=0.001 s; distance=184 kB, estimate=393 kB; lsn=0/61B4F08, redo lsn=0/61B4EB0
+2026-05-06 12:21:12 WAT LOG:  début du checkpoint : time
+2026-05-06 12:21:14 WAT LOG:  checkpoint complete: wrote 23 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.499 s, sync=0.015 s, total=2.527 s; sync files=24, longest=0.002 s, average=0.001 s; distance=137 kB, estimate=367 kB; lsn=0/61D7348, redo lsn=0/61D72F0
+2026-05-06 12:26:12 WAT LOG:  début du checkpoint : time
+2026-05-06 12:26:23 WAT LOG:  checkpoint complete: wrote 100 buffers (0.6%), wrote 4 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=10.894 s, sync=0.022 s, total=10.925 s; sync files=41, longest=0.002 s, average=0.001 s; distance=569 kB, estimate=569 kB; lsn=0/62659A0, redo lsn=0/6265910
+2026-05-06 12:31:12 WAT LOG:  début du checkpoint : time
+2026-05-06 12:31:17 WAT LOG:  checkpoint complete: wrote 50 buffers (0.3%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=5.435 s, sync=0.020 s, total=5.464 s; sync files=28, longest=0.003 s, average=0.001 s; distance=266 kB, estimate=539 kB; lsn=0/62A8440, redo lsn=0/62A83B0
+2026-05-06 12:36:12 WAT LOG:  début du checkpoint : time
+2026-05-06 12:36:19 WAT LOG:  checkpoint complete: wrote 55 buffers (0.3%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=6.001 s, sync=0.023 s, total=6.030 s; sync files=36, longest=0.002 s, average=0.001 s; distance=318 kB, estimate=517 kB; lsn=0/63096F8, redo lsn=0/62F7EB8
+2026-05-06 12:41:12 WAT LOG:  début du checkpoint : time
+2026-05-06 12:41:29 WAT LOG:  checkpoint complete: wrote 158 buffers (1.0%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=17.211 s, sync=0.018 s, total=17.238 s; sync files=32, longest=0.002 s, average=0.001 s; distance=1624 kB, estimate=1624 kB; lsn=0/64CC1A8, redo lsn=0/648DED0
+2026-05-06 12:46:12 WAT LOG:  début du checkpoint : time
+2026-05-06 12:46:33 WAT LOG:  checkpoint complete: wrote 198 buffers (1.2%), wrote 4 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=21.581 s, sync=0.014 s, total=21.608 s; sync files=25, longest=0.003 s, average=0.001 s; distance=2007 kB, estimate=2007 kB; lsn=0/66A9BE8, redo lsn=0/6683C80
+2026-05-06 12:51:12 WAT LOG:  début du checkpoint : time
+2026-05-06 12:51:29 WAT LOG:  checkpoint complete: wrote 148 buffers (0.9%), wrote 4 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=16.127 s, sync=0.013 s, total=16.150 s; sync files=23, longest=0.002 s, average=0.001 s; distance=1561 kB, estimate=1962 kB; lsn=0/684CB00, redo lsn=0/680A248
+2026-05-06 12:56:12 WAT LOG:  début du checkpoint : time
+2026-05-06 12:56:34 WAT LOG:  checkpoint complete: wrote 202 buffers (1.2%), wrote 4 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=22.000 s, sync=0.012 s, total=22.021 s; sync files=23, longest=0.001 s, average=0.001 s; distance=1991 kB, estimate=1991 kB; lsn=0/6A4A2E8, redo lsn=0/69FC130
+2026-05-06 13:01:12 WAT LOG:  début du checkpoint : time
+2026-05-06 13:01:23 WAT LOG:  checkpoint complete: wrote 105 buffers (0.6%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=11.473 s, sync=0.010 s, total=11.495 s; sync files=20, longest=0.002 s, average=0.001 s; distance=1040 kB, estimate=1896 kB; lsn=0/6B004D8, redo lsn=0/6B00448
+2026-05-06 13:03:35 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-05-06 13:03:35 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-05-06 13:03:35 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-05-06 13:03:35 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-05-06 13:03:35 WAT LOG:  n'a pas pu recevoir les donnÃ©es du client : An existing connection was forcibly closed by the remote host.
+	
+2026-05-06 13:03:35 WAT LOG:  fin de fichier (EOF) inattendue de la connexion du client avec une
+	transaction ouverte

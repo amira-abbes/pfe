@@ -1,0 +1,10 @@
+2026-06-05 12:29:10 WAT LOG:  début du checkpoint : time
+2026-06-05 12:29:12 WAT LOG:  checkpoint complete: wrote 15 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.635 s, sync=0.005 s, total=1.654 s; sync files=13, longest=0.001 s, average=0.001 s; distance=86 kB, estimate=239 kB; lsn=0/118690A8, redo lsn=0/11869050
+2026-06-05 12:34:10 WAT LOG:  début du checkpoint : time
+2026-06-05 12:34:16 WAT LOG:  checkpoint complete: wrote 54 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=5.907 s, sync=0.012 s, total=5.925 s; sync files=28, longest=0.003 s, average=0.001 s; distance=274 kB, estimate=274 kB; lsn=0/118ADC30, redo lsn=0/118ADBD8
+2026-06-05 12:35:56 WAT FATAL:  arrÃªt des connexions suite Ã  la demande de l'administrateur
+2026-06-05 12:35:56 WAT FATAL:  arrÃªt des connexions suite Ã  la demande de l'administrateur
+2026-06-05 12:35:56 WAT FATAL:  arrÃªt des connexions suite Ã  la demande de l'administrateur
+2026-06-05 12:35:56 WAT LOG:  arrêt en cours
+2026-06-05 12:35:56 WAT LOG:  début du checkpoint : shutdown immediate
+2026-06-05 12:35:56 WAT LOG:  checkpoint complete: wrote 0 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.001 s, sync=0.001 s, total=0.018 s; sync files=0, longest=0.000 s, average=0.000 s; distance=0 kB, estimate=247 kB; lsn=0/118ADCE0, redo lsn=0/118ADCE0

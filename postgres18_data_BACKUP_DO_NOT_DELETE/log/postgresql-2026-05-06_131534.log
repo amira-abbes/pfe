@@ -1,0 +1,8 @@
+2026-05-06 13:15:34 WAT LOG:  le système de bases de données a été interrompu ; dernier lancement connu à 2026-05-06 13:01:23 WAT
+2026-05-06 13:15:35 WAT LOG:  le système de bases de données n'a pas été arrêté proprement ; restauration
+	automatique en cours
+2026-05-06 13:15:36 WAT LOG:  la ré-exécution commence à 0/6B00448
+2026-05-06 13:15:36 WAT LOG:  longueur invalide de l'enregistrement à 0/6BE5E50 : attendait au moins 24, a eu 0
+2026-05-06 13:15:36 WAT LOG:  rejeu exécuté à 0/6BE5E18 utilisation système : CPU : utilisateur : 0.00 s, système : 0.04 s, temps passé : 0.03 s
+2026-05-06 13:15:36 WAT LOG:  début du checkpoint : end-of-recovery immediate wait
+2026-05-06 13:15:36 WAT LOG:  checkpoint complete: wrote 125 buffers (0.8%), wrote 2 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.015 s, sync=0.026 s, total=0.057 s; sync files=25, longest=0.003 s, average=0.002 s; distance=918 kB, estimate=918 kB; lsn=0/6BE5E50, redo lsn=0/6BE5E50

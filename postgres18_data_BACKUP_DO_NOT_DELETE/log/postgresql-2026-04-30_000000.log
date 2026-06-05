@@ -1,0 +1,213 @@
+2026-04-30 18:45:53 WAT LOG:  début du checkpoint : time
+2026-04-30 18:45:57 WAT LOG:  checkpoint complete: wrote 29 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.203 s, sync=0.018 s, total=3.249 s; sync files=25, longest=0.002 s, average=0.001 s; distance=113 kB, estimate=164 kB; lsn=0/3EF3490, redo lsn=0/3EF3438
+2026-04-30 18:50:53 WAT LOG:  début du checkpoint : time
+2026-04-30 18:50:55 WAT LOG:  checkpoint complete: wrote 22 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.421 s, sync=0.015 s, total=2.460 s; sync files=23, longest=0.003 s, average=0.001 s; distance=88 kB, estimate=156 kB; lsn=0/3F094D8, redo lsn=0/3F09480
+2026-04-30 18:55:53 WAT LOG:  début du checkpoint : time
+2026-04-30 18:55:59 WAT LOG:  checkpoint complete: wrote 51 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=5.651 s, sync=0.119 s, total=5.791 s; sync files=43, longest=0.012 s, average=0.003 s; distance=194 kB, estimate=194 kB; lsn=0/3F39D78, redo lsn=0/3F39D20
+2026-04-30 19:00:53 WAT LOG:  début du checkpoint : time
+2026-04-30 19:00:53 WAT LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.116 s, sync=0.001 s, total=0.129 s; sync files=1, longest=0.001 s, average=0.001 s; distance=4 kB, estimate=175 kB; lsn=0/3F3AE18, redo lsn=0/3F3ADC0
+2026-04-30 19:25:53 WAT LOG:  début du checkpoint : time
+2026-04-30 19:25:59 WAT LOG:  checkpoint complete: wrote 49 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=5.396 s, sync=0.023 s, total=5.431 s; sync files=42, longest=0.003 s, average=0.001 s; distance=173 kB, estimate=174 kB; lsn=0/3F66340, redo lsn=0/3F662E8
+2026-04-30 19:30:53 WAT LOG:  début du checkpoint : time
+2026-04-30 19:31:00 WAT LOG:  checkpoint complete: wrote 66 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=7.242 s, sync=0.029 s, total=7.281 s; sync files=58, longest=0.002 s, average=0.001 s; distance=208 kB, estimate=208 kB; lsn=0/3F9A6B8, redo lsn=0/3F9A628
+2026-04-30 19:35:53 WAT LOG:  début du checkpoint : time
+2026-04-30 19:36:01 WAT LOG:  checkpoint complete: wrote 70 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=7.739 s, sync=0.030 s, total=7.780 s; sync files=54, longest=0.002 s, average=0.001 s; distance=272 kB, estimate=272 kB; lsn=0/3FDEA60, redo lsn=0/3FDEA08
+2026-04-30 19:40:53 WAT LOG:  début du checkpoint : time
+2026-04-30 19:40:59 WAT LOG:  checkpoint complete: wrote 59 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 1 recycled; write=6.483 s, sync=0.027 s, total=6.526 s; sync files=51, longest=0.002 s, average=0.001 s; distance=202 kB, estimate=265 kB; lsn=0/4011368, redo lsn=0/40112D8
+2026-04-30 19:45:53 WAT LOG:  début du checkpoint : time
+2026-04-30 19:45:56 WAT LOG:  checkpoint complete: wrote 30 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.319 s, sync=0.015 s, total=3.343 s; sync files=26, longest=0.002 s, average=0.001 s; distance=134 kB, estimate=252 kB; lsn=0/4032E10, redo lsn=0/4032D80
+2026-04-30 19:50:54 WAT LOG:  début du checkpoint : time
+2026-04-30 19:51:02 WAT LOG:  checkpoint complete: wrote 78 buffers (0.5%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=8.625 s, sync=0.026 s, total=8.662 s; sync files=48, longest=0.002 s, average=0.001 s; distance=348 kB, estimate=348 kB; lsn=0/4089FF0, redo lsn=0/4089F60
+2026-04-30 20:30:54 WAT LOG:  début du checkpoint : time
+2026-04-30 20:30:57 WAT LOG:  checkpoint complete: wrote 23 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.573 s, sync=0.014 s, total=2.598 s; sync files=24, longest=0.002 s, average=0.001 s; distance=92 kB, estimate=322 kB; lsn=0/40B9038, redo lsn=0/40A1178
+2026-04-30 20:35:54 WAT LOG:  début du checkpoint : time
+2026-04-30 20:36:00 WAT LOG:  checkpoint complete: wrote 54 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=5.956 s, sync=0.023 s, total=5.987 s; sync files=43, longest=0.001 s, average=0.001 s; distance=218 kB, estimate=312 kB; lsn=0/40D7D98, redo lsn=0/40D7D08
+2026-04-30 20:40:54 WAT LOG:  début du checkpoint : time
+2026-04-30 20:41:02 WAT LOG:  checkpoint complete: wrote 72 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=7.942 s, sync=0.028 s, total=7.983 s; sync files=52, longest=0.002 s, average=0.001 s; distance=323 kB, estimate=323 kB; lsn=0/4128CD8, redo lsn=0/4128C80
+2026-04-30 20:45:54 WAT LOG:  début du checkpoint : time
+2026-04-30 20:46:02 WAT LOG:  checkpoint complete: wrote 71 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=7.803 s, sync=0.024 s, total=7.836 s; sync files=46, longest=0.001 s, average=0.001 s; distance=344 kB, estimate=344 kB; lsn=0/417EF60, redo lsn=0/417EED0
+2026-05-01 02:13:10 WAT LOG:  début du checkpoint : time
+2026-05-01 02:13:13 WAT LOG:  checkpoint complete: wrote 32 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.535 s, sync=0.018 s, total=3.566 s; sync files=24, longest=0.003 s, average=0.001 s; distance=146 kB, estimate=324 kB; lsn=0/41A3940, redo lsn=0/41A38E8
+2026-05-01 02:18:11 WAT LOG:  début du checkpoint : time
+2026-05-01 02:18:17 WAT LOG:  checkpoint complete: wrote 61 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=6.777 s, sync=0.023 s, total=6.808 s; sync files=44, longest=0.002 s, average=0.001 s; distance=292 kB, estimate=321 kB; lsn=0/41ECD40, redo lsn=0/41ECCB0
+2026-05-01 02:50:17 WAT LOG:  could not receive data from client: An existing connection was forcibly closed by the remote host.
+	
+2026-05-01 14:39:46 WAT LOG:  début du checkpoint : time
+2026-05-01 14:39:46 WAT LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.114 s, sync=0.005 s, total=0.149 s; sync files=2, longest=0.004 s, average=0.003 s; distance=6 kB, estimate=290 kB; lsn=0/41EE638, redo lsn=0/41EE5E0
+2026-05-01 14:44:46 WAT LOG:  début du checkpoint : time
+2026-05-01 14:44:50 WAT LOG:  checkpoint complete: wrote 43 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=4.707 s, sync=0.020 s, total=4.736 s; sync files=35, longest=0.002 s, average=0.001 s; distance=182 kB, estimate=279 kB; lsn=0/421C0A0, redo lsn=0/421C048
+2026-05-01 14:49:46 WAT LOG:  début du checkpoint : time
+2026-05-01 14:49:55 WAT LOG:  checkpoint complete: wrote 76 buffers (0.5%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=8.326 s, sync=0.211 s, total=8.553 s; sync files=59, longest=0.015 s, average=0.004 s; distance=277 kB, estimate=279 kB; lsn=0/4261808, redo lsn=0/4261778
+2026-05-01 14:54:46 WAT LOG:  début du checkpoint : time
+2026-05-01 14:54:53 WAT LOG:  checkpoint complete: wrote 68 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=7.426 s, sync=0.023 s, total=7.460 s; sync files=52, longest=0.002 s, average=0.001 s; distance=272 kB, estimate=278 kB; lsn=0/42A5B10, redo lsn=0/42A5A80
+2026-05-01 14:59:46 WAT LOG:  début du checkpoint : time
+2026-05-01 14:59:53 WAT LOG:  checkpoint complete: wrote 56 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=6.120 s, sync=0.024 s, total=6.156 s; sync files=41, longest=0.002 s, average=0.001 s; distance=269 kB, estimate=277 kB; lsn=0/42E9008, redo lsn=0/42E8FB0
+2026-05-01 15:04:46 WAT LOG:  début du checkpoint : time
+2026-05-01 15:04:49 WAT LOG:  checkpoint complete: wrote 31 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.379 s, sync=0.013 s, total=3.404 s; sync files=24, longest=0.002 s, average=0.001 s; distance=161 kB, estimate=265 kB; lsn=0/4311490, redo lsn=0/4311438
+2026-05-01 15:09:46 WAT LOG:  début du checkpoint : time
+2026-05-01 15:09:51 WAT LOG:  checkpoint complete: wrote 45 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=4.907 s, sync=0.023 s, total=4.940 s; sync files=41, longest=0.002 s, average=0.001 s; distance=204 kB, estimate=259 kB; lsn=0/4344610, redo lsn=0/4344580
+2026-05-01 15:14:46 WAT LOG:  début du checkpoint : time
+2026-05-01 15:14:55 WAT LOG:  checkpoint complete: wrote 86 buffers (0.5%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=9.382 s, sync=0.031 s, total=9.422 s; sync files=63, longest=0.003 s, average=0.001 s; distance=398 kB, estimate=398 kB; lsn=0/43A7FD0, redo lsn=0/43A7F40
+2026-05-01 15:29:47 WAT LOG:  début du checkpoint : time
+2026-05-01 15:29:50 WAT LOG:  checkpoint complete: wrote 33 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=3.601 s, sync=0.015 s, total=3.624 s; sync files=26, longest=0.002 s, average=0.001 s; distance=166 kB, estimate=375 kB; lsn=0/43D17D0, redo lsn=0/43D1740
+2026-05-01 16:21:51 WAT LOG:  début du checkpoint : time
+2026-05-01 16:21:56 WAT LOG:  checkpoint complete: wrote 48 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=5.319 s, sync=0.021 s, total=5.349 s; sync files=35, longest=0.002 s, average=0.001 s; distance=206 kB, estimate=358 kB; lsn=0/44050E8, redo lsn=0/4405090
+2026-05-01 17:21:51 WAT LOG:  début du checkpoint : time
+2026-05-01 17:21:51 WAT LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.118 s, sync=0.004 s, total=0.132 s; sync files=2, longest=0.003 s, average=0.002 s; distance=7 kB, estimate=323 kB; lsn=0/4406E18, redo lsn=0/4406DC0
+2026-05-01 17:26:51 WAT LOG:  début du checkpoint : time
+2026-05-01 17:26:56 WAT LOG:  checkpoint complete: wrote 41 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=4.505 s, sync=0.021 s, total=4.535 s; sync files=34, longest=0.002 s, average=0.001 s; distance=173 kB, estimate=308 kB; lsn=0/44325D8, redo lsn=0/4432580
+2026-05-01 17:31:51 WAT LOG:  début du checkpoint : time
+2026-05-01 17:31:56 WAT LOG:  checkpoint complete: wrote 45 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=4.908 s, sync=0.018 s, total=4.934 s; sync files=34, longest=0.002 s, average=0.001 s; distance=214 kB, estimate=298 kB; lsn=0/4467FC8, redo lsn=0/4467F70
+2026-05-01 17:46:51 WAT LOG:  début du checkpoint : time
+2026-05-01 17:47:02 WAT LOG:  checkpoint complete: wrote 102 buffers (0.6%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=11.121 s, sync=0.032 s, total=11.162 s; sync files=66, longest=0.002 s, average=0.001 s; distance=442 kB, estimate=442 kB; lsn=0/44D6A70, redo lsn=0/44D69E0
+2026-05-01 17:50:28 WAT ERREUR:  la valeur d'une clÃ© dupliquÃ©e rompt la contrainte unique Â« identifiants_totp_utilisateur_id_key Â»
+2026-05-01 17:50:28 WAT DÃ‰TAIL:  La clÃ© Â« (utilisateur_id)=(dbd47993-3f25-477e-824d-8835bcd1564e) Â» existe dÃ©jÃ .
+2026-05-01 17:50:28 WAT INSTRUCTION :  INSERT INTO app.identifiants_totp (utilisateur_id, secret_chiffre, est_actif, dernier_pas_utilise, date_creation, date_activation, date_derniere_utilisation, date_revocation, date_modification) VALUES ($1::UUID, $2::VARCHAR, $3, $4::VARCHAR, $5::TIMESTAMP WITH TIME ZONE, $6::TIMESTAMP WITH TIME ZONE, $7::TIMESTAMP WITH TIME ZONE, $8::TIMESTAMP WITH TIME ZONE, $9::TIMESTAMP WITH TIME ZONE) RETURNING app.identifiants_totp.id
+2026-05-01 17:51:51 WAT LOG:  début du checkpoint : time
+2026-05-01 17:51:56 WAT LOG:  checkpoint complete: wrote 42 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=4.582 s, sync=0.023 s, total=4.616 s; sync files=32, longest=0.004 s, average=0.001 s; distance=140 kB, estimate=412 kB; lsn=0/44F9B90, redo lsn=0/44F9B38
+2026-05-01 17:56:51 WAT LOG:  début du checkpoint : time
+2026-05-01 17:56:59 WAT LOG:  checkpoint complete: wrote 80 buffers (0.5%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=8.756 s, sync=0.031 s, total=8.797 s; sync files=60, longest=0.003 s, average=0.001 s; distance=345 kB, estimate=405 kB; lsn=0/454FF90, redo lsn=0/454FF38
+2026-05-01 18:01:51 WAT LOG:  début du checkpoint : time
+2026-05-01 18:02:05 WAT LOG:  checkpoint complete: wrote 129 buffers (0.8%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=14.133 s, sync=0.033 s, total=14.173 s; sync files=72, longest=0.001 s, average=0.001 s; distance=671 kB, estimate=671 kB; lsn=0/46489D0, redo lsn=0/45F7CB8
+2026-05-01 18:16:51 WAT LOG:  début du checkpoint : time
+2026-05-01 18:16:58 WAT LOG:  checkpoint complete: wrote 65 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=7.101 s, sync=0.018 s, total=7.130 s; sync files=31, longest=0.002 s, average=0.001 s; distance=388 kB, estimate=643 kB; lsn=0/4658DC8, redo lsn=0/4658D38
+2026-05-01 18:21:51 WAT LOG:  début du checkpoint : time
+2026-05-01 18:21:58 WAT LOG:  checkpoint complete: wrote 63 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=6.868 s, sync=0.022 s, total=6.903 s; sync files=44, longest=0.003 s, average=0.001 s; distance=277 kB, estimate=606 kB; lsn=0/469E500, redo lsn=0/469E470
+2026-05-01 18:41:51 WAT LOG:  début du checkpoint : time
+2026-05-01 18:41:58 WAT LOG:  checkpoint complete: wrote 66 buffers (0.4%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=7.205 s, sync=0.013 s, total=7.229 s; sync files=17, longest=0.003 s, average=0.001 s; distance=461 kB, estimate=591 kB; lsn=0/4711908, redo lsn=0/4711878
+2026-05-01 20:39:06 WAT LOG:  début du checkpoint : time
+2026-05-01 20:39:09 WAT LOG:  checkpoint complete: wrote 27 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.952 s, sync=0.019 s, total=2.995 s; sync files=24, longest=0.002 s, average=0.001 s; distance=138 kB, estimate=546 kB; lsn=0/4734480, redo lsn=0/4734428
+2026-05-01 20:44:06 WAT LOG:  début du checkpoint : time
+2026-05-01 20:44:10 WAT LOG:  checkpoint complete: wrote 38 buffers (0.2%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=4.152 s, sync=0.020 s, total=4.183 s; sync files=33, longest=0.003 s, average=0.001 s; distance=182 kB, estimate=510 kB; lsn=0/4761D30, redo lsn=0/4761CA0
+2026-05-02 15:48:04 WAT LOG:  début du checkpoint : time
+2026-05-02 15:48:11 WAT LOG:  checkpoint complete: wrote 59 buffers (0.4%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=6.445 s, sync=0.021 s, total=6.489 s; sync files=35, longest=0.003 s, average=0.001 s; distance=268 kB, estimate=486 kB; lsn=0/47A5078, redo lsn=0/47A4FE8
+2026-05-02 20:32:19 WAT ERREUR:  relation "droit_acces" does not exist au caractÃ¨re 15
+2026-05-02 20:32:19 WAT INSTRUCTION :  SELECT * FROM droit_acces ORDER BY id;
+	
+	SELECT * FROM departement ORDER BY id;
+	
+	SELECT * FROM departement_droit ORDER BY id;
+2026-05-02 20:32:31 WAT ERREUR:  la relation Â« app.droit_acces Â» n'existe pas au caractÃ¨re 15
+2026-05-02 20:32:31 WAT INSTRUCTION :  SELECT * FROM app.droit_acces ORDER BY id;
+	
+	SELECT * FROM departement ORDER BY id;
+	
+	SELECT * FROM departement_droit ORDER BY id;
+2026-05-02 20:32:49 WAT ERREUR:  la relation Â« departement Â» n'existe pas au caractÃ¨re 60
+2026-05-02 20:32:49 WAT INSTRUCTION :  SELECT * FROM app.droits_acces ORDER BY id;
+	
+	SELECT * FROM departement ORDER BY id;
+	
+	SELECT * FROM departement_droit ORDER BY id;
+2026-05-02 20:32:52 WAT ERREUR:  la relation Â« departement Â» n'existe pas au caractÃ¨re 60
+2026-05-02 20:32:52 WAT INSTRUCTION :  SELECT * FROM app.droits_acces ORDER BY id;
+	
+	SELECT * FROM departement ORDER BY id;
+	
+	SELECT * FROM departement_droit ORDER BY id;
+2026-05-02 20:33:47 WAT ERREUR:  la relation Â« departement Â» n'existe pas au caractÃ¨re 15
+2026-05-02 20:33:47 WAT INSTRUCTION :  SELECT * FROM departement ORDER BY id;
+2026-05-02 20:33:54 WAT ERREUR:  la relation Â« departements Â» n'existe pas au caractÃ¨re 15
+2026-05-02 20:33:54 WAT INSTRUCTION :  SELECT * FROM departements ORDER BY id;
+2026-05-02 20:34:19 WAT ERREUR:  la relation Â« app.departement_droit Â» n'existe pas au caractÃ¨re 15
+2026-05-02 20:34:19 WAT INSTRUCTION :  SELECT * FROM app.departement_droit ORDER BY id;
+2026-05-02 20:34:38 WAT ERREUR:  la colonne Â« id Â» n'existe pas au caractÃ¨re 47
+2026-05-02 20:34:38 WAT INSTRUCTION :  SELECT * FROM app.departement_droits ORDER BY id;
+2026-05-02 20:35:27 WAT ERREUR:  la relation Â« utilisateur Â» n'existe pas au caractÃ¨re 15
+2026-05-02 20:35:27 WAT INSTRUCTION :  SELECT * FROM utilisateur ORDER BY id;
+2026-05-02 20:35:35 WAT ERREUR:  la relation Â« utilisateurs Â» n'existe pas au caractÃ¨re 15
+2026-05-02 20:35:35 WAT INSTRUCTION :  SELECT * FROM utilisateurs ORDER BY id;
+2026-05-02 22:55:59 WAT ERREUR:  la colonne Â« code Â» n'existe pas au caractÃ¨re 38
+2026-05-02 22:55:59 WAT INSTRUCTION :  SELECT *
+	FROM app.droits_acces
+	WHERE code IN (
+	    'voir_dashboard_service',
+	    'voir_dashboard_avances',
+	    'voir_dashboard_remboursements',
+	    'dashboard_service_sos'
+	)
+	ORDER BY code;
+2026-05-02 22:56:32 WAT ERREUR:  la colonne Â« code Â» n'existe pas au caractÃ¨re 189
+2026-05-02 22:56:32 WAT INSTRUCTION :  SELECT *
+	FROM app.droits_acces
+	WHERE nom_droit IN (
+	    'voir_dashboard_service',
+	    'voir_dashboard_avances',
+	    'voir_dashboard_remboursements',
+	    'dashboard_service_sos'
+	)
+	ORDER BY code;
+2026-05-02 22:59:45 WAT LOG:  début du checkpoint : time
+2026-05-02 22:59:46 WAT LOG:  checkpoint complete: wrote 7 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.771 s, sync=0.005 s, total=0.800 s; sync files=8, longest=0.001 s, average=0.001 s; distance=9 kB, estimate=438 kB; lsn=0/47A76F0, redo lsn=0/47A7660
+2026-05-02 22:59:49 WAT ERREUR:  la colonne d.nom n'existe pas au caractÃ¨re 13
+2026-05-02 22:59:49 WAT INSTRUCTION :  SELECT 
+	    d.nom AS departement,
+	    da.nom_droit AS droit
+	FROM app.departement_droits dd
+	JOIN app.departements d 
+	    ON d.id = dd.departement_id
+	JOIN app.droits_acces da 
+	    ON da.id = dd.droit_acces_id
+	ORDER BY d.nom, da.nom_droit;
+2026-05-02 23:00:28 WAT ERREUR:  la transaction est annulÃ©e, les commandes sont ignorÃ©es jusqu'Ã  la fin du bloc
+	de la transaction
+2026-05-02 23:00:28 WAT INSTRUCTION :  SELECT 
+	    d.nom_departement AS departement,
+	    da.nom_droit AS droit
+	FROM app.departement_droits dd
+	JOIN app.departements d 
+	    ON d.id = dd.departement_id
+	JOIN app.droits_acces da 
+	    ON da.id = dd.droit_acces_id
+	ORDER BY d.nom, da.nom_droit;
+2026-05-02 23:00:37 WAT ERREUR:  la transaction est annulÃ©e, les commandes sont ignorÃ©es jusqu'Ã  la fin du bloc
+	de la transaction
+2026-05-02 23:00:37 WAT INSTRUCTION :  SELECT 
+	    d.nom_departement AS departement,
+	    da.nom_droit AS droit
+	FROM app.departement_droits dd
+	JOIN app.departements d 
+	    ON d.id = dd.departement_id
+	JOIN app.droits_acces da 
+	    ON da.id = dd.droit_acces_id
+	ORDER BY d.nom, da.nom_droit;
+2026-05-02 23:02:39 WAT ERREUR:  la transaction est annulÃ©e, les commandes sont ignorÃ©es jusqu'Ã  la fin du bloc
+	de la transaction
+2026-05-02 23:02:39 WAT INSTRUCTION :  SELECT 
+	    d.nom_departement AS departement,
+	    da.nom_droit AS droit
+	FROM app.departement_droits dd
+	JOIN app.departements d 
+	    ON d.id = dd.departement_id
+	JOIN app.droits_acces da 
+	    ON da.id = dd.droit_acces_id
+	;
+2026-05-02 23:08:59 WAT ERREUR:  la transaction est annulÃ©e, les commandes sont ignorÃ©es jusqu'Ã  la fin du bloc
+	de la transaction
+2026-05-02 23:08:59 WAT INSTRUCTION :  SELECT 
+	    d.nom_departement AS departement,
+	    da.nom_droit AS droit
+	FROM app.departement_droits dd
+	JOIN app.departements d 
+	    ON d.id = dd.departement_id
+	JOIN app.droits_acces da 
+	    ON da.id = dd.droit_acces_id
+	;
+	
+	ROLLBACK;
+2026-05-02 23:10:07 WAT LOG:  début du checkpoint : time
+2026-05-02 23:10:07 WAT LOG:  checkpoint complete: wrote 4 buffers (0.0%), wrote 0 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.430 s, sync=0.005 s, total=0.444 s; sync files=4, longest=0.003 s, average=0.002 s; distance=4 kB, estimate=395 kB; lsn=0/47A8770, redo lsn=0/47A8718
+2026-05-02 23:15:07 WAT LOG:  début du checkpoint : time
+2026-05-02 23:15:07 WAT LOG:  checkpoint complete: wrote 1 buffers (0.0%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=0.116 s, sync=0.002 s, total=0.128 s; sync files=2, longest=0.002 s, average=0.001 s; distance=1 kB, estimate=355 kB; lsn=0/47A8E70, redo lsn=0/47A8E18
+2026-05-02 23:25:07 WAT LOG:  début du checkpoint : time
+2026-05-02 23:25:12 WAT LOG:  checkpoint complete: wrote 41 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=4.472 s, sync=0.022 s, total=4.503 s; sync files=34, longest=0.003 s, average=0.001 s; distance=191 kB, estimate=339 kB; lsn=0/47D8DB8, redo lsn=0/47D8D28
+2026-05-02 23:30:07 WAT LOG:  début du checkpoint : time
+2026-05-02 23:30:08 WAT LOG:  checkpoint complete: wrote 12 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=1.309 s, sync=0.009 s, total=1.328 s; sync files=13, longest=0.002 s, average=0.001 s; distance=66 kB, estimate=312 kB; lsn=0/47E9848, redo lsn=0/47E97F0
+2026-05-02 23:35:07 WAT LOG:  début du checkpoint : time
+2026-05-02 23:35:12 WAT LOG:  checkpoint complete: wrote 50 buffers (0.3%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=5.445 s, sync=0.021 s, total=5.476 s; sync files=36, longest=0.003 s, average=0.001 s; distance=240 kB, estimate=304 kB; lsn=0/4825B20, redo lsn=0/4825AC8
+2026-05-02 23:50:08 WAT LOG:  début du checkpoint : time
+2026-05-02 23:50:10 WAT LOG:  checkpoint complete: wrote 23 buffers (0.1%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=2.509 s, sync=0.022 s, total=2.545 s; sync files=24, longest=0.004 s, average=0.001 s; distance=122 kB, estimate=286 kB; lsn=0/4844528, redo lsn=0/48444D0
+2026-05-02 23:55:08 WAT LOG:  début du checkpoint : time
+2026-05-02 23:55:13 WAT LOG:  checkpoint complete: wrote 42 buffers (0.3%), wrote 1 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=4.598 s, sync=0.016 s, total=4.622 s; sync files=34, longest=0.002 s, average=0.001 s; distance=216 kB, estimate=279 kB; lsn=0/487A588, redo lsn=0/487A530
+2026-05-03 00:10:08 WAT LOG:  début du checkpoint : time
+2026-05-03 00:10:14 WAT LOG:  checkpoint complete: wrote 56 buffers (0.3%), wrote 3 SLRU buffers; 0 WAL file(s) added, 0 removed, 0 recycled; write=6.119 s, sync=0.018 s, total=6.145 s; sync files=39, longest=0.002 s, average=0.001 s; distance=298 kB, estimate=298 kB; lsn=0/48C4F18, redo lsn=0/48C4EC0
