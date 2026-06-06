@@ -389,7 +389,7 @@ def get_reusable_agent_run_response(
             decision,
         )
     except Exception:
-        refreshed_analysis = payload.get("ai_analysis") or {}
+        refreshed_analysis = payload.get("business_analysis") or {}
 
     return {
         "run_id": row.get("run_id") or payload.get("run_id"),
@@ -398,7 +398,7 @@ def get_reusable_agent_run_response(
         "explanations": payload.get("explanations") or {},
         "decision": decision,
         "message": message,
-        "ai_analysis": refreshed_analysis,
+        "business_analysis": refreshed_analysis,
         "action_id": action_id,
         "agent_run_id": row.get("id"),
         "errors": [],
@@ -560,7 +560,7 @@ def _run_bad_debts_agent_core(db: Session, msisdn: str) -> dict[str, Any] | None
     explanations = build_explanations(client)
     decision = decide_next_action(client, explanations)
     message = generate_message(client, decision)
-    ai_analysis = _build_template_ai_analysis(client, decision, explanations)
+    business_analysis = _build_template_ai_analysis(client, decision, explanations)
     logging_result = log_agent_action(db, msisdn, decision)
 
     if not logging_result.get("action_logged") and not logging_result.get("action_reused"):
@@ -581,7 +581,7 @@ def _run_bad_debts_agent_core(db: Session, msisdn: str) -> dict[str, Any] | None
         "explanations": explanations,
         "decision": decision,
         "message": message,
-        "ai_analysis": ai_analysis,
+        "business_analysis": business_analysis,
         "ml_signature": signature_data["ml_signature"],
         "ml_signature_fields": signature_data["ml_signature_fields"],
         "decision_policy_version": DECISION_POLICY_VERSION,
@@ -816,10 +816,10 @@ def _normalize_signature_value(value: Any) -> Any:
 
 
 def _is_complete_agent_payload(payload: dict[str, Any]) -> bool:
-    required_sections = ("profile", "explanations", "decision", "message", "ai_analysis")
+    required_sections = ("profile", "explanations", "decision", "message", "business_analysis")
     if any(not isinstance(payload.get(section), dict) or not payload.get(section) for section in required_sections):
         return False
-    analysis = payload.get("ai_analysis") or {}
+    analysis = payload.get("business_analysis") or {}
     required_text = ("business_summary", "decision_reasoning", "internal_note")
     if any(not str(analysis.get(key) or "").strip() for key in required_text):
         return False

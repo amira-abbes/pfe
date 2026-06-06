@@ -90,7 +90,7 @@ select {
 }
 
 .auth-logo {
-  width: 80px;
+  width: 120px;
   display: block;
   margin: 0 auto 4px;
 }
@@ -573,7 +573,7 @@ select {
   }
 
   .auth-logo {
-    width: 76px;
+    width: 100px;
   }
 
   .auth-card h1 {
@@ -634,7 +634,7 @@ select {
   }
 
   .auth-logo {
-    width: 64px;
+    width: 90px;
   }
 
   .auth-tagline {
@@ -756,7 +756,7 @@ select {
   }
 
   .auth-logo {
-    width: 52px;
+    width: 72px;
     margin-bottom: 2px;
   }
 

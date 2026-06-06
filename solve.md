@@ -1,68 +1,41 @@
-## SOLVED
+# Fixes appliquées
 
-**Backend n8n routes created** — Added `backend/app/api/routes/n8n.py` with three dedicated endpoints (`/api/v1/n8n/metrics/summary`, `/api/v1/n8n/clients/at-risk`, `/api/v1/n8n/agent/reports`). These replace the missing routes the workflows were calling into void. Workflow URLs were kept as-is since `/api/v1/n8n/...` was always the right prefix — what was missing was the backend side.
+## 1. Renommage du nœud `ai_analysis` → `business_analysis`
 
-**Auth fixed** — Routes are protected by `X-API-Key` header validation against `settings.N8N_API_KEY`. The workflows already send this header correctly. No JWT needed for n8n.
+L'analyse client produite par l'agent est déterministe (règles métier), pas de l'IA générative. Le nom `ai_analysis` était trompeur.
 
-**`/agent/reports` route created** — No stored reports table exists. The new endpoint generates a live digest from `service.get_summary()` and returns it in the shape the workflow expects (`summary`, `recommendations`, `kpis_json`).
-
-**`N8N_API_KEY` added to `backend/.env`** — Set to `test-local-n8n-key`, matching the value already in `n8n/stack.env`. Both sides now agree.
-
-**Router registered** — `n8n_router` imported and mounted in `backend/app/main.py`.
+**Fichiers modifiés :**
+- `backend/app/agents/nodes.py` — fonction renommée `ai_analysis_node` → `business_analysis_node`, clé de retour mise à jour
+- `backend/app/agents/graph.py` — nœud LangGraph renommé, import mis à jour
+- `backend/app/agents/state.py` — champ `AgentState` renommé
+- `backend/app/schemas/bad_debts.py` — champ Pydantic renommé
+- `backend/app/services/bad_debts_agent_service.py` — toutes les références mises à jour (payload, retours, validation)
+- `backend/app/services/bad_debts_service.py` — requête SQL et dict mis à jour
+- `backend/app/api/routes/bad_debts.py` — réponse API mise à jour
+- `frontend/src/pages/DashboardBadDebtsPage.jsx` — lecture côté frontend mise à jour
 
 ---
 
-Start/enable Docker Desktop on Windows.
+## 2. Suppression de l'IA dans la génération des messages opérationnels
 
-Fix n8n workflow API URLs:
+Les messages et décisions métier (SMS, appels) doivent être 100% déterministes. L'appel à Ollama/LLM dans `message_generation_node` a été retiré.
 
-Replace /api/v1/n8n/metrics/summary with /api/v1/bad-debts/metrics/summary.
-Replace /api/v1/n8n/clients/at-risk with /api/v1/bad-debts/clients/at-risk.
-Replace invalid /api/v1/bad-debts/agent/reports usage or create that backend route.
-Add a backend API access method for n8n:
+**Fichier modifié :** `backend/app/agents/nodes.py`
 
-Either create public/internal n8n-only routes protected by N8N_API_KEY.
-Or make n8n authenticate and send a valid JWT/session token.
-Update the n8n workflows to send the required auth header, for example:
+- `message_generation_node` n'appelle plus `_generate_local_contact_message` (qui appelait Ollama pour les SMS anomalie)
+- Le message est toujours généré par le template déterministe `generate_message()`
+- `generated_by` forcé à `"deterministic_template"` en permanence
+- L'IA (Qwen/Ollama) reste utilisée uniquement pour les rapports décisionnels globaux (`bad_debts_llm_report_service.py`)
 
-X-N8N-API-Key: <key>
-or Authorization: Bearer <token>.
-Add/confirm backend .env values:
+---
 
-N8N_API_KEY=...
-BACKEND_PUBLIC_BASE_URL=http://127.0.0.1:8000
-Add/confirm n8n/stack.env values:
+## 3. Logo plus grand sur les pages login / mot de passe oublié / MFA
 
-PFE_API_URL=http://host.docker.internal:8000
-PFE_DASHBOARD_URL=http://localhost:5173/dashboard/bad-debts
-PFE_REPORT_EMAIL=...
-Configure SMTP credentials inside n8n, not in Git.
+**Fichier modifié :** `frontend/src/styles/global.css`
 
-Import the corrected workflow JSON into n8n.
-
-Test each HTTP Request node manually in n8n.
-
-Test the full workflow manually.
-
-Enable the Cron/Schedule trigger in n8n for automatic execution.
-
-Make n8n start automatically:
-
-Keep restart: unless-stopped in n8n/docker-compose.yml.
-Ensure Docker Desktop starts with Windows.
-Start n8n together with backend using a startup script:
-
-Start backend FastAPI.
-Run docker compose up -d inside the n8n folder.
-Optionally start frontend.
-Add health checks:
-
-Backend /api/v1/bad-debts/health.
-n8n http://localhost:5678.
-Verify final automation:
-
-Backend running.
-n8n running.
-Workflow active.
-Email sent successfully.
-No failed executions in n8n logs.
+| Breakpoint | Avant | Après |
+|---|---|---|
+| Desktop (défaut) | 80px | 120px |
+| Tablette | 76px | 100px |
+| Mobile | 64px | 90px |
+| Très petit écran | 52px | 72px |

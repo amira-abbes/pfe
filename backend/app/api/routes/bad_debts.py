@@ -190,7 +190,7 @@ def _bad_debts_agent_api_response(msisdn: str, result: dict[str, Any]) -> dict[s
         "explanations": result.get("explanations") or {},
         "decision": decision,
         "message": message,
-        "ai_analysis": result.get("ai_analysis") or {},
+        "business_analysis": result.get("business_analysis") or {},
         "errors": result.get("errors") or [],
         "reused_existing_analysis": bool(result.get("reused_existing_analysis")),
     }

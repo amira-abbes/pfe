@@ -23,7 +23,7 @@ class AgentState(TypedDict, total=False):
     explanations: dict[str, Any]
     decision: dict[str, Any]
     message: dict[str, Any] | None
-    ai_analysis: dict[str, Any]
+    business_analysis: dict[str, Any]
 
     action_id: int | None
     agent_run_id: int | None

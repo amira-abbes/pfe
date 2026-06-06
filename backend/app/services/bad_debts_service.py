@@ -460,11 +460,11 @@ class BadDebtsService:
                         id,
                         COALESCE(finished_at, started_at) AS created_at,
                         payload->'decision' AS decision,
-                        payload->'ai_analysis' AS ai_analysis
+                        payload->'business_analysis' AS business_analysis
                     FROM ml.agent_runs
                     WHERE msisdn = :msisdn
                       AND payload ? 'decision'
-                      AND payload ? 'ai_analysis'
+                      AND payload ? 'business_analysis'
                     ORDER BY COALESCE(finished_at, started_at) DESC NULLS LAST, id DESC
                     LIMIT 5
                     """
@@ -483,7 +483,7 @@ class BadDebtsService:
                         "priority": decision.get("priority"),
                         "recommendation": decision.get("recommendation") or decision.get("next_best_action") or decision.get("reason"),
                         "created_at": self._json_value(row["created_at"]),
-                        "ai_analysis": self._json_value(row["ai_analysis"]) or {},
+                        "business_analysis": self._json_value(row["business_analysis"]) or {},
                     }
                 )
             return actions

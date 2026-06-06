@@ -392,7 +392,7 @@ function BadDebtsWorkspace({ view }) {
     try {
       const response = await runBadDebtsAgent(msisdn);
       const decision = response.data.decision || {};
-      const analysis = response.data.ai_analysis || {};
+      const analysis = response.data.business_analysis || {};
       const profile = response.data.profile || {};
       const contactMessage = response.data.message || {};
       setAgentFeedback({

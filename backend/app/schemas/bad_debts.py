@@ -123,7 +123,7 @@ class BadDebtsAgentResponse(BaseModel):
     explanations: dict[str, Any]
     decision: dict[str, Any]
     message: dict[str, Any]
-    ai_analysis: dict[str, Any] = Field(default_factory=dict)
+    business_analysis: dict[str, Any] = Field(default_factory=dict)
     errors: list[str] = Field(default_factory=list)
     reused_existing_analysis: bool = False
 

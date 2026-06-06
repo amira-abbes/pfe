@@ -4,7 +4,10 @@
       "Bash(npm.cmd run *)",
       "PowerShell(Get-Command py -ErrorAction SilentlyContinue)",
       "PowerShell(Get-Command python -ErrorAction SilentlyContinue)",
-      "Bash(python -m py_compile app/schemas/bad_debts.py app/services/bad_debts_service.py app/services/bad_debts_llama_report_service.py app/api/routes/bad_debts.py)"
+      "Bash(python -m py_compile app/schemas/bad_debts.py app/services/bad_debts_service.py app/services/bad_debts_llama_report_service.py app/api/routes/bad_debts.py)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }

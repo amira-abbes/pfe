@@ -68,8 +68,7 @@ def message_generation_node(state: AgentState) -> AgentState:
     try:
         client = _client_from_state(state)
         decision = state.get("decision") or {}
-        fallback_message = _normalize_message_contract(generate_message(client, decision))
-        message = _generate_local_contact_message(client, decision, fallback_message)
+        message = _normalize_message_contract(generate_message(client, decision))
     except Exception as exc:
         fallback_message = _fallback_message(state.get("decision") or {})
         return {
@@ -81,21 +80,21 @@ def message_generation_node(state: AgentState) -> AgentState:
             ),
         }
 
-    return {"message": _lock_message_metadata(message, generated_by=message.get("generated_by") or "deterministic_template")}
+    return {"message": _lock_message_metadata(message, generated_by="deterministic_template")}
 
 
-def ai_analysis_node(state: AgentState) -> AgentState:
+def business_analysis_node(state: AgentState) -> AgentState:
     try:
         client = _client_from_state(state)
         decision = state.get("decision") or {}
         explanations = state.get("explanations") or {}
         profile = state.get("profile") or build_client_profile(client)
         analysis = build_deterministic_client_analysis(client, profile, explanations, decision)
-        return {"ai_analysis": analysis}
+        return {"business_analysis": analysis}
     except Exception as exc:
         return {
-            "errors": [f"ai_analysis_node: {exc}"],
-            "ai_analysis": build_ai_analysis(_client_from_state(state), state.get("decision") or {}, state.get("explanations") or {}),
+            "errors": [f"business_analysis_node: {exc}"],
+            "business_analysis": build_ai_analysis(_client_from_state(state), state.get("decision") or {}, state.get("explanations") or {}),
         }
 
 
@@ -601,7 +600,7 @@ def _response_payload(
         "explanations": state.get("explanations") or {},
         "decision": decision,
         "message": message,
-        "ai_analysis": state.get("ai_analysis") or {},
+        "business_analysis": state.get("business_analysis") or {},
         "ml_signature": state.get("ml_signature") or "",
         "ml_signature_fields": state.get("ml_signature_fields") or {},
         "decision_policy_version": state.get("decision_policy_version") or "",

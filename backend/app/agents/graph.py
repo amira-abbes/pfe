@@ -8,7 +8,7 @@ from langgraph.graph import END, StateGraph
 
 from app.agents.state import AgentState
 from app.agents.nodes import (
-    ai_analysis_node,
+    business_analysis_node,
     decision_node,
     explainability_node,
     message_generation_node,
@@ -29,16 +29,16 @@ def build_agent_graph():
     graph.add_node("profiling", profiling_node)
     graph.add_node("explainability", explainability_node)
     graph.add_node("decision", decision_node)
-    graph.add_node("ai_analysis", ai_analysis_node)
+    graph.add_node("business_analysis", business_analysis_node)
     graph.add_node("message_generation", message_generation_node)
     graph.add_node("monitoring", monitoring_node)
 
     graph.set_entry_point("profiling")
     graph.add_edge("profiling", "explainability")
     graph.add_edge("explainability", "decision")
-    graph.add_edge("decision", "ai_analysis")
+    graph.add_edge("decision", "business_analysis")
     graph.add_conditional_edges(
-        "ai_analysis",
+        "business_analysis",
         _route_after_decision,
         {
             "monitoring": "monitoring",
@@ -109,7 +109,7 @@ def run_agent_graph(
         "explanations": result.get("explanations", {}),
         "decision": result.get("decision", {}),
         "message": result.get("message"),
-        "ai_analysis": result.get("ai_analysis", {}),
+        "business_analysis": result.get("business_analysis", {}),
         "action_id": result.get("action_id"),
         "agent_run_id": result.get("agent_run_id"),
         "errors": result.get("errors", []),
