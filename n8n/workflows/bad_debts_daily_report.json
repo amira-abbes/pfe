@@ -3,7 +3,13 @@
   "nodes": [
     {
       "parameters": {
-        "url": "http://host.docker.internal:8000/api/v1/metrics/summary",
+        "url": "http://host.docker.internal:8000/api/v1/n8n/metrics/summary",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-API-Key", "value": "={{$env.N8N_API_KEY}}" }
+          ]
+        },
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -17,7 +23,13 @@
     },
     {
       "parameters": {
-        "url": "http://host.docker.internal:8000/api/v1/bad-debts/agent/reports?limit=5",
+        "url": "http://host.docker.internal:8000/api/v1/n8n/agent/reports?limit=5",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "X-API-Key", "value": "={{$env.N8N_API_KEY}}" }
+          ]
+        },
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",

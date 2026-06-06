@@ -57,7 +57,7 @@
     },
     {
       "parameters": {
-        "fromEmail": "n8n@example.com",
+        "fromEmail": "plateforme.tt.interne@gmail.com",
         "toEmail": "={{$env.PFE_REPORT_EMAIL}}",
         "subject": "={{$json.subject}}",
         "emailFormat": "html",

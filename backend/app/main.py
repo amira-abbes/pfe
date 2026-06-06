@@ -10,6 +10,7 @@ from app.api.routes.admin import router as admin_router
 from app.api.routes.admin_departements import router as admin_departements_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.bad_debts import router as bad_debts_router
+from app.api.routes.n8n import router as n8n_router
 from app.api.routes.elt import router as elt_router
 from app.api.routes.password_reset import router as password_reset_router
 from app.api.routes.security import router as security_router
@@ -94,3 +95,4 @@ app.include_router(account_security_router)
 app.include_router(security_router)
 app.include_router(elt_router)
 app.include_router(bad_debts_router)
+app.include_router(n8n_router)
