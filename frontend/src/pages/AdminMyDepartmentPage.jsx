@@ -1,4 +1,16 @@
-import { Plus, RefreshCw, Search, UserCheck, Users, UserX, X } from "lucide-react";
+import {
+  CheckCircle2,
+  EllipsisVertical,
+  KeyRound,
+  Plus,
+  RefreshCw,
+  Search,
+  Trash2,
+  UserCheck,
+  Users,
+  UserX,
+  X,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { api, getApiError } from "../api/api";
@@ -15,11 +27,11 @@ const STATUS_LABELS = {
 };
 
 const STATUS_CLASSES = {
-  ACTIF: "au-badge au-badge-green",
-  EN_ATTENTE_PREMIERE_CONNEXION: "au-badge au-badge-orange",
-  DESACTIVE_ADMIN: "au-badge au-badge-orange",
-  BLOQUE_TENTATIVES: "au-badge au-badge-red",
-  SUPPRIME: "au-badge au-badge-gray",
+  ACTIF: "is-active",
+  EN_ATTENTE_PREMIERE_CONNEXION: "is-pending",
+  DESACTIVE_ADMIN: "is-inactive",
+  BLOQUE_TENTATIVES: "is-blocked",
+  SUPPRIME: "is-deleted",
 };
 
 function normalizeStatus(item) {
@@ -39,6 +51,10 @@ function splitFullName(fullName = "") {
     return { prenom: parts[0] || "-", nom: "-" };
   }
   return { prenom: parts[0], nom: parts.slice(1).join(" ") };
+}
+
+function roleClass(role) {
+  return String(role || "USER").toLowerCase().replaceAll("_", "");
 }
 
 function formatDate(value) {
@@ -176,69 +192,70 @@ export default function AdminMyDepartmentPage() {
 
   return (
     <Layout>
-      <PageHeader
-        eyebrow="Administration"
-        title="Mon département"
-        subtitle={`Gérez les utilisateurs rattachés à ${departmentName || "votre département"}.`}
-        action={<button className="au-btn-create" onClick={() => { setDrawerOpen(true); setMessage(""); setError(""); }}><Plus size={18} />Ajouter un utilisateur</button>}
-      />
+      <main className="users-admin-page my-department-page">
+        <PageHeader
+          eyebrow="Administration"
+          title="Mon département"
+          subtitle={`Gérez les utilisateurs rattachés à ${departmentName || "votre département"}.`}
+          action={<button className="users-create-button" onClick={() => { setDrawerOpen(true); setMessage(""); setError(""); }}><Plus size={18} />Ajouter un utilisateur</button>}
+        />
 
-      {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
-      {message && <div className="alert alert-success" style={{ marginBottom: 16 }}>{message}</div>}
-      {debugLink && (
-        <div className="alert alert-info" style={{ marginBottom: 16 }}>
-          Lien activation debug : <a href={debugLink}>{debugLink}</a>
-        </div>
-      )}
+      {error && <div className="au-alert au-alert-error">{error}</div>}
+      {message && <div className="au-alert au-alert-success">{message}</div>}
+      {debugLink && <div className="au-alert au-alert-debug">Lien activation debug : <a href={debugLink}>{debugLink}</a></div>}
 
-      <div className="au-stats-row">
-        <div className="au-stat-card">
-          <div className="au-stat-icon" style={{ background: "#e0e7ff", color: "#4f46e5" }}>
+      <div className="users-kpi-grid my-department-kpis">
+        <div className="users-kpi-card users-kpi-total">
+          <div className="users-kpi-icon">
             <Users size={24} />
           </div>
           <div>
-            <div className="au-stat-value">{totalUsers}</div>
-            <div className="au-stat-label">Total utilisateurs</div>
+            <strong>{totalUsers}</strong>
+            <span>Total utilisateurs</span>
           </div>
         </div>
-        <div className="au-stat-card">
-          <div className="au-stat-icon" style={{ background: "#dcfce7", color: "#16a34a" }}>
+        <div className="users-kpi-card users-kpi-active">
+          <div className="users-kpi-icon">
             <UserCheck size={24} />
           </div>
           <div>
-            <div className="au-stat-value" style={{ color: "#16a34a" }}>{activeUsers}</div>
-            <div className="au-stat-label">Utilisateurs actifs</div>
+            <strong>{activeUsers}</strong>
+            <span>Comptes actifs</span>
           </div>
         </div>
-        <div className="au-stat-card">
-          <div className="au-stat-icon" style={{ background: "#fee2e2", color: "#dc2626" }}>
+        <div className="users-kpi-card users-kpi-inactive">
+          <div className="users-kpi-icon">
             <UserX size={24} />
           </div>
           <div>
-            <div className="au-stat-value" style={{ color: "#dc2626" }}>{inactiveUsers}</div>
-            <div className="au-stat-label">Utilisateurs désactivés</div>
+            <strong>{inactiveUsers}</strong>
+            <span>Comptes inactifs</span>
           </div>
         </div>
       </div>
 
-      <div className="au-filter-bar">
-        <div className="au-search-wrap">
-          <Search size={16} className="au-search-icon" />
+      <div className="users-control-panel my-department-controls">
+        <div className="users-search-field">
+          <Search size={18} />
           <input
-            className="au-search-input"
-            placeholder="Rechercher par nom, prénom ou email..."
+            placeholder="Rechercher par nom, email, rôle ou statut…"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
         </div>
-        <button className="au-refresh-btn" onClick={loadUsers} title="Actualiser">
-          <RefreshCw size={16} />
-        </button>
+        <div className="users-filter-group">
+          <button className="users-refresh-button" onClick={loadUsers} title="Actualiser">
+            <RefreshCw size={17} />
+          </button>
+        </div>
+        <div className="users-results-meta">
+          <strong>{filteredUsers.length}</strong> utilisateur{filteredUsers.length > 1 ? "s" : ""} trouvé{filteredUsers.length > 1 ? "s" : ""}
+        </div>
       </div>
 
-      <div className="au-table-card">
-        <div className="au-table-wrap">
-          <table className="au-table">
+      <div className="users-table-shell">
+        <div className="users-table-scroll">
+          <table className="users-premium-table my-department-table">
             <thead>
               <tr>
                 <th>Prénom</th>
@@ -247,7 +264,7 @@ export default function AdminMyDepartmentPage() {
                 <th>Rôle</th>
                 <th>Statut</th>
                 <th>Date création</th>
-                <th>Actions</th>
+                <th className="users-actions-heading">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -255,37 +272,31 @@ export default function AdminMyDepartmentPage() {
                 const status = normalizeStatus(item);
                 const { prenom, nom } = splitFullName(item.nom_complet);
                 return (
-                  <tr key={item.id} className="au-table-row">
+                  <tr key={item.id}>
                     <td className="au-td-name">{prenom}</td>
                     <td className="au-td-name">{nom}</td>
                     <td className="au-td-email">{item.email}</td>
-                    <td><span className="au-role-badge">{item.role}</span></td>
+                    <td><span className={`users-role-badge role-${roleClass(item.role)}`}>{item.role}</span></td>
                     <td>
-                      <span className={STATUS_CLASSES[status] || "au-badge au-badge-orange"}>
-                        {STATUS_LABELS[status] || status}
+                      <span className={`users-status-badge ${STATUS_CLASSES[status] || "is-pending"}`}>
+                        <i />{STATUS_LABELS[status] || status}
                       </span>
                     </td>
-                    <td className="au-td-text">{formatDate(item.date_creation)}</td>
-                    <td>
-                      <div className="au-actions">
-                        {canDeactivate(item) && (
-                          <button className="au-btn-toggle" onClick={() => toggleStatus(item)}>
-                            Désactiver
-                          </button>
-                        )}
-                        {canReactivate(item) && (
-                          <button className="au-btn-toggle" onClick={() => toggleStatus(item)}>
-                            {status === "BLOQUE_TENTATIVES" ? "Débloquer" : "Réactiver"}
-                          </button>
-                        )}
-                        <button className="au-btn-toggle" onClick={() => regenerateRecoveryCodes(item)}>
-                          Codes secours
-                        </button>
-                        <button className="au-btn-delete" onClick={() => deleteUser(item)}>
-                          <UserX size={14} />
-                          Supprimer
-                        </button>
-                      </div>
+                    <td><span className="users-last-login">{formatDate(item.date_creation)}</span></td>
+                    <td className="users-actions-cell">
+                      <details className="users-action-dropdown">
+                        <summary aria-label={`Actions pour ${item.email}`}><EllipsisVertical size={19} /></summary>
+                        <div className="users-action-menu">
+                          <button onClick={() => regenerateRecoveryCodes(item)}><KeyRound size={15} /> Codes de secours</button>
+                          {canDeactivate(item) && (
+                            <button onClick={() => toggleStatus(item)}><UserX size={15} /> Désactiver</button>
+                          )}
+                          {canReactivate(item) && (
+                            <button onClick={() => toggleStatus(item)}><CheckCircle2 size={15} /> {status === "BLOQUE_TENTATIVES" ? "Débloquer" : "Réactiver"}</button>
+                          )}
+                          <button className="is-danger" onClick={() => deleteUser(item)}><Trash2 size={15} /> Supprimer</button>
+                        </div>
+                      </details>
                     </td>
                   </tr>
                 );
@@ -293,8 +304,10 @@ export default function AdminMyDepartmentPage() {
 
               {filteredUsers.length === 0 && (
                 <tr>
-                  <td colSpan="7" className="au-empty-row">
-                    Aucun utilisateur dans ce département.
+                  <td colSpan="7" className="users-table-state my-department-empty">
+                    <Users size={25} />
+                    <strong>Aucun utilisateur trouvé</strong>
+                    <span>{search ? "Modifiez votre recherche pour afficher d'autres résultats." : "Les utilisateurs ajoutés au département apparaîtront ici."}</span>
                   </td>
                 </tr>
               )}
@@ -302,6 +315,7 @@ export default function AdminMyDepartmentPage() {
           </table>
         </div>
       </div>
+      </main>
 
       {drawerOpen && <div className="au-overlay" onClick={() => setDrawerOpen(false)} />}
 

@@ -1,251 +1,359 @@
-INFO:     127.0.0.1:50207 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50210 - "GET /docs HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50222 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50222 - "OPTIONS /admin/departements/by-name/Commercial/droits HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50222 - "GET /admin/departements/by-name/Commercial/droits HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50227 - "GET /admin/departements/by-name/analyse%20operationnel/droits HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50229 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50231 - "GET /admin/departements/by-name/Assurance/droits HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50240 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50245 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50250 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50262 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50270 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50275 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50282 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50288 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50293 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50301 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50307 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50312 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50323 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50326 - "OPTIONS /admin/departements HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50327 - "OPTIONS /admin/departements HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50328 - "OPTIONS /admin/users HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50326 - "GET /admin/departements HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50327 - "GET /admin/departements HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50328 - "GET /admin/users HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50328 - "GET /admin/users HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50331 - "OPTIONS /admin/users/by-email/miledrana04%40gmail.com/status HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50331 - "PATCH /admin/users/by-email/miledrana04%40gmail.com/status HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50331 - "GET /admin/users HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50332 - "GET /admin/departements HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50335 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50342 - "OPTIONS /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50342 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50349 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50356 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50362 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50376 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50381 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50430 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50437 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50448 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50458 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50464 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50468 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50476 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50515 - "GET /docs HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50515 - "GET /openapi.json HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50526 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50535 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50543 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50548 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50556 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50562 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50567 - "OPTIONS /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50567 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50574 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50586 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50613 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50632 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50638 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50642 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50646 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50667 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50673 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50680 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50689 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50707 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50781 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50805 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50830 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50834 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50843 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50850 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50855 - "OPTIONS /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:50855 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50862 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50870 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50879 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50896 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50900 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50916 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50922 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50937 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50941 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50944 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50955 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50985 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50991 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:50995 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:51000 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:51008 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:51012 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:51019 - "GET /auth/me HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:51019 - "OPTIONS /elt/watch/stop HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51019 - "POST /elt/watch/stop HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:51124 - "OPTIONS /auth/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51124 - "POST /auth/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51220 - "OPTIONS /auth/totp/verify HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51220 - "POST /auth/totp/verify HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51220 - "POST /auth/login HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51221 - "POST /auth/totp/verify HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51221 - "OPTIONS /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51221 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51222 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51234 - "OPTIONS /admin/users HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51234 - "OPTIONS /admin/departements HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51234 - "GET /admin/departements HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51235 - "GET /admin/users HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51234 - "GET /admin/departements HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51235 - "GET /admin/users HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51235 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51236 - "OPTIONS /admin/droits HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51235 - "GET /admin/departements HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51234 - "GET /admin/departements HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51236 - "GET /admin/droits HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51235 - "GET /admin/droits HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51235 - "OPTIONS /admin/departements/by-name/analyse%20operationnel/droits HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51235 - "GET /admin/departements/by-name/analyse%20operationnel/droits HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51242 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51253 - "OPTIONS /api/v1/bad-debts/metrics/summary HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51253 - "OPTIONS /api/v1/bad-debts/clients/at-risk?tier=high&page=1&page_size=10 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51254 - "OPTIONS /api/v1/bad-debts/imports?limit=20 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51255 - "GET /api/v1/bad-debts/metrics/summary HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51253 - "GET /api/v1/bad-debts/clients/at-risk?tier=high&page=1&page_size=10 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51254 - "GET /api/v1/bad-debts/imports?limit=20 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51255 - "GET /api/v1/bad-debts/metrics/summary HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51254 - "GET /api/v1/bad-debts/imports?limit=20 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51253 - "GET /api/v1/bad-debts/clients/at-risk?tier=high&page=1&page_size=10 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51253 - "OPTIONS /elt/archive-files?limit=50 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51254 - "OPTIONS /elt/watch/status HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51255 - "OPTIONS /elt/run/status HTTP/1.1" 200 OK
-[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
-[ELT RUN] status response success=True status=STOPPED active=False
-INFO:     127.0.0.1:51255 - "GET /elt/run/status HTTP/1.1" 200 OK
-[ELT WATCH] status route called
-[ELT ARCHIVE FILES] route called limit=50
-[ELT WATCH] status called
-[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
-[ELT ARCHIVE FILES] error=Dossier ELT introuvable : C:\Users\benab\PycharmProjects\PythonProject1
-[ELT WATCH] response success=True status=STOPPED active=False
-[ELT WATCH] status route response success=True status=STOPPED active=False
-INFO:     127.0.0.1:51254 - "GET /elt/watch/status HTTP/1.1" 200 OK
-Traceback (most recent call last):
-  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 807, in get_archive_files
-    conn = _get_elt_oracle_connection()
-  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 566, in _get_elt_oracle_connection
-    _validate_elt_project()
-    ~~~~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 144, in _validate_elt_project
-    raise FileNotFoundError(f"Dossier ELT introuvable : {ELT_PROJECT_DIR}")
-FileNotFoundError: Dossier ELT introuvable : C:\Users\benab\PycharmProjects\PythonProject1
-
-[ELT ARCHIVE FILES] route response success=False adv=0 rev=0
-INFO:     127.0.0.1:51253 - "GET /elt/archive-files?limit=50 HTTP/1.1" 200 OK
-[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
-[ELT RUN] status response success=True status=STOPPED active=False
-INFO:     127.0.0.1:51255 - "GET /elt/run/status HTTP/1.1" 200 OK
-[ELT ARCHIVE FILES] route called limit=50
-[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
-[ELT ARCHIVE FILES] error=Dossier ELT introuvable : C:\Users\benab\PycharmProjects\PythonProject1
-Traceback (most recent call last):
-  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 807, in get_archive_files
-    conn = _get_elt_oracle_connection()
-  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 566, in _get_elt_oracle_connection
-    _validate_elt_project()
-    ~~~~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 144, in _validate_elt_project
-    raise FileNotFoundError(f"Dossier ELT introuvable : {ELT_PROJECT_DIR}")
-FileNotFoundError: Dossier ELT introuvable : C:\Users\benab\PycharmProjects\PythonProject1
-
-[ELT ARCHIVE FILES] route response success=False adv=0 rev=0
-INFO:     127.0.0.1:51253 - "GET /elt/archive-files?limit=50 HTTP/1.1" 200 OK
-[ELT WATCH] status route called
-[ELT WATCH] status called
-[ELT WATCH] response success=True status=STOPPED active=False
-[ELT WATCH] status route response success=True status=STOPPED active=False
-INFO:     127.0.0.1:51254 - "GET /elt/watch/status HTTP/1.1" 200 OK
-[ELT WATCH] status route called
-[ELT WATCH] status called
-[ELT ARCHIVE FILES] route called limit=50
-[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
-[ELT WATCH] response success=True status=STOPPED active=False
-[ELT ARCHIVE FILES] error=Dossier ELT introuvable : C:\Users\benab\PycharmProjects\PythonProject1
-[ELT WATCH] status route response success=True status=STOPPED active=False
-Traceback (most recent call last):
-  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 807, in get_archive_files
-    conn = _get_elt_oracle_connection()
-  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 566, in _get_elt_oracle_connection
-    _validate_elt_project()
-    ~~~~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 144, in _validate_elt_project
-    raise FileNotFoundError(f"Dossier ELT introuvable : {ELT_PROJECT_DIR}")
-FileNotFoundError: Dossier ELT introuvable : C:\Users\benab\PycharmProjects\PythonProject1
-
-INFO:     127.0.0.1:51254 - "GET /elt/watch/status HTTP/1.1" 200 OK
-[ELT ARCHIVE FILES] route response success=False adv=0 rev=0
-INFO:     127.0.0.1:51253 - "GET /elt/archive-files?limit=50 HTTP/1.1" 200 OK
-[ELT ARCHIVE FILES] route called limit=50
-[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
-[ELT ARCHIVE FILES] error=Dossier ELT introuvable : C:\Users\benab\PycharmProjects\PythonProject1
-Traceback (most recent call last):
-  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 807, in get_archive_files
-    conn = _get_elt_oracle_connection()
-  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 566, in _get_elt_oracle_connection
-    _validate_elt_project()
-    ~~~~~~~~~~~~~~~~~~~~~^^
-  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 144, in _validate_elt_project
-    raise FileNotFoundError(f"Dossier ELT introuvable : {ELT_PROJECT_DIR}")
-FileNotFoundError: Dossier ELT introuvable : C:\Users\benab\PycharmProjects\PythonProject1
-
-[ELT ARCHIVE FILES] route response success=False adv=0 rev=0
-INFO:     127.0.0.1:51257 - "GET /elt/archive-files?limit=50 HTTP/1.1" 200 OK
-[ELT WATCH] status route called
-[ELT WATCH] status called
-[ELT WATCH] response success=True status=STOPPED active=False
-[ELT WATCH] status route response success=True status=STOPPED active=False
-INFO:     127.0.0.1:51258 - "GET /elt/watch/status HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51270 - "OPTIONS /auth/security/recovery-codes/status HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51270 - "GET /auth/security/recovery-codes/status HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51270 - "GET /auth/security/recovery-codes/status HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51279 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51809 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51819 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51827 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51835 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51856 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51862 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51896 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51911 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51932 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51948 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51975 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:51992 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52009 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52013 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51825 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51839 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51840 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51840 - "GET /auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51839 - "GET /auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:51840 - "OPTIONS /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51839 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51848 - "OPTIONS /auth/totp/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51848 - "POST /auth/totp/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51848 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51849 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51848 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51848 - "OPTIONS /admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51848 - "OPTIONS /admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51849 - "GET /admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51848 - "GET /admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51853 - "OPTIONS /elt/watch/stop HTTP/1.1" 200 OK
+[ELT WATCH] stop route called
+[ELT WATCH] stop called
+[ELT WATCH] stop route exception=[WinError 5] Accès refusé: 'C:\\Users\\benab'
+INFO:     127.0.0.1:51853 - "POST /elt/watch/stop HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:51853 - "OPTIONS /auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51853 - "POST /auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51855 - "OPTIONS /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51855 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51859 - "OPTIONS /auth/totp/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51859 - "POST /auth/totp/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51859 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51859 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51860 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51859 - "OPTIONS /admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51859 - "GET /admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51859 - "GET /admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51863 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51863 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51864 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51865 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51883 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51903 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51909 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51913 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51913 - "OPTIONS /auth/security/recovery-codes/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51913 - "GET /auth/security/recovery-codes/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51913 - "GET /auth/security/recovery-codes/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51915 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51915 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51915 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51917 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51930 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51940 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51940 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51973 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51974 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51974 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51978 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51993 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51998 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51998 - "OPTIONS /admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51998 - "GET /admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51998 - "GET /admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51998 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51998 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51998 - "OPTIONS /elt/watch/stop HTTP/1.1" 200 OK
+[ELT WATCH] stop route called
+[ELT WATCH] stop called
+[ELT WATCH] stop route exception=[WinError 5] Accès refusé: 'C:\\Users\\benab'
+INFO:     127.0.0.1:51998 - "POST /elt/watch/stop HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:51998 - "OPTIONS /auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51998 - "POST /auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52004 - "OPTIONS /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52004 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52007 - "OPTIONS /auth/totp/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52007 - "POST /auth/totp/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52007 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52007 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52008 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52007 - "OPTIONS /api/v1/bad-debts/metrics/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52008 - "OPTIONS /api/v1/bad-debts/clients/at-risk?tier=high&page=1&page_size=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52007 - "OPTIONS /api/v1/bad-debts/imports?limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52008 - "OPTIONS /api/v1/bad-debts/clients/at-risk?tier=high&page=1&page_size=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52010 - "OPTIONS /api/v1/bad-debts/metrics/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52011 - "OPTIONS /api/v1/bad-debts/imports?limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52012 - "GET /api/v1/bad-debts/metrics/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52007 - "GET /api/v1/bad-debts/imports?limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52008 - "GET /api/v1/bad-debts/clients/at-risk?tier=high&page=1&page_size=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52010 - "GET /api/v1/bad-debts/metrics/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52011 - "GET /api/v1/bad-debts/imports?limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52013 - "GET /api/v1/bad-debts/clients/at-risk?tier=high&page=1&page_size=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52019 - "OPTIONS /api/v1/bad-debts/reporting/global HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52019 - "POST /api/v1/bad-debts/reporting/global HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52024 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52024 - "GET /auth/me HTTP/1.1" 200 OK
 INFO:     127.0.0.1:52028 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52031 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52028 - "GET /auth/me HTTP/1.1" 200 OK
 INFO:     127.0.0.1:52031 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52036 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52039 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52042 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52047 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52051 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52056 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52041 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52046 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52057 - "GET /auth/me HTTP/1.1" 200 OK
 INFO:     127.0.0.1:52060 - "GET /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52086 - "OPTIONS /elt/watch/stop HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52087 - "OPTIONS /auth/me HTTP/1.1" 200 OK
-INFO:     127.0.0.1:52086 - "POST /elt/watch/stop HTTP/1.1" 401 Unauthorized
-INFO:     127.0.0.1:52087 - "GET /auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52062 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52067 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52067 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52069 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52071 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52074 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52078 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52078 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52079 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52081 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52088 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52091 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52097 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52102 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52105 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52108 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "OPTIONS /api/v1/bad-debts/clients?page=1&page_size=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52111 - "GET /api/v1/bad-debts/clients?page=1&page_size=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52114 - "OPTIONS /elt/watch/stop HTTP/1.1" 200 OK
+[ELT WATCH] stop route called
+[ELT WATCH] stop called
+[ELT WATCH] stop route exception=[WinError 5] Accès refusé: 'C:\\Users\\benab'
+INFO:     127.0.0.1:52114 - "POST /elt/watch/stop HTTP/1.1" 500 Internal Server Error
+[ELT WATCH] stop route called
+[ELT WATCH] stop called
+[ELT WATCH] stop route exception=[WinError 5] Accès refusé: 'C:\\Users\\benab'
+INFO:     127.0.0.1:52115 - "POST /elt/watch/stop HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:52114 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52115 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52115 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52114 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52115 - "OPTIONS /api/v1/bad-debts/metrics/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52114 - "OPTIONS /api/v1/bad-debts/clients/at-risk?tier=high&page=1&page_size=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52114 - "OPTIONS /api/v1/bad-debts/imports?limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52124 - "OPTIONS /api/v1/bad-debts/metrics/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52114 - "OPTIONS /api/v1/bad-debts/clients/at-risk?tier=high&page=1&page_size=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52125 - "OPTIONS /api/v1/bad-debts/imports?limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52115 - "GET /api/v1/bad-debts/metrics/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52126 - "GET /api/v1/bad-debts/metrics/summary HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52124 - "GET /api/v1/bad-debts/imports?limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52123 - "GET /api/v1/bad-debts/clients/at-risk?tier=high&page=1&page_size=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52114 - "GET /api/v1/bad-debts/clients/at-risk?tier=high&page=1&page_size=10 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52125 - "GET /api/v1/bad-debts/imports?limit=20 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52134 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52134 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52139 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52139 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52143 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52149 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52156 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52168 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52172 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52177 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52187 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52191 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52196 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52199 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52199 - "OPTIONS /auth/security/recovery-codes/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52201 - "OPTIONS /auth/security/recovery-codes/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52199 - "GET /auth/security/recovery-codes/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52201 - "GET /auth/security/recovery-codes/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52199 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52199 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52199 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52204 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52210 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52216 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52219 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52221 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52223 - "OPTIONS /elt/watch/stop HTTP/1.1" 200 OK
+[ELT WATCH] stop route called
+[ELT WATCH] stop called
+[ELT WATCH] stop route exception=[WinError 5] Accès refusé: 'C:\\Users\\benab'
+INFO:     127.0.0.1:52223 - "POST /elt/watch/stop HTTP/1.1" 500 Internal Server Error
+INFO:     127.0.0.1:52223 - "OPTIONS /auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52223 - "POST /auth/logout HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52223 - "OPTIONS /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52223 - "POST /auth/login HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52227 - "OPTIONS /auth/totp/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52227 - "POST /auth/totp/verify HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52227 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52227 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52228 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52227 - "OPTIONS /admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52227 - "GET /admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52227 - "GET /admin/users HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52232 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52232 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52232 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52234 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52240 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52240 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52250 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52261 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52262 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52262 - "OPTIONS /auth/security/recovery-codes/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52262 - "GET /auth/security/recovery-codes/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52262 - "GET /auth/security/recovery-codes/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52266 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52266 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52266 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52266 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52272 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52274 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52280 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52283 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52287 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52288 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52318 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52318 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52327 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52328 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52328 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52330 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52333 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52338 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52339 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52339 - "OPTIONS /elt/archive-files?limit=50 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52339 - "OPTIONS /elt/run/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52339 - "OPTIONS /elt/watch/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52339 - "OPTIONS /elt/run/status HTTP/1.1" 200 OK
+[ELT ARCHIVE FILES] route called limit=50
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[ELT ARCHIVE FILES] error=Dossier ELT introuvable : C:\Users\benab\PycharmProjects\PythonProject1
+[ELT WATCH] status route called
+[ELT RUN] status response success=True status=STOPPED active=False
+[ELT WATCH] status called
+INFO:     127.0.0.1:52339 - "GET /elt/run/status HTTP/1.1" 200 OK
+[ELT WATCH] response success=True status=STOPPED active=False
+Traceback (most recent call last):
+  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 807, in get_archive_files
+    conn = _get_elt_oracle_connection()
+  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 566, in _get_elt_oracle_connection
+    _validate_elt_project()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 144, in _validate_elt_project
+    raise FileNotFoundError(f"Dossier ELT introuvable : {ELT_PROJECT_DIR}")
+FileNotFoundError: Dossier ELT introuvable : C:\Users\benab\PycharmProjects\PythonProject1
+
+[ELT WATCH] status route response success=True status=STOPPED active=False
+[ELT ARCHIVE FILES] route response success=False adv=0 rev=0
+INFO:     127.0.0.1:52343 - "GET /elt/watch/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52341 - "GET /elt/archive-files?limit=50 HTTP/1.1" 200 OK
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[ELT RUN] status response success=True status=STOPPED active=False
+INFO:     127.0.0.1:52342 - "GET /elt/run/status HTTP/1.1" 200 OK
+[ELT WATCH] status route called
+[ELT WATCH] status called
+[ELT WATCH] response success=True status=STOPPED active=False
+[ELT WATCH] status route response success=True status=STOPPED active=False
+[ELT WATCH] status route called
+INFO:     127.0.0.1:52343 - "GET /elt/watch/status HTTP/1.1" 200 OK
+[ELT WATCH] status called
+[ELT WATCH] response success=True status=STOPPED active=False
+[ELT WATCH] status route response success=True status=STOPPED active=False
+INFO:     127.0.0.1:52344 - "GET /elt/watch/status HTTP/1.1" 200 OK
+[ELT ARCHIVE FILES] route called limit=50
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[ELT ARCHIVE FILES] error=Dossier ELT introuvable : C:\Users\benab\PycharmProjects\PythonProject1
+Traceback (most recent call last):
+  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 807, in get_archive_files
+    conn = _get_elt_oracle_connection()
+  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 566, in _get_elt_oracle_connection
+    _validate_elt_project()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 144, in _validate_elt_project
+    raise FileNotFoundError(f"Dossier ELT introuvable : {ELT_PROJECT_DIR}")
+FileNotFoundError: Dossier ELT introuvable : C:\Users\benab\PycharmProjects\PythonProject1
+
+[ELT ARCHIVE FILES] route response success=False adv=0 rev=0
+INFO:     127.0.0.1:52341 - "GET /elt/archive-files?limit=50 HTTP/1.1" 200 OK
+[ELT ARCHIVE FILES] route called limit=50
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[ELT ARCHIVE FILES] route called limit=50
+[ELT ARCHIVE FILES] error=Dossier ELT introuvable : C:\Users\benab\PycharmProjects\PythonProject1
+[ELT API] ELT_PROJECT_DIR=C:\Users\benab\PycharmProjects\PythonProject1
+[ELT ARCHIVE FILES] error=Dossier ELT introuvable : C:\Users\benab\PycharmProjects\PythonProject1
+Traceback (most recent call last):
+  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 807, in get_archive_files
+    conn = _get_elt_oracle_connection()
+  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 566, in _get_elt_oracle_connection
+    _validate_elt_project()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 144, in _validate_elt_project
+    raise FileNotFoundError(f"Dossier ELT introuvable : {ELT_PROJECT_DIR}")
+FileNotFoundError: Dossier ELT introuvable : C:\Users\benab\PycharmProjects\PythonProject1
+
+[ELT ARCHIVE FILES] route response success=False adv=0 rev=0
+Traceback (most recent call last):
+  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 807, in get_archive_files
+    conn = _get_elt_oracle_connection()
+  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 566, in _get_elt_oracle_connection
+    _validate_elt_project()
+    ~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\Rana Miled\Downloads\pfe-main\pfe-main\pfe\pfe\backend\app\services\elt_service.py", line 144, in _validate_elt_project
+    raise FileNotFoundError(f"Dossier ELT introuvable : {ELT_PROJECT_DIR}")
+FileNotFoundError: Dossier ELT introuvable : C:\Users\benab\PycharmProjects\PythonProject1
+
+INFO:     127.0.0.1:52339 - "GET /elt/archive-files?limit=50 HTTP/1.1" 200 OK
+[ELT ARCHIVE FILES] route response success=False adv=0 rev=0
+INFO:     127.0.0.1:52342 - "GET /elt/archive-files?limit=50 HTTP/1.1" 200 OK
+[ELT WATCH] status route called
+[ELT WATCH] status called
+[ELT WATCH] response success=True status=STOPPED active=False
+[ELT WATCH] status route response success=True status=STOPPED active=False
+INFO:     127.0.0.1:52345 - "GET /elt/watch/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52350 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52350 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52354 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52358 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52361 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52374 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52377 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52381 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52388 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52391 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52394 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52398 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52401 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52407 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52413 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52445 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52451 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52451 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52454 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52458 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52459 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52462 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52482 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52485 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52489 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52489 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52491 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52495 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52501 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52506 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52513 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52535 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52542 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52544 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52549 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52553 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52558 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52584 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52588 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52601 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52616 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52619 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52626 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52630 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52632 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52632 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52638 - "GET /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52791 - "OPTIONS /auth/me HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52791 - "GET /auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52791 - "OPTIONS /elt/watch/stop HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52797 - "GET /auth/me HTTP/1.1" 401 Unauthorized
+INFO:     127.0.0.1:52791 - "POST /elt/watch/stop HTTP/1.1" 401 Unauthorized

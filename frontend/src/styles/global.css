@@ -6170,6 +6170,89 @@ body {
     transition-duration: 0.01ms;
   }
 }
+
+/* Mon departement - visual alignment with the users administration page */
+.my-department-kpis {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.my-department-controls {
+  grid-template-columns: minmax(280px, 1fr) auto;
+}
+
+.my-department-controls .users-results-meta {
+  grid-column: 1 / -1;
+}
+
+.my-department-table {
+  min-width: 920px;
+}
+
+.my-department-table .users-status-badge.is-pending {
+  border-color: #f4dfb9;
+  background: #fff8e9;
+  color: #a76b13;
+}
+
+.my-department-table .users-status-badge.is-blocked {
+  border-color: #f2ced6;
+  background: #fff0f3;
+  color: #c44761;
+}
+
+.my-department-table .users-status-badge.is-deleted {
+  border-color: #dce5ef;
+  background: #f5f8fc;
+  color: #65728a;
+}
+
+.my-department-empty {
+  padding: 38px 20px !important;
+}
+
+.my-department-empty svg,
+.my-department-empty strong,
+.my-department-empty span {
+  display: block;
+  margin: 0 auto;
+}
+
+.my-department-empty svg {
+  margin-bottom: 9px;
+  color: #6d4bea;
+}
+
+.my-department-empty strong {
+  margin-bottom: 5px;
+  color: #34405b;
+  font-size: 0.82rem;
+}
+
+.my-department-empty span {
+  color: #8a96aa;
+  font-size: 0.7rem;
+}
+
+@media (max-width: 900px) {
+  .my-department-kpis {
+    grid-template-columns: 1fr;
+  }
+
+  .my-department-controls {
+    grid-template-columns: 1fr auto;
+  }
+}
+
+@media (max-width: 700px) {
+  .my-department-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .my-department-controls .users-filter-group {
+    justify-content: flex-end;
+  }
+}
+
 /* Departments and permissions governance workspace */
 .governance-page {
   width: min(1480px, 100%);
