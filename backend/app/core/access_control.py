@@ -8,6 +8,7 @@ from app.core.constants import (
     PERMISSION_GERER_ROLES,
     PERMISSION_GERER_UTILISATEURS,
     PERMISSION_LANCER_ELT,
+    PERMISSION_VOIR_RESULTAT_ELT,
     ROLE_ADMIN,
     ROLE_SUPER_ADMIN,
     ROLE_USER,
@@ -32,6 +33,14 @@ BUSINESS_PERMISSION_LABELS = {
     BUSINESS_PERMISSION_DASHBOARD_BAD_DEBTS: "Dashboard Bad Debts",
     BUSINESS_PERMISSION_LANCER_TRAITEMENT_ELT: "Lancer traitement ELT",
     BUSINESS_PERMISSION_VOIR_RESULTAT_ELT: "Voir résultat ELT",
+}
+
+BUSINESS_TO_EFFECTIVE_PERMISSION = {
+    BUSINESS_PERMISSION_DASHBOARD_SERVICE_SOS: PERMISSION_DASHBOARD_SERVICE_SOS,
+    BUSINESS_PERMISSION_DASHBOARD_PARC_SERVICE_SOS: PERMISSION_DASHBOARD_PARC_SERVICE_SOS,
+    BUSINESS_PERMISSION_DASHBOARD_BAD_DEBTS: PERMISSION_DASHBOARD_BAD_DEBTS,
+    BUSINESS_PERMISSION_LANCER_TRAITEMENT_ELT: PERMISSION_LANCER_ELT,
+    BUSINESS_PERMISSION_VOIR_RESULTAT_ELT: PERMISSION_VOIR_RESULTAT_ELT,
 }
 
 BUSINESS_DEPARTMENT_PERMISSIONS = {
@@ -61,38 +70,6 @@ SUPER_ADMIN_PERMISSIONS = {
     PERMISSION_DASHBOARD_BAD_DEBTS,
     PERMISSION_LANCER_ELT,
 }
-
-DEPARTMENT_ADMIN_PERMISSIONS = {
-    COMMERCIAL_DEPARTMENT: {
-        PERMISSION_DASHBOARD_SERVICE_SOS,
-        PERMISSION_DASHBOARD_PARC_SERVICE_SOS,
-    },
-    RISK_DEPARTMENT: {
-        PERMISSION_DASHBOARD_BAD_DEBTS,
-    },
-    OPERATIONAL_ANALYSIS_DEPARTMENT: {
-        PERMISSION_DASHBOARD_SERVICE_SOS,
-        PERMISSION_DASHBOARD_PARC_SERVICE_SOS,
-        PERMISSION_LANCER_ELT,
-    },
-}
-
-DEPARTMENT_USER_PERMISSIONS = {
-    COMMERCIAL_DEPARTMENT: {
-        PERMISSION_DASHBOARD_BAD_DEBTS,
-    },
-    RISK_DEPARTMENT: {
-        PERMISSION_DASHBOARD_SERVICE_SOS,
-        PERMISSION_DASHBOARD_PARC_SERVICE_SOS,
-        PERMISSION_LANCER_ELT,
-    },
-    OPERATIONAL_ANALYSIS_DEPARTMENT: {
-        PERMISSION_DASHBOARD_SERVICE_SOS,
-        PERMISSION_DASHBOARD_PARC_SERVICE_SOS,
-        PERMISSION_LANCER_ELT,
-    },
-}
-
 
 def normalize_department_name(name: str | None) -> str:
     value = unicodedata.normalize("NFKD", str(name or "").strip().lower())
@@ -129,21 +106,6 @@ def department_key(name: str | None) -> str | None:
     return None
 
 
-def permissions_for_role_department(role: str | None, department_name: str | None) -> set[str]:
-    normalized_role = str(role or "").upper()
-    if normalized_role == ROLE_SUPER_ADMIN:
-        return set(SUPER_ADMIN_PERMISSIONS)
-
-    key = department_key(department_name)
-    if normalized_role in DEPARTMENT_ADMIN_ROLES:
-        return set(DEPARTMENT_ADMIN_PERMISSIONS.get(key, set()))
-
-    if normalized_role == ROLE_USER:
-        return set(DEPARTMENT_USER_PERMISSIONS.get(key, set()))
-
-    return set()
-
-
 def valid_business_permissions() -> set[str]:
     return set(BUSINESS_PERMISSION_LABELS)
 
@@ -154,8 +116,27 @@ def business_permissions_for_department(department_name: str | None) -> set[str]
 
 
 def user_effective_permissions(user) -> set[str]:
-    department_name = user.departement.nom_departement if getattr(user, "departement", None) else None
-    return permissions_for_role_department(getattr(user, "role", None), department_name)
+    role = str(getattr(user, "role", None) or "").upper()
+    if role == ROLE_SUPER_ADMIN:
+        return set(SUPER_ADMIN_PERMISSIONS)
+    if role not in {*DEPARTMENT_ADMIN_ROLES, ROLE_USER}:
+        return set()
+
+    department = getattr(user, "departement", None)
+    if not department:
+        return set()
+
+    permissions = set()
+    for relation in getattr(department, "departement_droits", []) or []:
+        business_name = (
+            relation.droit_acces.nom_droit
+            if getattr(relation, "droit_acces", None)
+            else None
+        )
+        effective_name = BUSINESS_TO_EFFECTIVE_PERMISSION.get(business_name)
+        if effective_name:
+            permissions.add(effective_name)
+    return permissions
 
 
 def user_has_permission(user, permission: str) -> bool:

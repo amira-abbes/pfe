@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse, Response
 
 from app.api.deps import get_current_user, get_user_permissions, require_permission
-from app.core.constants import PERMISSION_DASHBOARD_SERVICE_SOS, PERMISSION_LANCER_ELT
+from app.core.constants import PERMISSION_LANCER_ELT, PERMISSION_VOIR_RESULTAT_ELT
 from app.models.utilisateur import Utilisateur
 from app.services.elt_service import (
     build_pdf_report,
@@ -64,7 +64,7 @@ def require_any_right(*rights: str):
 
 
 require_lancer_elt = require_permission(PERMISSION_LANCER_ELT)
-require_elt_report_access = require_any_right(PERMISSION_DASHBOARD_SERVICE_SOS, PERMISSION_LANCER_ELT)
+require_elt_report_access = require_any_right(PERMISSION_VOIR_RESULTAT_ELT, PERMISSION_LANCER_ELT)
 
 
 @router.post("/jobs/start")

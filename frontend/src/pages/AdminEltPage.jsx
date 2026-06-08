@@ -751,9 +751,46 @@ export default function AdminEltPage() {
     window.print();
   }
 
+  const pageActions = (
+    <div className="actions elt-primary-actions">
+      <button
+        className="btn btn-primary elt-btn elt-btn--primary"
+        onClick={handleLaunchClick}
+        disabled={runButtonDisabled}
+        title={watcherActive ? "Surveillance locale active. Désactivez-la avant de lancer un ELT manuel." : activeRun ? "Traitement ELT en cours." : ""}
+      >
+        {isStartingRun || activeRun ? <Loader2 className="spin" size={18} /> : <PlayCircle size={18} />}
+        {isStartingRun || activeRun ? "Traitement en cours…" : "Lancer ELT"}
+      </button>
+      {watcherActive ? (
+        <button className="btn btn-secondary" onClick={stopWatch} disabled={stopWatcherDisabled} title={isStoppingWatcher ? "Arrêt de la surveillance en cours." : ""}>
+          {isStoppingWatcher ? <Loader2 className="spin" size={18} /> : <Square size={18} />}
+          Désactiver surveillance locale
+        </button>
+      ) : (
+        <button
+          className="btn btn-secondary"
+          onClick={startWatch}
+          disabled={startWatcherDisabled}
+          title={activeRun ? "Traitement ELT en cours. La surveillance locale ne peut pas être activée pendant l’exécution." : ""}
+        >
+          {isStartingWatcher ? <Loader2 className="spin" size={18} /> : <Power size={18} />}
+          Activer surveillance locale
+        </button>
+      )}
+      <button className="btn btn-secondary" onClick={refreshPage} disabled={refreshDisabled}>
+        <RefreshCw className={isRefreshing ? "spin" : ""} size={18} />
+        Actualiser
+      </button>
+    </div>
+  );
+
   return (
     <Layout
-      title="Pilotage ELT Service SOS Solde & Data"
+      eyebrow="Traitements"
+      title="Traitement ELT"
+      subtitle="Supervisez les flux, exécutions et contrôles de traitement."
+      action={pageActions}
       hideSidebar
       className="app-shell--elt"
     >
@@ -767,48 +804,6 @@ export default function AdminEltPage() {
           <span className="elt-bg-mesh" />
         </div>
         <div className="elt-bg-waves" aria-hidden="true" />
-
-      <section className="elt-hero-header elt-reveal">
-        <div className="elt-hero-copy">
-          <h1 className="elt-hero-title">Pilotage ELT Service SOS Solde & Data</h1>
-        </div>
-        <div className="actions elt-primary-actions elt-hero-actions">
-          <button
-            className="btn btn-primary elt-btn elt-btn--primary"
-            onClick={handleLaunchClick}
-            disabled={runButtonDisabled}
-            title={watcherActive ? "Surveillance locale active. Désactivez-la avant de lancer un ELT manuel." : activeRun ? "Traitement ELT en cours." : ""}
-          >
-            {isStartingRun || activeRun ? <Loader2 className="spin" size={18} /> : <PlayCircle size={18} />}
-            {isStartingRun || activeRun ? "Traitement en cours…" : "Lancer ELT"}
-          </button>
-          {watcherActive ? (
-            <button className="btn btn-secondary" onClick={stopWatch} disabled={stopWatcherDisabled} title={isStoppingWatcher ? "Arrêt de la surveillance en cours." : ""}>
-              {isStoppingWatcher ? <Loader2 className="spin" size={18} /> : <Square size={18} />}
-              Désactiver surveillance locale
-            </button>
-          ) : (
-            <button
-              className="btn btn-secondary"
-              onClick={startWatch}
-              disabled={startWatcherDisabled}
-              title={activeRun ? "Traitement ELT en cours. La surveillance locale ne peut pas être activée pendant l’exécution." : ""}
-            >
-              {isStartingWatcher ? <Loader2 className="spin" size={18} /> : <Power size={18} />}
-              Activer surveillance locale
-            </button>
-          )}
-          <button className="btn btn-secondary" onClick={refreshPage} disabled={refreshDisabled}>
-            <RefreshCw className={isRefreshing ? "spin" : ""} size={18} />
-            Actualiser
-          </button>
-        </div>
-        <div className="elt-hero-orbit" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </div>
-      </section>
 
       {(connectionChecking || showModeChoice) && (
       <section className="elt-panel elt-launch-panel elt-reveal elt-reveal--delay-1">

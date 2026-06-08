@@ -1,4 +1,4 @@
-import { LogOut } from "lucide-react";
+import { LogOut, UserRound } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 const ROLE_LABELS = {
@@ -53,8 +53,14 @@ export default function AppHeader() {
 
       <div className="top-header-right">
         <div className="user-chip" title={userSummary}>
-          <span className="user-chip-label">{userSummary}</span>
-          <span className="user-chip-role">{roleBadge}</span>
+          <span className="user-chip-avatar" aria-hidden="true">
+            <UserRound size={16} />
+            <i />
+          </span>
+          <span className="user-chip-content">
+            <span className="user-chip-label">{userSummary}</span>
+            <span className="user-chip-role">{roleBadge}</span>
+          </span>
         </div>
         <button className="logout-chip" onClick={logout} title="Déconnexion" aria-label="Déconnexion">
           <LogOut size={18} />

@@ -1,108 +1,140 @@
-import { Plus, RefreshCw, Search, UserCheck, Users, UserX, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { api, getApiError } from "../api/api";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import {
+  Building2,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Edit3,
+  EllipsisVertical,
+  FilterX,
+  KeyRound,
+  Plus,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  Trash2,
+  UserCheck,
+  Users,
+  UserX,
+  X,
+} from "lucide-react";
 import Layout from "../components/Layout";
+import PageHeader from "../components/PageHeader";
+import Drawer from "../components/Drawer";
 import { useAuth } from "../context/AuthContext";
+import { api, getApiError } from "../api/api";
 
-const ITEMS_PER_PAGE = 10;
+const DEFAULT_ITEMS_PER_PAGE = 10;
 
-const STATUS_LABELS = {
-  ACTIF: "Actif",
-  EN_ATTENTE_PREMIERE_CONNEXION: "En attente de première connexion",
-  DESACTIVE_ADMIN: "Désactivé",
-  BLOQUE_TENTATIVES: "Bloqué",
-  SUPPRIME: "Supprimé",
-};
-
-const STATUS_CLASSES = {
-  ACTIF: "au-badge au-badge-green",
-  EN_ATTENTE_PREMIERE_CONNEXION: "au-badge au-badge-orange",
-  DESACTIVE_ADMIN: "au-badge au-badge-orange",
-  BLOQUE_TENTATIVES: "au-badge au-badge-red",
-  SUPPRIME: "au-badge au-badge-gray",
+const ROLE_LABELS = {
+  SUPER_ADMIN: "SUPER ADMIN",
+  ADMIN: "ADMIN",
+  USER: "USER",
 };
 
 function normalizeStatus(item) {
   if (item.date_suppression) return "SUPPRIME";
   const raw = String(item.statut_compte || "").toUpperCase();
   if (raw === "ACTIVE") return "ACTIF";
-  if (raw === "PENDING_ACTIVATION" || raw === "MFA_SETUP_REQUIRED") {
-    return "EN_ATTENTE_PREMIERE_CONNEXION";
-  }
+  if (raw === "PENDING_ACTIVATION" || raw === "MFA_SETUP_REQUIRED") return "EN_ATTENTE_PREMIERE_CONNEXION";
   if (raw === "DISABLED") return "DESACTIVE_ADMIN";
   return raw;
+}
+
+function roleClass(role) {
+  return String(role || "USER").toLowerCase().replaceAll("_", "");
+}
+
+function formatDate(value) {
+  if (!value) return "Jamais";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Jamais";
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function getInitials(name, email) {
+  const source = name?.trim() || email?.split("@")[0] || "U";
+  const parts = source.split(/\s+/).filter(Boolean);
+  return (parts.length > 1 ? `${parts[0][0]}${parts[1][0]}` : source.slice(0, 2)).toUpperCase();
 }
 
 export default function AdminUsersPage() {
   const { user: currentUser } = useAuth();
   const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
-  const isAdmin = currentUser?.role === "ADMIN";
 
-  // ── Core state ────────────────────────────────────────────────────────────
   const [users, setUsers] = useState([]);
-  const [departements, setDepartements] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const [form, setForm] = useState({
     email: "",
     nom_complet: "",
-    departement_nom: "",
     role: "USER",
+    departement_nom: "",
   });
   const [message, setMessage] = useState("");
   const [debugLink, setDebugLink] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  // ── UI state ──────────────────────────────────────────────────────────────
+  const [loading, setLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [filterDept, setFilterDept] = useState("");
   const [filterRole, setFilterRole] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [page, setPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [editingId, setEditingId] = useState(null);
 
-  // ── Data loading ──────────────────────────────────────────────────────────
-  async function loadData() {
+  const loadData = async () => {
+    setLoading(true);
     setError("");
     try {
       if (isSuperAdmin) {
-        const [usersResponse, depsResponse] = await Promise.all([
+        const [usersResponse, departmentsResponse] = await Promise.all([
           api.get("/admin/users"),
           api.get("/admin/departements"),
         ]);
-        const deps = Array.isArray(depsResponse.data) ? depsResponse.data : [];
+        const availableDepartments = Array.isArray(departmentsResponse.data) ? departmentsResponse.data : [];
         setUsers(usersResponse.data);
-        setDepartements(deps);
-        setForm((c) => ({
-          ...c,
+        setDepartments(availableDepartments);
+        setForm((current) => ({
+          ...current,
           departement_nom:
-            c.departement_nom && deps.some((d) => d.nom_departement === c.departement_nom)
-              ? c.departement_nom
-              : deps[0]?.nom_departement || "",
+            current.departement_nom && availableDepartments.some((department) => department.nom_departement === current.departement_nom)
+              ? current.departement_nom
+              : availableDepartments[0]?.nom_departement || "",
         }));
       } else {
         const usersResponse = await api.get("/admin/users");
         setUsers(usersResponse.data);
-        setDepartements([]);
-        setForm((c) => ({ ...c, departement_nom: currentUser?.departement_nom || "", role: "USER" }));
+        setDepartments([]);
+        setForm((current) => ({ ...current, departement_nom: currentUser?.departement_nom || "", role: "USER" }));
       }
     } catch (err) {
       setError(getApiError(err, "Erreur chargement utilisateurs."));
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
+    // Initial synchronization with the administration API.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isSuperAdmin, currentUser?.departement_nom]);
 
-  function updateField(field, value) {
-    setForm((c) => ({ ...c, [field]: value }));
-  }
-
-  // ── Create user ───────────────────────────────────────────────────────────
-  async function createUser(event) {
+  const createUser = async (event) => {
     event.preventDefault();
-    setError(""); setMessage(""); setDebugLink(""); setLoading(true);
+    setMessage("");
+    setDebugLink("");
+    setError("");
+    setLoading(true);
     try {
       const payload = {
         email: form.email,
@@ -115,7 +147,7 @@ export default function AdminUsersPage() {
       const response = await api.post("/admin/users", payload);
       setMessage(response.data.message || "Utilisateur créé.");
       setDebugLink(response.data.activation_link_debug || "");
-      setForm((c) => ({ ...c, email: "", nom_complet: "", role: "USER" }));
+      setForm((current) => ({ ...current, email: "", nom_complet: "", role: "USER" }));
       await loadData();
       setDrawerOpen(false);
     } catch (err) {
@@ -123,473 +155,366 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  // ── Toggle status ─────────────────────────────────────────────────────────
-  async function toggleStatus(item) {
+  const toggleStatus = async (item) => {
     const action = item.est_actif ? "désactiver" : "réactiver";
-    if (!confirm(`Voulez-vous ${action} le compte ${item.email} ?`)) return;
+    if (!window.confirm(`Voulez-vous ${action} le compte ${item.email} ?`)) return;
     setError(""); setMessage("");
     try {
-      const response = await api.patch(
-        `/admin/users/by-email/${encodeURIComponent(item.email)}/status`,
-        { est_actif: !item.est_actif }
-      );
+      const response = await api.patch(`/admin/users/by-email/${encodeURIComponent(item.email)}/status`, {
+        est_actif: !item.est_actif,
+      });
       setMessage(response.data.message || "Statut utilisateur mis à jour.");
       await loadData();
     } catch (err) {
       setError(getApiError(err, "Erreur mise à jour statut."));
     }
-  }
+  };
 
-  // ── Update profile ────────────────────────────────────────────────────────
-  async function updateUserProfile(user, changes) {
+  const updateUserProfile = async (item, changes) => {
     if (!isSuperAdmin) return;
     setError(""); setMessage("");
     try {
-      await api.patch(`/admin/users/by-email/${encodeURIComponent(user.email)}/profile`, {
-        role: changes.role || user.role,
-        departement_nom: changes.departement_nom || user.departement_nom || departements[0]?.nom_departement || "",
+      await api.patch(`/admin/users/by-email/${encodeURIComponent(item.email)}/profile`, {
+        role: changes.role || item.role,
+        departement_nom: changes.departement_nom || item.departement_nom || departments[0]?.nom_departement || "",
       });
       setMessage("Profil utilisateur mis à jour.");
       await loadData();
     } catch (err) {
       setError(getApiError(err, "Erreur mise à jour profil utilisateur."));
     }
-  }
+  };
 
-  // ── Delete user ───────────────────────────────────────────────────────────
-  async function deleteUser(item) {
-    if (!confirm(`Supprimer l'utilisateur ${item.email} ?`)) return;
-    setError(""); setMessage("");
+  const deleteUser = async (item) => {
+    if (!window.confirm(`Supprimer définitivement ${item.email} ?`)) return;
+    setError("");
     try {
       await api.delete(`/admin/users/by-email/${encodeURIComponent(item.email)}`);
       setMessage("Utilisateur supprimé.");
+      setSelectedIds((current) => {
+        const next = new Set(current);
+        next.delete(item.id);
+        return next;
+      });
       await loadData();
     } catch (err) {
       setError(getApiError(err, "Erreur suppression utilisateur."));
     }
-  }
+  };
 
-  async function regenerateRecoveryCodes(item) {
-    if (!confirm(`Régénérer les codes de secours de ${item.email} et les envoyer par email ?`)) return;
+  const regenerateRecoveryCodes = async (item) => {
+    if (!window.confirm(`Régénérer les codes de secours de ${item.email} et les envoyer par email ?`)) return;
     setError(""); setMessage("");
     try {
-      const response = await api.post(
-        `/admin/users/by-email/${encodeURIComponent(item.email)}/recovery-codes/regenerate`
-      );
+      const response = await api.post(`/admin/users/by-email/${encodeURIComponent(item.email)}/recovery-codes/regenerate`);
       setMessage(response.data.message || "Codes de secours régénérés.");
     } catch (err) {
       setError(getApiError(err, "Erreur régénération codes de secours."));
     }
-  }
+  };
 
-  function canDeactivate(item) {
-    return item.est_actif && normalizeStatus(item) === "ACTIF" && item.id !== currentUser?.id;
-  }
+  const canDeactivate = (item) => item.est_actif && normalizeStatus(item) === "ACTIF" && item.id !== currentUser?.id;
+  const canReactivate = (item) => !item.est_actif && ["DESACTIVE_ADMIN", "BLOQUE_TENTATIVES"].includes(normalizeStatus(item));
 
-  function canReactivate(item) {
-    return !item.est_actif && ["DESACTIVE_ADMIN", "BLOQUE_TENTATIVES"].includes(normalizeStatus(item));
-  }
-
-  // ── Derived / filtered data ───────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return users.filter((u) => {
-      const matchSearch = !q || u.email?.toLowerCase().includes(q) || u.nom_complet?.toLowerCase().includes(q);
-      const matchDept = !filterDept || u.departement_nom === filterDept;
-      const matchRole = !filterRole || u.role === filterRole;
-      const matchStatus = !filterStatus || (filterStatus === "actif" ? u.est_actif : !u.est_actif);
-      return matchSearch && matchDept && matchRole && matchStatus;
+  const filteredUsers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return users.filter((item) => {
+      const matchesSearch =
+        !query ||
+        item.email?.toLowerCase().includes(query) ||
+        item.nom_complet?.toLowerCase().includes(query) ||
+        ROLE_LABELS[item.role]?.toLowerCase().includes(query) ||
+        item.role?.toLowerCase().includes(query);
+      const matchesDept = !filterDept || item.departement_nom === filterDept;
+      const matchesRole = !filterRole || item.role === filterRole;
+      const matchesStatus = !filterStatus || String(item.est_actif) === filterStatus;
+      return matchesSearch && matchesDept && matchesRole && matchesStatus;
     });
   }, [users, search, filterDept, filterRole, filterStatus]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
-  const paginated = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / itemsPerPage));
+  const currentPage = Math.min(page, totalPages);
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const visiblePages = Array.from({ length: Math.min(5, totalPages) }, (_, index) => {
+    const start = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+    return start + index;
+  });
 
-  const totalUsers = users.length;
-  const activeUsers = users.filter((u) => u.est_actif).length;
-  const inactiveUsers = totalUsers - activeUsers;
-  const uniqueDepts = [...new Set(users.map((u) => u.departement_nom).filter(Boolean))];
+  const stats = useMemo(() => {
+    const departmentNames = new Set(users.map((item) => item.departement_nom).filter(Boolean));
+    return {
+      total: users.length,
+      active: users.filter((item) => item.est_actif).length,
+      inactive: users.filter((item) => !item.est_actif).length,
+      departments: departmentNames.size,
+    };
+  }, [users]);
+
+  const resetFilters = () => {
+    setSearch("");
+    setFilterDept("");
+    setFilterRole("");
+    setFilterStatus("");
+    setPage(1);
+  };
+
+  const setFilter = (setter, value) => {
+    setter(value);
+    setPage(1);
+  };
+
+  const toggleSelected = (id) => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const allPageSelected = paginatedUsers.length > 0 && paginatedUsers.every((item) => selectedIds.has(item.id));
+  const togglePageSelection = () => {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      paginatedUsers.forEach((item) => (allPageSelected ? next.delete(item.id) : next.add(item.id)));
+      return next;
+    });
+  };
 
   return (
     <Layout>
-      {/* ── Page header ─────────────────────────────────────────────────────── */}
-      <div className="au-page-header">
-        <div>
-          <h1 className="au-page-title">Gestion Utilisateurs</h1>
-          <p className="au-page-sub">Gérez les comptes, rôles et accès de votre équipe.</p>
-        </div>
-        <button
-          className="au-btn-create"
-          onClick={() => { setDrawerOpen(true); setMessage(""); setError(""); }}
-        >
-          <Plus size={18} />
-          Créer un utilisateur
-        </button>
-      </div>
+      <main className="users-admin-page">
+        <PageHeader
+          eyebrow="Administration"
+          title="Gestion des utilisateurs"
+          subtitle="Gérez les comptes, rôles et accès de votre équipe."
+          action={<button className="users-create-button" onClick={() => setDrawerOpen(true)}><Plus size={18} /> Créer un utilisateur</button>}
+        />
 
-      {/* ── Global alerts ───────────────────────────────────────────────────── */}
-      {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
-      {message && <div className="alert alert-success" style={{ marginBottom: 16 }}>{message}</div>}
-      {debugLink && (
-        <div className="alert alert-info" style={{ marginBottom: 16 }}>
-          Lien activation debug : <a href={debugLink}>{debugLink}</a>
-        </div>
-      )}
+        {message && <div className="au-alert au-alert-success">{message}</div>}
+        {debugLink && <div className="au-alert au-alert-debug">Lien activation debug : <a href={debugLink}>{debugLink}</a></div>}
+        {error && <div className="au-alert au-alert-error">{error}</div>}
 
-      {/* ── Stats cards ─────────────────────────────────────────────────────── */}
-      <div className="au-stats-row">
-        <div className="au-stat-card">
-          <div className="au-stat-icon" style={{ background: "#e0e7ff", color: "#4f46e5", width: "48px", height: "48px", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Users size={24} />
+        <section className="users-kpi-grid" aria-label="Statistiques utilisateurs">
+          <article className="users-kpi-card users-kpi-total">
+            <span className="users-kpi-icon"><Users size={21} /></span>
+            <div><strong>{stats.total}</strong><span>Total utilisateurs</span></div>
+          </article>
+          <article className="users-kpi-card users-kpi-active">
+            <span className="users-kpi-icon"><UserCheck size={21} /></span>
+            <div><strong>{stats.active}</strong><span>Comptes actifs</span></div>
+          </article>
+          <article className="users-kpi-card users-kpi-inactive">
+            <span className="users-kpi-icon"><UserX size={21} /></span>
+            <div><strong>{stats.inactive}</strong><span>Comptes inactifs</span></div>
+          </article>
+          <article className="users-kpi-card users-kpi-departments">
+            <span className="users-kpi-icon"><Building2 size={21} /></span>
+            <div><strong>{stats.departments}</strong><span>Départements couverts</span></div>
+          </article>
+        </section>
+
+        <section className="users-control-panel" aria-label="Recherche et filtres">
+          <div className="users-search-field">
+            <Search size={18} />
+            <input
+              value={search}
+              onChange={(event) => setFilter(setSearch, event.target.value)}
+              placeholder="Rechercher par nom, email ou rôle…"
+            />
           </div>
-          <div>
-            <div className="au-stat-value">{totalUsers}</div>
-            <div className="au-stat-label">Total Utilisateurs</div>
+          <div className="users-filter-group">
+            <select value={filterDept} onChange={(event) => setFilter(setFilterDept, event.target.value)}>
+              <option value="">Tous les départements</option>
+              {departments.map((department) => (
+                <option key={department.id} value={department.nom_departement}>{department.nom_departement}</option>
+              ))}
+            </select>
+            <select value={filterRole} onChange={(event) => setFilter(setFilterRole, event.target.value)}>
+              <option value="">Tous les rôles</option>
+              <option value="SUPER_ADMIN">Super admin</option>
+              <option value="ADMIN">Admin</option>
+              <option value="USER">Utilisateur</option>
+            </select>
+            <select value={filterStatus} onChange={(event) => setFilter(setFilterStatus, event.target.value)}>
+              <option value="">Tous les statuts</option>
+              <option value="true">Actifs</option>
+              <option value="false">Inactifs</option>
+            </select>
+            <button className="users-reset-button" onClick={resetFilters} title="Réinitialiser les filtres">
+              <FilterX size={17} /><span>Réinitialiser</span>
+            </button>
+            <button className="users-refresh-button" onClick={loadData} title="Actualiser">
+              <RefreshCw size={17} />
+            </button>
           </div>
-        </div>
-        <div className="au-stat-card">
-          <div className="au-stat-icon" style={{ background: "#dcfce7", color: "#16a34a", width: "48px", height: "48px", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <UserCheck size={24} />
+          <div className="users-results-meta">
+            <strong>{filteredUsers.length}</strong> utilisateur{filteredUsers.length > 1 ? "s" : ""} trouvé{filteredUsers.length > 1 ? "s" : ""}
+            {selectedIds.size > 0 && <span>{selectedIds.size} sélectionné{selectedIds.size > 1 ? "s" : ""}</span>}
           </div>
-          <div>
-            <div className="au-stat-value" style={{ color: "#16a34a" }}>{activeUsers}</div>
-            <div className="au-stat-label">Comptes Actifs</div>
-          </div>
-        </div>
-        <div className="au-stat-card">
-          <div className="au-stat-icon" style={{ background: "#fee2e2", color: "#dc2626", width: "48px", height: "48px", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <UserX size={24} />
-          </div>
-          <div>
-            <div className="au-stat-value" style={{ color: "#dc2626" }}>{inactiveUsers}</div>
-            <div className="au-stat-label">Comptes Inactifs</div>
-          </div>
-        </div>
-      </div>
+        </section>
 
-      {/* ── Search & filters ────────────────────────────────────────────────── */}
-      <div className="au-filter-bar">
-        <div className="au-search-wrap">
-          <Search size={16} className="au-search-icon" />
-          <input
-            className="au-search-input"
-            placeholder="Rechercher par nom, email..."
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          />
-        </div>
-
-        {isSuperAdmin && (
-          <select
-            className="au-filter-select"
-            value={filterDept}
-            onChange={(e) => { setFilterDept(e.target.value); setPage(1); }}
-          >
-            <option value="">Tous les départements</option>
-            {uniqueDepts.map((d) => <option key={d} value={d}>{d}</option>)}
-          </select>
-        )}
-
-        <select
-          className="au-filter-select"
-          value={filterRole}
-          onChange={(e) => { setFilterRole(e.target.value); setPage(1); }}
-        >
-          <option value="">Tous les rôles</option>
-          <option value="USER">USER</option>
-          <option value="ADMIN">ADMIN</option>
-          <option value="SUPER_ADMIN">SUPER_ADMIN</option>
-        </select>
-
-        <select
-          className="au-filter-select"
-          value={filterStatus}
-          onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-        >
-          <option value="">Tous les statuts</option>
-          <option value="actif">Actif</option>
-          <option value="inactif">Inactif</option>
-        </select>
-
-        <button className="au-refresh-btn" onClick={loadData} title="Actualiser">
-          <RefreshCw size={16} />
-        </button>
-      </div>
-
-      {/* ── Users table ─────────────────────────────────────────────────────── */}
-      <div className="au-table-card">
-        <div className="au-table-wrap">
-          <table className="au-table">
-            <thead>
-              <tr>
-                <th>Email</th>
-                <th>Nom complet</th>
-                <th>Département</th>
-                <th>Rôle</th>
-                <th>Statut</th>
-                <th>Actif</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.map((item) => {
-                const status = normalizeStatus(item);
-                return (
-                  <tr key={item.id} className="au-table-row">
-                    <td className="au-td-email">{item.email}</td>
-                    <td className="au-td-name">{item.nom_complet}</td>
-
-                    <td>
-                      {isSuperAdmin ? (
-                        <select
-                          className="au-inline-select"
-                          value={item.departement_nom || ""}
-                          onChange={(e) => updateUserProfile(item, { departement_nom: e.target.value })}
-                        >
-                          <option value="">Aucun</option>
-                          {departements.map((dep) => (
-                            <option key={dep.id} value={dep.nom_departement}>{dep.nom_departement}</option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span className="au-td-text">{item.departement_nom || "—"}</span>
-                      )}
-                    </td>
-
-                    <td>
-                      {isSuperAdmin ? (
-                        <select
-                          className="au-inline-select"
-                          value={item.role}
-                          onChange={(e) => updateUserProfile(item, { role: e.target.value })}
-                        >
-                          <option value="USER">USER</option>
-                          <option value="ADMIN">ADMIN</option>
-                        </select>
-                      ) : (
-                        <span className="au-role-badge">{item.role}</span>
-                      )}
-                    </td>
-
-                    <td>
-                      <span className={STATUS_CLASSES[status] || "au-badge au-badge-orange"}>
-                        {STATUS_LABELS[status] || status}
-                      </span>
-                    </td>
-
-                    <td>
-                      <span className={item.est_actif ? "au-badge au-badge-green" : "au-badge au-badge-red"}>
-                        {item.est_actif ? "Oui" : "Non"}
-                      </span>
-                    </td>
-
-                    <td>
-                      <div className="au-actions">
-                        {canDeactivate(item) && (
-                          <button className="au-btn-toggle" onClick={() => toggleStatus(item)}>
-                            Désactiver
-                          </button>
-                        )}
-                        {canReactivate(item) && (
-                          <button className="au-btn-toggle" onClick={() => toggleStatus(item)}>
-                            {status === "BLOQUE_TENTATIVES" ? "Débloquer" : "Réactiver"}
-                          </button>
-                        )}
-                        <button className="au-btn-toggle" onClick={() => regenerateRecoveryCodes(item)}>
-                          Codes secours
-                        </button>
-                        <button className="au-btn-delete" onClick={() => deleteUser(item)}>
-                          <UserX size={14} />
-                          Supprimer
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-
-              {paginated.length === 0 && (
+        <section className="users-table-shell">
+          <div className="users-table-scroll">
+            <table className="users-premium-table">
+              <thead>
                 <tr>
-                  <td colSpan="7" className="au-empty-row">
-                    {search ? "Aucun résultat pour cette recherche." : "Aucun utilisateur."}
-                  </td>
+                  <th className="users-check-column">
+                    <input type="checkbox" checked={allPageSelected} onChange={togglePageSelection} aria-label="Sélectionner la page" />
+                  </th>
+                  <th>Utilisateur</th>
+                  <th>Rôle</th>
+                  <th>Département</th>
+                  <th>Statut</th>
+                  <th>Dernière connexion</th>
+                  <th className="users-actions-heading">Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* ── Mobile card list ── */}
-        <div className="au-card-list">
-          {paginated.map((item) => {
-            const status = normalizeStatus(item);
-            return (
-              <div key={item.id} className="au-list-card">
-                <div className="au-list-card-header">
-                  <div className="au-td-email">{item.email}</div>
-                  <span className={STATUS_CLASSES[status] || "au-badge au-badge-orange"}>
-                    {STATUS_LABELS[status] || status}
-                  </span>
-                </div>
-                <div className="au-list-card-body">
-                  <div className="au-list-card-row">
-                    <span className="au-list-card-label">Nom</span>
-                    <span className="au-list-card-value">{item.nom_complet}</span>
-                  </div>
-                  <div className="au-list-card-row">
-                    <span className="au-list-card-label">Département</span>
-                    <span className="au-list-card-value">{item.departement_nom || "—"}</span>
-                  </div>
-                  <div className="au-list-card-row">
-                    <span className="au-list-card-label">Rôle</span>
-                    <span className="au-role-badge">{item.role}</span>
-                  </div>
-                </div>
-                <div className="au-list-card-actions">
-                  {canDeactivate(item) && (
-                    <button className="au-btn-toggle" onClick={() => toggleStatus(item)}>
-                      Désactiver
-                    </button>
-                  )}
-                  {canReactivate(item) && (
-                    <button className="au-btn-toggle" onClick={() => toggleStatus(item)}>
-                      {status === "BLOQUE_TENTATIVES" ? "Débloquer" : "Réactiver"}
-                    </button>
-                  )}
-                  <button className="au-btn-toggle" onClick={() => regenerateRecoveryCodes(item)}>
-                    Codes secours
-                  </button>
-                  <button className="au-btn-delete" onClick={() => deleteUser(item)}>
-                    <UserX size={14} />
-                    Supprimer
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-          {paginated.length === 0 && (
-            <div className="au-empty-row">
-              {search ? "Aucun résultat pour cette recherche." : "Aucun utilisateur."}
-            </div>
-          )}
-        </div>
-
-        {totalPages > 1 && (
-          <div className="au-pagination">
-            <button className="au-page-btn" disabled={page === 1} onClick={() => setPage(page - 1)}>‹</button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-              <button
-                key={p}
-                className={`au-page-btn ${p === page ? "au-page-btn-active" : ""}`}
-                onClick={() => setPage(p)}
-              >
-                {p}
-              </button>
-            ))}
-            <button className="au-page-btn" disabled={page === totalPages} onClick={() => setPage(page + 1)}>›</button>
-          </div>
-        )}
-      </div>
-
-      {/* ── Drawer overlay ──────────────────────────────────────────────────── */}
-      {drawerOpen && <div className="au-overlay" onClick={() => setDrawerOpen(false)} />}
-
-      {/* ── Drawer panel ────────────────────────────────────────────────────── */}
-      <div className={`au-drawer ${drawerOpen ? "au-drawer-open" : ""}`}>
-        <div className="au-drawer-header">
-          <div>
-            <h2 className="au-drawer-title">Créer un utilisateur</h2>
-            <p className="au-drawer-hint">
-              Après création, l'utilisateur reçoit un email avec un bouton d'activation.
-            </p>
-          </div>
-          <button className="au-drawer-close" onClick={() => setDrawerOpen(false)}>
-            <X size={20} />
-          </button>
-        </div>
-
-        {error && <div className="alert alert-error" style={{ margin: "0 0 16px" }}>{error}</div>}
-        {message && <div className="alert alert-success" style={{ margin: "0 0 16px" }}>{message}</div>}
-
-        {isAdmin && (
-          <div className="alert alert-info" style={{ margin: "0 0 16px", fontSize: 13 }}>
-            En tant qu'administrateur, vous gérez uniquement les utilisateurs de votre département.
-          </div>
-        )}
-
-        <form className="au-drawer-form" onSubmit={createUser}>
-          <div className="au-field">
-            <label className="au-label">Email</label>
-            <input
-              className="au-input"
-              type="email"
-              value={form.email}
-              onChange={(e) => updateField("email", e.target.value)}
-              placeholder="utilisateur@tunisietelecom.tn"
-              required
-            />
-          </div>
-
-          <div className="au-field">
-            <label className="au-label">Nom complet</label>
-            <input
-              className="au-input"
-              value={form.nom_complet}
-              onChange={(e) => updateField("nom_complet", e.target.value)}
-              placeholder="Prénom Nom"
-              required
-            />
-          </div>
-
-          <div className="au-field">
-            <label className="au-label">Département</label>
-            {isSuperAdmin ? (
-              <select
-                className="au-input"
-                value={form.departement_nom}
-                onChange={(e) => updateField("departement_nom", e.target.value)}
-                required
-              >
-                <option value="" disabled>Choisir un département</option>
-                {departements.map((item) => (
-                  <option key={item.id} value={item.nom_departement}>{item.nom_departement}</option>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr><td colSpan="7" className="users-table-state">Chargement des utilisateurs…</td></tr>
+                ) : paginatedUsers.length === 0 ? (
+                  <tr><td colSpan="7" className="users-table-state">Aucun utilisateur ne correspond aux filtres.</td></tr>
+                ) : paginatedUsers.map((item) => (
+                  <Fragment key={item.id}>
+                    <tr key={item.id} className={selectedIds.has(item.id) ? "is-selected" : ""}>
+                      <td className="users-check-column">
+                        <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelected(item.id)} aria-label={`Sélectionner ${item.email}`} />
+                      </td>
+                      <td>
+                        <div className="users-person-cell">
+                          <span className="users-avatar">{getInitials(item.nom_complet, item.email)}</span>
+                          <div><strong>{item.nom_complet || "Nom non renseigné"}</strong><span>{item.email}</span></div>
+                        </div>
+                      </td>
+                      <td><span className={`users-role-badge role-${roleClass(item.role)}`}>{ROLE_LABELS[item.role] || item.role}</span></td>
+                      <td><span className="users-department-tag">{item.departement_nom || "Aucun"}</span></td>
+                      <td>
+                        <span className={`users-status-badge ${item.est_actif ? "is-active" : "is-inactive"}`}>
+                          <i />{item.est_actif ? "Actif" : "Inactif"}
+                        </span>
+                      </td>
+                      <td><span className="users-last-login">{formatDate(item.date_derniere_connexion)}</span></td>
+                      <td className="users-actions-cell">
+                        <details className="users-action-dropdown">
+                          <summary aria-label={`Actions pour ${item.email}`}><EllipsisVertical size={19} /></summary>
+                          <div className="users-action-menu">
+                            {isSuperAdmin && (
+                              <button onClick={() => setEditingId(editingId === item.id ? null : item.id)}><Edit3 size={15} /> Modifier</button>
+                            )}
+                            <button onClick={() => regenerateRecoveryCodes(item)}><KeyRound size={15} /> Codes de secours</button>
+                            {canDeactivate(item) && (
+                              <button onClick={() => toggleStatus(item)}><UserX size={15} /> Désactiver</button>
+                            )}
+                            {canReactivate(item) && (
+                              <button onClick={() => toggleStatus(item)}><CheckCircle2 size={15} /> Réactiver</button>
+                            )}
+                            <button className="is-danger" onClick={() => deleteUser(item)}><Trash2 size={15} /> Supprimer</button>
+                          </div>
+                        </details>
+                      </td>
+                    </tr>
+                    {editingId === item.id && (
+                      <tr key={`${item.id}-edit`} className="users-edit-row">
+                        <td colSpan="7">
+                          <div className="users-inline-editor">
+                            <span><ShieldCheck size={17} /> Modifier les accès de <strong>{item.nom_complet || item.email}</strong></span>
+                            <label>Rôle
+                              <select value={item.role} onChange={(event) => updateUserProfile(item, { role: event.target.value })}>
+                                <option value="SUPER_ADMIN">Super admin</option>
+                                <option value="ADMIN">Admin</option>
+                                <option value="USER">Utilisateur</option>
+                              </select>
+                            </label>
+                            <label>Département
+                              <select value={item.departement_nom || ""} onChange={(event) => updateUserProfile(item, { departement_nom: event.target.value })}>
+                                {departments.map((department) => (
+                                  <option key={department.id} value={department.nom_departement}>{department.nom_departement}</option>
+                                ))}
+                              </select>
+                            </label>
+                            <button onClick={() => setEditingId(null)}><X size={16} /> Fermer</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
-              </select>
-            ) : (
-              <div className="au-input au-input-readonly">
-                {currentUser?.departement_nom || "Département associé à votre compte"}
-              </div>
-            )}
+              </tbody>
+            </table>
           </div>
 
-          <div className="au-field">
-            <label className="au-label">Rôle</label>
-            {isSuperAdmin ? (
-              <select
-                className="au-input"
-                value={form.role}
-                onChange={(e) => updateField("role", e.target.value)}
-              >
-                <option value="USER">USER</option>
-                <option value="ADMIN">ADMIN</option>
+          <footer className="users-pagination">
+            <div className="users-per-page">
+              <span>Afficher</span>
+              <select value={itemsPerPage} onChange={(event) => { setItemsPerPage(Number(event.target.value)); setPage(1); }}>
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
               </select>
-            ) : (
-              <div className="au-input au-input-readonly">USER</div>
-            )}
-          </div>
+              <span>par page</span>
+            </div>
+            <span className="users-range">
+              {filteredUsers.length ? (currentPage - 1) * itemsPerPage + 1 : 0} - {Math.min(currentPage * itemsPerPage, filteredUsers.length)} sur {filteredUsers.length}
+            </span>
+            <nav aria-label="Pagination utilisateurs">
+              <button disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}><ChevronLeft size={16} /></button>
+              {visiblePages.map((pageNumber) => (
+                <button key={pageNumber} className={pageNumber === currentPage ? "is-current" : ""} onClick={() => setPage(pageNumber)}>{pageNumber}</button>
+              ))}
+              <button disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)}><ChevronRight size={16} /></button>
+            </nav>
+          </footer>
+        </section>
+      </main>
 
-          <button
-            className="au-btn-submit"
-            type="submit"
-            disabled={loading || (isSuperAdmin && !form.departement_nom)}
-          >
-            <Plus size={18} />
-            {loading ? "Création en cours..." : "Créer l'utilisateur"}
+      <Drawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        title="Créer un utilisateur"
+        description="Après création, l’utilisateur reçoit un email avec un bouton d’activation."
+        labelledBy="create-user-title"
+        footer={(
+          <button type="submit" form="create-user-form" className="au-btn-submit" disabled={loading || (isSuperAdmin && !form.departement_nom)}>
+            <Plus size={16} /> {loading ? "Création en cours…" : "Créer l’utilisateur"}
           </button>
-        </form>
-      </div>
+        )}
+      >
+            <form id="create-user-form" onSubmit={createUser} className="platform-drawer-form">
+              <div className="au-field">
+                <label className="au-label">Nom complet</label>
+                <input className="au-input" value={form.nom_complet} onChange={(event) => setForm({ ...form, nom_complet: event.target.value })} required />
+              </div>
+              <div className="au-field">
+                <label className="au-label">Email</label>
+                <input className="au-input" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required />
+              </div>
+              <div className="au-field">
+                <label className="au-label">Rôle</label>
+                {isSuperAdmin ? (
+                  <select className="au-input" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>
+                    <option value="USER">Utilisateur</option>
+                    <option value="ADMIN">Admin</option>
+                  </select>
+                ) : (
+                  <div className="au-input au-input-readonly">USER</div>
+                )}
+              </div>
+              <div className="au-field">
+                <label className="au-label">Département</label>
+                {isSuperAdmin ? (
+                  <select className="au-input" value={form.departement_nom} onChange={(event) => setForm({ ...form, departement_nom: event.target.value })} required>
+                    {departments.map((department) => (
+                      <option key={department.id} value={department.nom_departement}>{department.nom_departement}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="au-input au-input-readonly">{currentUser?.departement_nom || "Département associé à votre compte"}</div>
+                )}
+              </div>
+            </form>
+      </Drawer>
     </Layout>
   );
 }

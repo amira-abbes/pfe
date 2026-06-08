@@ -8,6 +8,7 @@ const SESSION_EXPIRED_REASON = "session_expired";
 const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
 const ACTIVITY_THROTTLE_MS = 1500;
 const ACCOUNT_STATUS_CHECK_MS = 30 * 1000;
+const PERMISSIONS_CHANGED_KEY = "permissionsChangedAt";
 const LAST_ACTIVITY_KEY = "lastActivityAt";
 const AUTH_FLOW_PREFIXES = [
   "/login",
@@ -332,6 +333,33 @@ export function AuthProvider({ children }) {
     }, ACCOUNT_STATUS_CHECK_MS);
     return () => clearAccountStatusTimer();
   }, [accessToken]);
+
+  useEffect(() => {
+    if (!accessToken) return undefined;
+
+    const refreshPermissions = (event) => {
+      const changedDepartment = event?.detail?.departement_nom;
+      if (changedDepartment && changedDepartment !== user?.departement_nom && user?.role !== "SUPER_ADMIN") {
+        return;
+      }
+      refreshMe({ skipAuthRedirect: true, silent: true }).catch(() => {});
+    };
+    const refreshPermissionsFromStorage = (event) => {
+      if (event.key === PERMISSIONS_CHANGED_KEY) refreshPermissions();
+    };
+    const refreshPermissionsOnFocus = () => refreshPermissions();
+
+    window.addEventListener("permissions:changed", refreshPermissions);
+    window.addEventListener("permissions:stale", refreshPermissions);
+    window.addEventListener("storage", refreshPermissionsFromStorage);
+    window.addEventListener("focus", refreshPermissionsOnFocus);
+    return () => {
+      window.removeEventListener("permissions:changed", refreshPermissions);
+      window.removeEventListener("permissions:stale", refreshPermissions);
+      window.removeEventListener("storage", refreshPermissionsFromStorage);
+      window.removeEventListener("focus", refreshPermissionsOnFocus);
+    };
+  }, [accessToken, user?.departement_nom, user?.role]);
 
   useEffect(() => {
     redirectingRef.current = false;

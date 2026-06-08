@@ -1,6 +1,8 @@
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   CloudUpload,
   FileDown,
   FileText,
@@ -8,11 +10,13 @@ import {
   Home,
   Loader2,
   LogOut,
+  Maximize2,
+  Menu,
+  Minimize2,
   Moon,
   Printer,
   RotateCcw,
   Search,
-  Settings,
   ShieldAlert,
   Sun,
   TrendingDown,
@@ -20,11 +24,14 @@ import {
   Zap,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { NavLink, Navigate, useNavigate, useParams } from "react-router-dom";
 
 import Layout from "../components/Layout";
+import PageHeader from "../components/PageHeader";
 
 import {
+  downloadBadDebtsGlobalReportPdf,
   generateBadDebtsGlobalReport,
   getApiError,
   getBadDebtsAtRisk,
@@ -494,12 +501,13 @@ function BadDebtsWorkspace({ view }) {
     globalReportLoading,
     globalReportLoadingStage,
     globalReportError,
+    setGlobalReportError,
     refreshDashboard,
     loadClients,
     runAgent,
     generateGlobalReport,
   };
-  const headerNode = <BadDebtsHeader view={view} />;
+  const headerNode = <BadDebtsHeader />;
 
   return (
     <Layout>
@@ -523,13 +531,13 @@ function BadDebtsSidebar({ theme, onThemeToggle }) {
     ["overview", "Vue globale", Home],
     ["clients", "Clients à risque", Users],
     ["imports", "Historique des imports", CloudUpload],
-    ["settings", "Paramètres", Settings],
   ];
 
   return (
     <aside className="bdx-sidebar">
-      <div className="bdx-side-brand">
-        <img src="/tt-logo.png" alt="Tunisie Telecom" />
+      <div className="bdx-side-brand" title="Menu">
+        <Menu size={19} />
+        <span className="bdx-side-label">Menu</span>
       </div>
       <nav className="bdx-side-nav">
         {items.map(([key, label, Icon]) => (
@@ -538,23 +546,21 @@ function BadDebtsSidebar({ theme, onThemeToggle }) {
             <span className="bdx-side-label">{label}</span>
           </NavLink>
         ))}
-      </nav>
-      <div className="bdx-side-bottom">
-        <button type="button" onClick={onThemeToggle} title="Mode clair/sombre">
+        <button className="bdx-theme-nav-button" type="button" onClick={onThemeToggle} title="Mode clair/sombre">
           {theme === "dark" ? <Moon size={18} /> : <Sun size={18} />}
           <span className="bdx-side-label">Mode clair/sombre</span>
         </button>
-      </div>
+      </nav>
     </aside>
   );
 }
 
-function BadDebtsHeader({ view }) {
-  const title = view === "overview" ? "Tableau de bord de pilotage des créances à risque" : (VIEW_META[view] || VIEW_META.overview);
+function BadDebtsHeader() {
   return (
-    <header className="bdx-header">
-      <h1>{title}</h1>
-    </header>
+    <PageHeader
+      className="platform-page-header--compact bdx-header bdx-header--institutional"
+      title="Tableau de bord de pilotage des créances à risque"
+    />
   );
 }
 
@@ -567,6 +573,9 @@ function ViewRenderer({ view, context }) {
 
 function OverviewPage({ summary, clients, headerNode }) {
   const navigate = useNavigate();
+  const overviewRef = useRef(null);
+  const [nativeFullscreen, setNativeFullscreen] = useState(false);
+  const [fallbackFullscreen, setFallbackFullscreen] = useState(false);
   const [activeRisk, setActiveRisk] = useState(null);
   const [activeSegment, setActiveSegment] = useState(null);
   const [activeScoreSegment, setActiveScoreSegment] = useState(null);
@@ -583,15 +592,64 @@ function OverviewPage({ summary, clients, headerNode }) {
     ["Anomalies détectées", summary.anomaly_count ?? 0, AlertTriangle, "orange"],
     ["Score moyen", scoreValue, Gauge, "green", 3],
   ];
+  const isFullscreen = nativeFullscreen || fallbackFullscreen;
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setNativeFullscreen(document.fullscreenElement === overviewRef.current);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
+  useEffect(() => {
+    if (!fallbackFullscreen) return undefined;
+    document.body.classList.add("bad-debts-overview-fullscreen-open");
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setFallbackFullscreen(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.classList.remove("bad-debts-overview-fullscreen-open");
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [fallbackFullscreen]);
+
+  async function toggleFullscreen() {
+    if (document.fullscreenElement === overviewRef.current) {
+      await document.exitFullscreen?.();
+      return;
+    }
+    if (fallbackFullscreen) {
+      setFallbackFullscreen(false);
+      return;
+    }
+    if (overviewRef.current?.requestFullscreen) {
+      try {
+        await overviewRef.current.requestFullscreen();
+        return;
+      } catch {
+        setFallbackFullscreen(true);
+        return;
+      }
+    }
+    setFallbackFullscreen(true);
+  }
 
   return (
-    <div className="bdx-view bdx-overview">
+    <div ref={overviewRef} className={`bdx-view bdx-overview ${fallbackFullscreen ? "is-fullscreen-fallback" : ""}`}>
       <section className="bdx-overview-kpi-grid" aria-label="Indicateurs Bad Debts">
         {kpis.map(([label, value, Icon, tone, decimals, to], index) => <KpiCard key={label} label={label} value={value} icon={Icon} tone={tone} index={index} decimals={decimals} onClick={to ? () => navigate(to) : undefined} />)}
       </section>
 
       <div className="bdx-overview-main">
-        {headerNode}
+        <div className="bdx-overview-header-row">
+          {headerNode}
+          <button className="bdx-overview-fullscreen-button" type="button" onClick={toggleFullscreen} title={isFullscreen ? "Quitter le plein écran" : "Afficher en plein écran"}>
+            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            <span>{isFullscreen ? "Quitter le plein écran" : "Plein écran"}</span>
+          </button>
+        </div>
         <section className="bdx-chart-grid">
           <Panel title="Répartition du risque" meta="Population ML">
             <DonutChart rows={tierRows} total={summary.total_clients || 0} active={activeRisk} onActiveChange={setActiveRisk} />
@@ -623,11 +681,13 @@ function RiskClientsPage({
   globalReportLoading,
   globalReportLoadingStage,
   globalReportError,
+  setGlobalReportError,
   generateGlobalReport,
 }) {
   const [filters, setFilters] = useState(DEFAULT_CLIENT_FILTERS);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [showGlobalReport, setShowGlobalReport] = useState(false);
+  const [pdfAction, setPdfAction] = useState("");
   const globalReportRef = useRef(null);
   const searchDebounceRef = useRef(null);
   const rows = clients.items || [];
@@ -697,12 +757,73 @@ function RiskClientsPage({
     }, 100);
   }
 
-  function handlePrintGlobalReport() {
-    window.print();
+  async function getGlobalReportPdfBlob() {
+    if (!globalReport) throw new Error("Rapport indisponible.");
+    const response = await downloadBadDebtsGlobalReportPdf(globalReport);
+    const blob = response.data instanceof Blob
+      ? response.data
+      : new Blob([response.data], { type: "application/pdf" });
+    if (!blob.size || !String(blob.type || "").toLowerCase().includes("pdf")) {
+      throw new Error("Réponse PDF invalide.");
+    }
+    return blob;
   }
 
-  function handleDownloadGlobalReportPdf() {
-    window.print();
+  async function handlePrintReport() {
+    if (!globalReport || pdfAction) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      setGlobalReportError("Impossible de générer le PDF. Autorisez les fenêtres contextuelles puis réessayez.");
+      return;
+    }
+
+    printWindow.document.title = "Tunisie Telecom - Plateforme Interne";
+    printWindow.document.body.innerHTML = "<p style=\"font:600 15px Arial,sans-serif;padding:24px;color:#334155\">Génération du rapport PDF...</p>";
+
+    try {
+      setGlobalReportError("");
+      setPdfAction("print");
+      const blob = await getGlobalReportPdfBlob();
+      const url = URL.createObjectURL(blob);
+      printWindow.location.replace(url);
+      window.setTimeout(() => {
+        try {
+          if (!printWindow.closed) {
+            printWindow.focus();
+            printWindow.print();
+          }
+        } catch {
+          // The native PDF viewer remains open so the user can use its print action.
+        }
+      }, 2500);
+      window.setTimeout(() => URL.revokeObjectURL(url), 120000);
+    } catch {
+      printWindow.close();
+      setGlobalReportError("Impossible de générer le PDF. Veuillez réessayer.");
+    } finally {
+      setPdfAction("");
+    }
+  }
+
+  async function handleDownloadPdf() {
+    if (!globalReport || pdfAction) return;
+    try {
+      setGlobalReportError("");
+      setPdfAction("download");
+      const blob = await getGlobalReportPdfBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "rapport_bad_debts.pdf";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      setGlobalReportError("Impossible de générer le PDF. Veuillez réessayer.");
+    } finally {
+      setPdfAction("");
+    }
   }
 
   return (
@@ -725,6 +846,8 @@ function RiskClientsPage({
         meta={clientsTotalText(clients.total)}
         activeFilters={activeFilters}
         page={page}
+        pageSize={pageSize}
+        total={Number(clients.total || 0)}
         totalPages={totalPages}
         onPrev={() => goToPage(page - 1)}
         onNext={() => goToPage(page + 1)}
@@ -736,7 +859,7 @@ function RiskClientsPage({
       {showGlobalReport && (
         <div ref={globalReportRef} className="bad-debts-global-report-section">
           {globalReportError && (
-            <div className="bdx-alert no-print"><AlertTriangle size={18} />{globalReportError}</div>
+            <div className="bdx-alert"><AlertTriangle size={18} />{globalReportError}</div>
           )}
           {globalReportLoading && (
             <div className="bad-debts-global-report-loading">
@@ -755,8 +878,9 @@ function RiskClientsPage({
           {!globalReportLoading && globalReport && (
             <GlobalReportPanel
               data={globalReport}
-              onPrint={handlePrintGlobalReport}
-              onDownloadPdf={handleDownloadGlobalReportPdf}
+              onPrint={handlePrintReport}
+              onDownloadPdf={handleDownloadPdf}
+              pdfAction={pdfAction}
               onClose={() => setShowGlobalReport(false)}
             />
           )}
@@ -820,7 +944,10 @@ function BadDebtsClientsKpis({ summary }) {
   );
 }
 
-function BadDebtsClientsTable({ rows, loading, title, meta, activeFilters, page, totalPages, onPrev, onNext, onPageChange, onReset, onRunAgent, loadingMsisdn }) {
+function BadDebtsClientsTable({ rows, loading, title, meta, activeFilters, page, pageSize, total, totalPages, onPrev, onNext, onPageChange, onReset, onRunAgent, loadingMsisdn }) {
+  const rangeStart = total > 0 ? ((page - 1) * pageSize) + 1 : 0;
+  const rangeEnd = total > 0 ? Math.min(page * pageSize, total) : 0;
+
   return (
     <section className="bad-debts-table-card">
       <div className="bad-debts-card-head table-head">
@@ -831,7 +958,7 @@ function BadDebtsClientsTable({ rows, loading, title, meta, activeFilters, page,
           <>
             <div className="bad-debts-table-wrap">
               <table className="bad-debts-table">
-                <thead><tr><th>Client</th><th>Segment client</th><th>Risque</th><th>Score</th><th>Dette (TND)</th><th>Remboursement</th><th>Anomalie</th><th>Action recommandée</th><th>Priorité</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Client</th><th>Segment client</th><th>Risque</th><th>Score</th><th>Dette (TND)</th><th>Remboursement</th><th>Anomalie</th><th>Action recommandée</th><th className="bad-debts-priority-cell">Priorité</th><th className="bad-debts-actions-cell">Actions</th></tr></thead>
                 <tbody>{rows.map((client) => {
                   const actionType = recommendedActionForClient(client);
                   const priority = priorityForClient(client);
@@ -839,28 +966,32 @@ function BadDebtsClientsTable({ rows, loading, title, meta, activeFilters, page,
                   return (
                     <tr key={client.msisdn}>
                       <td><ClientCell value={client.msisdn} /></td>
-                      <td>{segmentLabel(client.cluster_name)}</td>
-                      <td><RiskBadge tier={client.effective_tier || client.risk_tier} /></td>
+                      <td className="bad-debts-segment-cell" title={segmentLabel(client.cluster_name)}>{segmentLabel(client.cluster_name)}</td>
+                      <td className="bad-debts-risk-cell"><RiskBadge tier={client.effective_tier || client.risk_tier} /></td>
                       <td><ScoreBar score={client.final_risk_score} tone={client.effective_tier || client.risk_tier} /></td>
                       <td>{formatNumber(client.total_outstanding_amount)}</td>
                       <td>{formatPercent(client.avg_reimburse_ratio)}</td>
-                      <td><AnomalyBadge value={client.is_anomaly} /></td>
-                      <td>{client.recommended_action_label || actionLabel(actionType)}</td>
-                      <td><PriorityBadge priority={priority} label={client.priority_label} /></td>
-                      <td><div className="bad-debts-row-actions"><button className="bad-debts-btn primary small" type="button" onClick={() => onRunAgent(client.msisdn)} disabled={isLoading}>{isLoading ? <Loader2 className="spin" size={15} /> : <Search size={15} />}{isLoading ? "Analyse en cours..." : "Analyser"}</button></div></td>
+                      <td className="bad-debts-anomaly-cell"><AnomalyBadge value={client.is_anomaly} /></td>
+                      <td className="bad-debts-recommended-action" title={client.recommended_action_label || actionLabel(actionType)}><span>{client.recommended_action_label || actionLabel(actionType)}</span></td>
+                      <td className="bad-debts-priority-cell"><PriorityBadge priority={priority} label={client.priority_label} /></td>
+                      <td className="bad-debts-actions-cell"><div className="bad-debts-row-actions"><button className="bad-debts-btn primary small" type="button" onClick={() => onRunAgent(client.msisdn)} disabled={isLoading}>{isLoading ? <Loader2 className="spin" size={15} /> : <Search size={15} />}{isLoading ? "Analyse en cours..." : "Analyser"}</button></div></td>
                     </tr>
                   );
                 })}</tbody>
               </table>
             </div>
-            <div className="bad-debts-pagination">
-              <button className="bad-debts-page-dot nav" type="button" onClick={onPrev} disabled={page <= 1} aria-label="Page précédente">‹</button>
-              {paginationItems(page, totalPages).map((item, index) => (
-                item === "ellipsis"
-                  ? <span className="bad-debts-page-ellipsis" key={`ellipsis-${index}`}>…</span>
-                  : <button className={`bad-debts-page-dot ${item === page ? "is-active" : ""}`} type="button" key={item} onClick={() => onPageChange(item)} disabled={item === page}>{formatNumber(item)}</button>
-              ))}
-              <button className="bad-debts-page-dot nav" type="button" onClick={onNext} disabled={page >= totalPages} aria-label="Page suivante">›</button>
+            <div className="bad-debts-pagination-shell">
+              <p className="bad-debts-pagination-summary">{formatNumber(rangeStart)}–{formatNumber(rangeEnd)} sur {formatNumber(total)} clients</p>
+              <div className="bad-debts-pagination">
+                <button className="bad-debts-page-dot nav" type="button" onClick={onPrev} disabled={page <= 1} aria-label="Page précédente"><ChevronLeft size={16} /></button>
+                <span className="bad-debts-pagination-mobile-label">Page {formatNumber(page)} / {formatNumber(totalPages)}</span>
+                {paginationItems(page, totalPages).map((item, index) => (
+                  item === "ellipsis"
+                    ? <span className="bad-debts-page-ellipsis" key={`ellipsis-${index}`}>…</span>
+                    : <button className={`bad-debts-page-dot page-number ${item === page ? "is-active" : ""}`} type="button" key={item} onClick={() => onPageChange(item)} disabled={item === page}>{formatNumber(item)}</button>
+                ))}
+                <button className="bad-debts-page-dot nav" type="button" onClick={onNext} disabled={page >= totalPages} aria-label="Page suivante"><ChevronRight size={16} /></button>
+              </div>
             </div>
           </>
         ) : <div className="bad-debts-empty-state"><h3>Aucun client ne correspond aux filtres sélectionnés.</h3><button className="bad-debts-btn secondary" type="button" onClick={onReset}>Réinitialiser les filtres</button></div>
@@ -870,9 +1001,15 @@ function BadDebtsClientsTable({ rows, loading, title, meta, activeFilters, page,
 }
 
 function BadDebtsAgentDrawer({ feedback, open, onClose }) {
+  useEffect(() => {
+    if (!open) return undefined;
+    document.body.classList.add("modal-open");
+    return () => document.body.classList.remove("modal-open");
+  }, [open]);
+
   if (!open || !feedback) return null;
   const contact = feedback.contact || {};
-  return (
+  return createPortal(
     <div className="bad-debts-agent-overlay" role="presentation" onMouseDown={onClose}>
       <aside className="bad-debts-agent-drawer" role="dialog" aria-modal="true" aria-label="Analyse métier assistée client" onMouseDown={(event) => event.stopPropagation()}>
         <div className="bad-debts-drawer-head">
@@ -885,34 +1022,47 @@ function BadDebtsAgentDrawer({ feedback, open, onClose }) {
         </div>
         <div className="bad-debts-drawer-body">
           {feedback.reused && <div className="bad-debts-drawer-note"><CheckCircle2 size={17} />Analyse récente réutilisée car les données ML n'ont pas changé.</div>}
-          <div className="bad-debts-drawer-grid">
-            <div><span>Client / MSISDN</span><strong>{feedback.msisdn}</strong></div>
-            <div><span>Segment</span><strong>{cleanBusinessText(feedback.segment || "-")}</strong></div>
-            <div><span>Niveau de risque</span><strong>{feedback.effectiveTier ? tierLabel(feedback.effectiveTier) : feedback.risk ? tierLabel(feedback.risk) : "Non classé"}</strong></div>
-            <div><span>Score ML</span><strong>{formatScore(feedback.score)}</strong></div>
-            <div><span>Dette</span><strong>{feedback.debt != null ? `${formatNumber(feedback.debt)} TND` : "-"}</strong></div>
-            <div><span>Remboursement</span><strong>{formatRatioPercent(feedback.reimbursement)}</strong></div>
-            <div><span>Anomalie</span><strong>{feedback.anomaly ? "Oui" : "Non"}</strong></div>
-            <div><span>Priorité</span><strong>{feedback.priority}</strong></div>
-          </div>
+          <section className="bad-debts-analysis-section">
+            <h4>Identité client</h4>
+            <div className="bad-debts-drawer-grid identity">
+              <div><span>Client / MSISDN</span><strong>{feedback.msisdn}</strong></div>
+              <div><span>Segment</span><strong>{cleanBusinessText(feedback.segment || "-")}</strong></div>
+            </div>
+          </section>
+          <section className="bad-debts-analysis-section">
+            <h4>Niveau de risque</h4>
+            <div className="bad-debts-drawer-grid highlights">
+              <div className="risk"><span>Niveau de risque</span><strong>{feedback.effectiveTier ? tierLabel(feedback.effectiveTier) : feedback.risk ? tierLabel(feedback.risk) : "Non classé"}</strong></div>
+              <div className="score"><span>Score ML</span><strong>{formatScore(feedback.score)}</strong></div>
+              <div><span>Anomalie</span><strong>{feedback.anomaly ? "Oui" : "Non"}</strong></div>
+              <div className="priority"><span>Priorité</span><strong>{feedback.priority}</strong></div>
+            </div>
+          </section>
+          <section className="bad-debts-analysis-section">
+            <h4>Indicateurs financiers</h4>
+            <div className="bad-debts-drawer-grid financial">
+              <div><span>Dette</span><strong>{feedback.debt != null ? `${formatNumber(feedback.debt)} TND` : "-"}</strong></div>
+              <div><span>Remboursement</span><strong>{formatRatioPercent(feedback.reimbursement)}</strong></div>
+            </div>
+          </section>
           {feedback.anomalyEscalated && <div className="bad-debts-drawer-note"><AlertTriangle size={17} />Le niveau de risque a été renforcé car une anomalie ML a été détectée.</div>}
-          <section><h4>Recommandation principale</h4><p>{feedback.action}</p></section>
-          {!!feedback.factors.length && <section><h4>Facteurs principaux</h4><ul>{feedback.factors.map((item, index) => <li key={`${item}-${index}`}>{cleanBusinessText(item)}</li>)}</ul></section>}
+          {!!feedback.factors.length && <section className="bad-debts-analysis-section"><h4>Facteurs principaux</h4><ul>{feedback.factors.map((item, index) => <li key={`${item}-${index}`}>{cleanBusinessText(item)}</li>)}</ul></section>}
+          <section className="bad-debts-analysis-section recommendation"><h4>Décision recommandée</h4><p>{feedback.action}</p></section>
           {contact.type === "call_script" && (
-            <section>
-              <h4>Décision</h4>
+            <section className="bad-debts-analysis-section">
+              <h4>Orientation métier</h4>
               <p>Contacter le client via le centre de relation client afin de qualifier la situation.</p>
             </section>
           )}
           {(contact.type === "preventive_sms" || contact.type === "preventive_sms_ai") && contact.text && (
-            <section>
+            <section className="bad-debts-analysis-section">
               <h4>Exemple de message</h4>
               <p>{contact.text}</p>
             </section>
           )}
           {contact.type === "monitoring_note" && (
-            <section>
-              <h4>Décision</h4>
+            <section className="bad-debts-analysis-section">
+              <h4>Orientation métier</h4>
               <p>Aucune action client immédiate. Suivi automatique recommandé.</p>
             </section>
           )}
@@ -921,7 +1071,8 @@ function BadDebtsAgentDrawer({ feedback, open, onClose }) {
           <button className="bad-debts-btn secondary" type="button" onClick={onClose}>Fermer</button>
         </div>
       </aside>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -946,7 +1097,7 @@ function formatFiltersDisplay(filters = {}) {
   return parts.length ? `Filtres actifs : ${parts.join(", ")}` : "";
 }
 
-function GlobalReportPanel({ data, onPrint, onDownloadPdf, onClose }) {
+function GlobalReportPanel({ data, onPrint, onDownloadPdf, pdfAction, onClose }) {
   const report = data.report || {};
   const kpis = data.kpis || {};
   const filters = data.filters || {};
@@ -1033,18 +1184,20 @@ function GlobalReportPanel({ data, onPrint, onDownloadPdf, onClose }) {
     }));
 
   return (
-    <div className="global-report-panel print-zone">
-      <div className="global-report-header no-print">
+    <div className="global-report-panel">
+      <div className="global-report-header">
         <h3>{reportTitle}</h3>
         <div className="global-report-header-actions">
-          <button className="bad-debts-btn secondary small" type="button" onClick={onPrint}><Printer size={15} />Imprimer</button>
-          <button className="bad-debts-btn secondary small" type="button" onClick={onDownloadPdf}><FileDown size={15} />Télécharger PDF</button>
+          <button className="bad-debts-btn secondary small" type="button" onClick={onPrint} disabled={Boolean(pdfAction)}>
+            {pdfAction === "print" ? <Loader2 className="spin" size={15} /> : <Printer size={15} />}
+            {pdfAction === "print" ? "Génération..." : "Imprimer"}
+          </button>
+          <button className="bad-debts-btn secondary small" type="button" onClick={onDownloadPdf} disabled={Boolean(pdfAction)}>
+            {pdfAction === "download" ? <Loader2 className="spin" size={15} /> : <FileDown size={15} />}
+            {pdfAction === "download" ? "Génération..." : "Télécharger PDF"}
+          </button>
           <button className="bad-debts-btn secondary small" type="button" onClick={onClose}>Fermer</button>
         </div>
-      </div>
-
-      <div className="global-report-print-header print-only">
-        <h2>{reportTitle}</h2>
       </div>
 
       <div className="global-report-meta">
@@ -1222,11 +1375,6 @@ function GlobalReportPanel({ data, onPrint, onDownloadPdf, onClose }) {
         </section>
       )}
 
-      <div className="global-report-footer no-print">
-        <button className="bad-debts-btn secondary" type="button" onClick={onPrint}><Printer size={15} />Imprimer</button>
-        <button className="bad-debts-btn secondary" type="button" onClick={onDownloadPdf}><FileDown size={15} />Télécharger PDF</button>
-        <button className="bad-debts-btn secondary" type="button" onClick={onClose}>Fermer le rapport</button>
-      </div>
     </div>
   );
 }
@@ -1249,10 +1397,17 @@ function AnomalyBadge({ value }) {
 function ImportHistoryPage({ imports, refreshDashboard }) {
   const rows = imports || [];
   const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedImportDetails, setSelectedImportDetails] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadMessage, setUploadMessage] = useState("");
   const [uploadError, setUploadError] = useState("");
   const latest = rows[0] || null;
+
+  useEffect(() => {
+    if (!selectedImportDetails) return undefined;
+    document.body.classList.add("modal-open");
+    return () => document.body.classList.remove("modal-open");
+  }, [selectedImportDetails]);
 
   async function submitImport(event) {
     event.preventDefault();
@@ -1318,8 +1473,73 @@ function ImportHistoryPage({ imports, refreshDashboard }) {
         )}
       </Panel>
       <Panel title="Historique des imports" meta={`${rows.length} derniers imports`}>
-        <div className="bdx-table-wrap"><table className="bdx-table"><thead><tr><th>Date d'import</th><th>Date fin</th><th>Fichier source</th><th>Clients importés</th><th>Statut</th><th>Erreur</th></tr></thead><tbody>{rows.length ? rows.map((item) => <tr key={item.id}><td>{formatDate(item.imported_at)}</td><td>{formatDate(item.finished_at)}</td><td>{displayValue(item.file_name)}</td><td>{formatNumber(item.rows_imported)}</td><td><Badge tone={statusTone(item.status)}>{importStatusLabel(item.status)}</Badge></td><td>{item.error_message || "-"}</td></tr>) : <tr><td colSpan={6}><p className="bdx-empty">Aucun import disponible pour le moment.</p></td></tr>}</tbody></table></div>
+        <div className="bdx-table-wrap bdx-import-history-wrap">
+          <table className="bdx-table bdx-import-history-table">
+            <thead><tr><th>Date d'import</th><th>Fichier source</th><th>Clients importés</th><th>Statut</th><th>Erreur / détails</th><th>Actions</th></tr></thead>
+            <tbody>
+              {rows.length ? rows.map((item) => (
+                <tr key={item.id}>
+                  <td>{formatDate(item.imported_at)}</td>
+                  <td className="bdx-import-file" title={displayValue(item.file_name)}>{displayValue(item.file_name)}</td>
+                  <td>{formatNumber(item.rows_imported)}</td>
+                  <td><Badge tone={statusTone(item.status)}>{importStatusLabel(item.status)}</Badge></td>
+                  <td><p className="bdx-import-error-summary" title={item.error_message || ""}>{item.error_message || "Aucune erreur signalée"}</p></td>
+                  <td><button className="bdx-button bdx-import-details-btn" type="button" onClick={() => setSelectedImportDetails(item)}>Voir détails</button></td>
+                </tr>
+              )) : <tr><td colSpan={6}><p className="bdx-empty">Aucun import disponible pour le moment.</p></td></tr>}
+            </tbody>
+          </table>
+        </div>
       </Panel>
+      {selectedImportDetails && createPortal(
+        <div className="bdx-import-details-overlay" role="presentation" onMouseDown={() => setSelectedImportDetails(null)}>
+          <aside className="bdx-import-details-drawer" role="dialog" aria-modal="true" aria-label="Détails de l'import" onMouseDown={(event) => event.stopPropagation()}>
+            <header className="bdx-import-details-head">
+              <div>
+                <span className="bdx-import-details-label">Détails de l'import</span>
+                <h3>{displayValue(selectedImportDetails.file_name)}</h3>
+                <p>{formatDate(selectedImportDetails.imported_at)} · {importStatusLabel(selectedImportDetails.status)}</p>
+              </div>
+              <button type="button" onClick={() => setSelectedImportDetails(null)} aria-label="Fermer">×</button>
+            </header>
+            <div className="bdx-import-details-body">
+              <section className="bdx-import-details-section">
+                <h4>Informations générales</h4>
+                <dl>
+                  <div><dt>Fichier source</dt><dd title={displayValue(selectedImportDetails.file_name)}>{displayValue(selectedImportDetails.file_name)}</dd></div>
+                  <div><dt>Statut</dt><dd><Badge tone={statusTone(selectedImportDetails.status)}>{importStatusLabel(selectedImportDetails.status)}</Badge></dd></div>
+                  <div><dt>Date d'import</dt><dd>{formatDate(selectedImportDetails.imported_at)}</dd></div>
+                  <div><dt>Date de fin</dt><dd>{formatDate(selectedImportDetails.finished_at)}</dd></div>
+                </dl>
+              </section>
+
+              <section className="bdx-import-details-section">
+                <h4>Résultat de l'import</h4>
+                <dl>
+                  <div className="is-highlight"><dt>Clients importés</dt><dd>{formatNumber(selectedImportDetails.rows_imported)}</dd></div>
+                  <div><dt>Statut final</dt><dd><Badge tone={statusTone(selectedImportDetails.status)}>{importStatusLabel(selectedImportDetails.status)}</Badge></dd></div>
+                  {selectedImportDetails.pipeline_type && <div><dt>Périmètre</dt><dd>{displayValue(selectedImportDetails.pipeline_type)}</dd></div>}
+                  {selectedImportDetails.duration && <div><dt>Durée</dt><dd>{displayValue(selectedImportDetails.duration)}</dd></div>}
+                </dl>
+              </section>
+
+              <section className="bdx-import-details-section technical">
+                <h4>Erreur / détails techniques</h4>
+                {selectedImportDetails.error_message ? (
+                  <>
+                    <p className="bdx-import-error-intro">L'import n'a pas pu être finalisé. Le détail technique complet est disponible ci-dessous.</p>
+                    <pre>{selectedImportDetails.error_message}</pre>
+                  </>
+                ) : (
+                  <div className="bdx-import-success-note"><CheckCircle2 size={18} /><span>Aucune erreur signalée pour cet import.</span></div>
+                )}
+              </section>
+            </div>
+            <footer><button className="bdx-button" type="button" onClick={() => setSelectedImportDetails(null)}>Fermer</button></footer>
+          </aside>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

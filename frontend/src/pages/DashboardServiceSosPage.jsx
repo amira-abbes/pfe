@@ -54,46 +54,40 @@ export default function DashboardServiceSosPage() {
   }, [location.search]);
 
   return (
-    <Layout noPadding noScroll>
-      <div className="powerbi-fullscreen" ref={dashboardRef}>
-        {canDisplayDashboard && (
-          <div className="powerbi-minimal-toolbar" style={{ position: "absolute", top: 16, right: 16, zIndex: 10, display: "flex", gap: 8 }}>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={reloadDashboardView}
-              style={{ background: "rgba(15, 23, 42, 0.75)", color: "#fff", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.2)" }}
-            >
-              <RefreshCw size={16} />
-              Actualiser l’affichage
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handleFullscreen}
-              style={{ background: "rgba(15, 23, 42, 0.75)", color: "#fff", backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.2)" }}
-            >
-              <Maximize2 size={16} />
-              Plein écran
-            </button>
+    <Layout noScroll className="app-shell--service-sos">
+      <div className="service-sos-dashboard-page">
+        <div className="service-sos-toolbar">
+          <div className="service-sos-toolbar-title">
+            <strong>Service SOS</strong>
+            <span>Power BI</span>
           </div>
-        )}
+          {canDisplayDashboard && (
+            <div className="service-sos-toolbar-actions">
+              <button type="button" onClick={reloadDashboardView} title="Actualiser le dashboard">
+                <RefreshCw size={15} /> <span>Actualiser</span>
+              </button>
+              <button type="button" onClick={handleFullscreen} title="Afficher en plein écran">
+                <Maximize2 size={15} /> <span>Plein écran</span>
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="service-sos-dashboard-frame" ref={dashboardRef}>
+          {canDisplayDashboard && showIframe ? (
+            <iframe
+              key={iframeKey}
+              title="Dashboard Service SOS Power BI"
+              src={iframeSrc}
+              allowFullScreen
+            />
+          ) : canDisplayDashboard ? null : (
+            <div className="powerbi-error">
+              URL Power BI invalide ou non configurée.
+            </div>
+          )}
 
-        {canDisplayDashboard && showIframe ? (
-          <iframe
-            key={iframeKey}
-            title="Dashboard Service SOS Power BI"
-            src={iframeSrc}
-            allowFullScreen
-            style={{ width: "100%", height: "100%", border: 0 }}
-          />
-        ) : canDisplayDashboard ? null : (
-          <div className="powerbi-error">
-            URL Power BI invalide ou non configurée.
-          </div>
-        )}
-
-        {toast && <div className="powerbi-toast info" style={{ position: "absolute", bottom: 24, right: 24, zIndex: 10, background: "rgba(15, 23, 42, 0.9)", color: "#fff", padding: "10px 20px", borderRadius: 12, backdropFilter: "blur(10px)" }}>{toast}</div>}
+          {toast && <div className="service-sos-toast">{toast}</div>}
+        </div>
       </div>
     </Layout>
   );

@@ -1,465 +1,146 @@
 import {
-  ArrowRight,
-  BarChart2,
-  Brain,
-  Building2,
-  PieChart,
-  Shield,
-  ShieldCheck,
-  Sparkles,
-  User,
-  Users,
+  ArrowDown, ArrowRight, BarChart3, BrainCircuit, Building2, CheckCircle2,
+  CloudSun, KeyRound, Layers3, Moon, PlayCircle, RefreshCw,
+  ShieldCheck, Sun, TrendingUp, UserCog,
 } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { firstAuthorizedPath } from "../accessControl";
 import Layout from "../components/Layout";
 import { useAuth } from "../context/AuthContext";
 
 function useScrollReveal() {
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("reveal-visible");
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.1 }
-    );
-
-    const elements = document.querySelectorAll(".reveal-hidden");
-    elements.forEach((el) => observer.observe(el));
-
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("reveal-visible");
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.08 });
+    document.querySelectorAll(".reveal-hidden").forEach((element) => observer.observe(element));
     return () => observer.disconnect();
   }, []);
+}
+
+const floatingCards = [
+  { title: "ELT Actif", detail: "Pipeline quotidien", icon: RefreshCw, className: "elt" },
+  { title: "Power BI", detail: "Actualisation suivie", icon: BarChart3, className: "bi" },
+  { title: "IA Bad Debts", detail: "Prédiction risque", icon: BrainCircuit, className: "ai" },
+  { title: "Sécurité", detail: "JWT + MFA", icon: ShieldCheck, className: "security" },
+];
+
+const decisionModules = [
+  { title: "Power BI", description: "Visualisation des indicateurs SOS Solde & Data.", icon: BarChart3, chart: "bars", accent: "blue" },
+  { title: "Machine Learning", description: "Analyse prédictive des mauvaises créances.", icon: BrainCircuit, chart: "line", accent: "violet" },
+  { title: "Pipeline ELT SOS Solde & Data", description: "Collecte, transformation et valorisation des flux ADV et REV.", icon: Layers3, chart: "flow", accent: "cyan" },
+];
+
+const profiles = [
+  ["Super Administrateur", "Tous les modules", "Plateforme complète"],
+  ["Administrateur départemental", "Gestion utilisateurs", "Son département"],
+  ["Commercial", "Dashboards SOS", "Activité & parc"],
+  ["Assurance & Risque", "Bad Debts IA", "Risque client"],
+  ["Analyse Opérationnelle", "ELT & dashboards", "Traitements et suivi"],
+];
+
+function MiniChart({ type }) {
+  if (type === "line") {
+    return <div className="b2b-mini-chart b2b-mini-line" aria-hidden="true"><svg viewBox="0 0 240 86" preserveAspectRatio="none"><path d="M4 70 C40 62, 52 66, 78 46 S126 58, 150 32 S198 38, 236 10" /><path className="fill" d="M4 70 C40 62, 52 66, 78 46 S126 58, 150 32 S198 38, 236 10 L236 86 L4 86 Z" /></svg></div>;
+  }
+  if (type === "flow") {
+    const steps = ["ADV + REV", "Extraction", "Chargement Oracle", "Transformation", "Agrégation", "Reporting Power BI"];
+    return (
+      <div className="b2b-mini-chart b2b-mini-flow" aria-label="Pipeline ELT SOS Solde et Data">
+        {steps.map((step, index) => (
+          <div className="b2b-flow-step" key={step}>
+            <span>{step}</span>
+            {index < steps.length - 1 && <ArrowDown size={13} aria-hidden="true" />}
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return <div className="b2b-mini-chart b2b-mini-bars" aria-hidden="true">{[42, 68, 55, 86, 72, 94, 80].map((height, index) => <i key={index} style={{ height: `${height}%` }} />)}</div>;
 }
 
 export default function AccueilPage() {
   const { user, hasRight } = useAuth();
   useScrollReveal();
 
-  const isSuperAdmin = user?.role === "SUPER_ADMIN";
-  const isAdmin = user?.role === "ADMIN";
-  const isAdminArea = isAdmin || isSuperAdmin;
-
   const hour = new Date().getHours();
-  const greeting =
-    hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
+  const roleLabel = user?.role === "SUPER_ADMIN" ? "Super Administrateur"
+    : ["ADMIN", "ADMIN_DEPARTEMENTAL"].includes(user?.role) ? "Administrateur"
+      : "Utilisateur";
+  const displayName = user?.nom_complet?.trim()?.split(/\s+/)[0] || roleLabel;
+  const greeting = hour >= 5 && hour < 12 ? "Bonjour"
+    : hour >= 12 && hour < 18 ? "Bon après-midi" : "Bonsoir";
+  const GreetingIcon = hour >= 5 && hour < 12 ? Sun
+    : hour >= 12 && hour < 18 ? CloudSun : Moon;
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
+  const isAdmin = ["ADMIN", "ADMIN_DEPARTEMENTAL", "SUPER_ADMIN"].includes(user?.role);
 
-  const allCards = [
-    {
-      to: "/dashboard/parc-service-sos",
-      icon: <BarChart2 size={40} />,
-      label: "Tableau de bord du Parc d'abonnés",
-      desc: "Vue d'ensemble et évolution du parc d'abonnés Tunisie Telecom entre abonné prepaid et hybride , et data et solde",
-      color: "#3b82f6", // blue
-      hidden: !hasRight("dashboard_parc_service_sos"),
-    },
-    {
-      to: "/dashboard/service-sos",
-      icon: <PieChart size={40} />,
-      label: "Tableau de Bord de visualisation des services SOS Solde et Data de Tunisie Télécom",
-      desc: "Tableau de bord de visualisation des services SOS Solde et Data",
-      color: "#8b5cf6", // purple
-      badge: "PowerBI",
-      badgeColor: "badge-orange",
-      hidden: !hasRight("dashboard_service_sos"),
-    },
-    {
-      to: "/dashboard/bad-debts",
-      icon: <Brain size={40} />,
-      label: "Bad Debts Dashboard",
-      desc: "Analyse prédictive des mauvaises créances générée par Machine Learning",
-      color: "#ef4444", // red/coral
-      badge: "ML",
-      badgeColor: "badge-green",
-      hidden: !hasRight("dashboard_bad_debts"),
-    },
-    {
-      to: "/admin/users",
-      icon: <Users size={40} />,
-      label: "Utilisateurs",
-      desc: "Créer, modifier et gérer les comptes utilisateurs et leurs accès",
-      color: "#6366f1", // indigo
-      hidden: !hasRight("gerer_utilisateurs"),
-    },
-    {
-      to: "/admin/departements",
-      icon: <Building2 size={40} />,
-      label: "Départements",
-      desc: "Configurer les départements et les permissions d'accès",
-      color: "#f97316", // orange
-      hidden: !(hasRight("gerer_departements") || hasRight("gerer_roles")),
-    },
-  ];
-
-  const cards = useMemo(() => {
-    if (isSuperAdmin) {
-      return allCards.filter((c) => !c.hidden);
-    }
-    if (isAdmin) {
-      return [
-        ...allCards.filter((c) => !c.hidden && c.to.startsWith("/dashboard/")),
-        {
-          to: "/admin/mon-departement",
-          icon: <Building2 size={40} />,
-          label: "Mon Département",
-          desc: "Consulter les informations de mon département",
-          color: "#f97316", // orange
-        },
-      ].filter(Boolean);
-    }
-    // USER role
-    return [
-      {
-        to: "/security",
-        icon: <Shield size={40} />,
-        label: "Sécurité",
-        desc: "Gérez vos codes de secours et votre authentification MFA",
-        color: "#16a34a", // green
-      },
-      {
-        to: "/mon-compte",
-        icon: <User size={40} />,
-        label: "Mon Compte",
-        desc: (
-          <div style={{ fontSize: "13px", marginTop: "4px" }}>
-            <div style={{ fontWeight: 600 }}>{user?.nom_complet}</div>
-            <div style={{ opacity: 0.8 }}>Dept: {user?.departement_nom || "N/A"}</div>
-            <div style={{ marginTop: "6px" }}>
-              <span
-                className={`au-badge ${
-                  user?.statut_compte === "ACTIF" ? "au-badge-green" : "au-badge-red"
-                }`}
-                style={{ fontSize: "10px", padding: "2px 8px" }}
-              >
-                {user?.statut_compte}
-              </span>
-            </div>
-          </div>
-        ),
-        color: "#3b82f6", // blue
-      },
-    ];
-  }, [isSuperAdmin, isAdmin, allCards, user, hasRight]);
-
-  const primaryCtaPath = firstAuthorizedPath(user);
+  const dashboardPath = hasRight("dashboard_service_sos") ? "/dashboard/service-sos"
+    : hasRight("dashboard_parc_service_sos") ? "/dashboard/parc-service-sos"
+      : hasRight("dashboard_bad_debts") ? "/dashboard/bad-debts" : "/mon-compte";
+  const modules = [
+    { title: "Dashboard Service SOS", description: "Analyse des avances, remboursements et services.", icon: BarChart3, to: "/dashboard/service-sos", visible: hasRight("dashboard_service_sos") },
+    { title: "Dashboard Parc Service SOS", description: "Suivi du parc prépayé et hybride.", icon: BarChart3, to: "/dashboard/parc-service-sos", visible: hasRight("dashboard_parc_service_sos") },
+    { title: "Dashboard Bad Debts", description: "Anticipation des mauvaises créances.", icon: BrainCircuit, to: "/dashboard/bad-debts", visible: hasRight("dashboard_bad_debts") },
+    { title: "Traitement ELT", description: "Lancement, suivi et contrôle des traitements.", icon: PlayCircle, to: "/admin/elt", visible: hasRight("lancer_elt") },
+    { title: "Utilisateurs", description: "Gestion des comptes et des accès.", icon: UserCog, to: "/admin/users", visible: isSuperAdmin },
+    { title: "Départements & permissions", description: "Organisation des rôles par département.", icon: Building2, to: "/admin/departements", visible: isSuperAdmin },
+    { title: "Mon département", description: "Gestion des utilisateurs et accès de votre département.", icon: Building2, to: "/admin/mon-departement", visible: isAdmin },
+    { title: "Sécurité", description: "Authentification multifacteur et codes de secours.", icon: KeyRound, to: "/security", visible: true },
+  ].filter((module) => module.visible);
 
   return (
-    <Layout title="Accueil" subtitle="Plateforme interne Tunisie Telecom">
-
-      {/* ── Ambient Aurora background mesh ── */}
-      <div className="accueil-bg" aria-hidden="true">
-        <div className="accueil-mesh" />
-      </div>
-
-      {/* ── Hero welcome banner ── */}
-      <div className="accueil-hero">
-
-        {/* Decorative blur circles */}
-        <div className="accueil-hero-blur-tr" aria-hidden="true" />
-        <div className="accueil-hero-blur-bl" aria-hidden="true" />
-
-        {/* LEFT COLUMN — Text */}
-        <div className="accueil-hero-left">
-          {/* Badge pill */}
-          <div className="accueil-greeting">
-            <Sparkles size={16} className="accueil-sparkle" />
-            {greeting}, {user?.nom_complet?.split(" ")[0] || "Utilisateur"} !
+    <Layout>
+      <div className="b2b-home">
+        <section className="b2b-hero">
+          <div className="b2b-hero-copy">
+            <h1 className="b2b-hero-title">Plateforme Décisionnelle SOS Solde &amp; Data</h1>
+            <div className="b2b-eyebrow"><GreetingIcon size={16} />{greeting}, {displayName}</div>
+            <p className="b2b-hero-description">Pilotez les opérations SOS, supervisez les traitements ELT, analysez les performances Power BI et anticipez les mauvaises créances grâce à l’intelligence artificielle.</p>
+            <div className="b2b-hero-actions">
+              <Link to={dashboardPath} className="b2b-btn b2b-btn-primary">Accéder aux dashboards <ArrowRight size={17} /></Link>
+              {hasRight("lancer_elt") && <Link to="/admin/elt" className="b2b-btn b2b-btn-secondary">Superviser l’ELT <PlayCircle size={17} /></Link>}
+            </div>
+            <div className="b2b-hero-meta"><CheckCircle2 size={16} />Environnement sécurisé pour {user?.departement_nom || "Tunisie Telecom"}</div>
           </div>
 
-          {/* Title */}
-          <h1 className="accueil-title">
-            Bienvenue sur la plateforme
-            <span className="accueil-title-brand">Tunisie Telecom</span>
-          </h1>
-
-          {/* Subtitle */}
-          <p className="accueil-subtitle">
-            {isAdminArea
-              ? "Gérez vos équipes, sécurisez les accès et pilotez les traitements depuis un seul espace."
-              : "Accédez à votre espace personnel, gérez votre sécurité et consultez vos informations."}
-          </p>
-
-          {/* CTA Button */}
-          <Link to={primaryCtaPath} className="accueil-cta-btn">
-            Commencer →
-          </Link>
-
-          {/* Role badge */}
-          <div>
-            <div className="accueil-role-badge">
-              <ShieldCheck size={14} />
-              {user?.role === "SUPER_ADMIN"
-                ? "Super Administrateur"
-                : user?.role === "ADMIN"
-                  ? "Administrateur"
-                  : "Utilisateur"}
+          <div className="b2b-product-stage" aria-label="Aperçu de la plateforme">
+            <div className="b2b-product-card">
+              <div className="b2b-product-head"><div><span>Tunisie Telecom Platform</span><strong>Vue opérationnelle</strong></div><div className="b2b-live-pill"><span /> En ligne</div></div>
+              <div className="b2b-product-kpi"><span>Volume consolidé</span><strong>9 982 474</strong><small>CDR traités <b><TrendingUp size={12} /> +8.4%</b></small></div>
+              <div className="b2b-product-chart" aria-hidden="true">{[48, 62, 54, 76, 68, 88, 74, 96, 84, 100].map((height, index) => <i key={index} style={{ height: `${height}%` }} />)}</div>
+              <div className="b2b-product-stats"><div><strong>24/7</strong><span>Supervision</span></div><div><strong>2</strong><span>Dashboards BI</span></div><div><strong>92%</strong><span>Score IA</span></div></div>
             </div>
+            {floatingCards.map(({ title, detail, icon: Icon, className }) => <div key={title} className={`b2b-float-card ${className}`}><span><Icon size={17} /></span><div><strong>{title}</strong><small>{detail}</small></div></div>)}
           </div>
-        </div>
+        </section>
 
-        {/* RIGHT COLUMN — Floating device mockups */}
-        <div className="accueil-hero-right" aria-hidden="true">
-          {/* Tablet Mockup */}
-          <div className="hero-mockup-tablet">
-            {/* Mini nav bar */}
-            <div className="hero-mockup-tablet-nav">
-              <div className="hero-mock-nav-dot" style={{background: '#ef4444'}} />
-              <div className="hero-mock-nav-dot" style={{background: '#f59e0b'}} />
-              <div className="hero-mock-nav-dot" style={{background: '#10b981'}} />
-              <div className="hero-mock-nav-bar" />
-            </div>
-            {/* Bar chart SVG */}
-            <div className="hero-mockup-tablet-body">
-              <svg width="100%" height="130" viewBox="0 0 268 130" xmlns="http://www.w3.org/2000/svg">
-                {/* Y-axis gridlines */}
-                <line x1="0" y1="110" x2="268" y2="110" stroke="#e2e8f0" strokeWidth="1"/>
-                <line x1="0" y1="80"  x2="268" y2="80"  stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4,4"/>
-                <line x1="0" y1="50"  x2="268" y2="50"  stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4,4"/>
-                <line x1="0" y1="20"  x2="268" y2="20"  stroke="#e2e8f0" strokeWidth="1" strokeDasharray="4,4"/>
-                {/* Bars */}
-                <rect x="16"  y="50" width="34" height="60" rx="5" fill="#3b82f6"/>
-                <rect x="64"  y="30" width="34" height="80" rx="5" fill="#ef4444"/>
-                <rect x="112" y="60" width="34" height="50" rx="5" fill="#10b981"/>
-                <rect x="160" y="20" width="34" height="90" rx="5" fill="#8b5cf6"/>
-                <rect x="208" y="40" width="34" height="70" rx="5" fill="#f59e0b"/>
-                {/* Labels */}
-                <text x="33"  y="126" textAnchor="middle" fontSize="9" fill="#94a3b8">Jan</text>
-                <text x="81"  y="126" textAnchor="middle" fontSize="9" fill="#94a3b8">Fév</text>
-                <text x="129" y="126" textAnchor="middle" fontSize="9" fill="#94a3b8">Mar</text>
-                <text x="177" y="126" textAnchor="middle" fontSize="9" fill="#94a3b8">Avr</text>
-                <text x="225" y="126" textAnchor="middle" fontSize="9" fill="#94a3b8">Mai</text>
-              </svg>
-            </div>
+        <section className="b2b-section reveal-hidden">
+          <div className="b2b-section-heading"><div><span>Espaces de travail</span><h2>Modules intégrés</h2></div><p>Vos espaces de travail disponibles selon vos droits d’accès.</p></div>
+          <div className="b2b-modules-grid">
+            {modules.map(({ title, description, icon: Icon, to }) => (
+              <Link key={title} to={to} className="b2b-module-card"><span className="b2b-module-icon"><Icon size={21} /></span><div><h3>{title}</h3><p>{description}</p></div><ArrowRight className="b2b-module-arrow" size={18} /></Link>
+            ))}
           </div>
+        </section>
 
-          {/* Phone Mockup */}
-          <div className="hero-mockup-mobile">
-            <div className="hero-mock-mobile-line wide" />
-            <div className="hero-mock-mobile-line medium" />
-            <div className="hero-mock-mobile-line narrow" />
-            <div style={{height: '1px', background: 'rgba(255,255,255,0.15)', margin: '4px 0'}} />
-            <div className="hero-mock-mobile-line wide" />
-            <div className="hero-mock-mobile-line medium" />
+        <section className="b2b-section b2b-decision-section reveal-hidden">
+          <div className="b2b-section-heading"><div><span>Chaîne décisionnelle</span><h2>Une plateforme pour piloter les décisions</h2></div><p>Des données brutes jusqu’aux indicateurs et aux modèles prédictifs.</p></div>
+          <div className="b2b-decision-grid">
+            {decisionModules.map(({ title, description, icon: Icon, chart, accent }) => <article key={title} className={`b2b-decision-card ${accent}`}><div className="b2b-decision-head"><span><Icon size={20} /></span><h3>{title}</h3></div><p>{description}</p><MiniChart type={chart} /></article>)}
           </div>
-        </div>
+        </section>
 
-      </div>
+        <section className="b2b-section reveal-hidden">
+          <div className="b2b-section-heading"><div><span>Gouvernance</span><h2>Profils & permissions</h2></div><p>Une organisation claire des responsabilités et périmètres d’accès.</p></div>
+          <div className="b2b-profile-table-wrap"><table className="b2b-profile-table"><thead><tr><th>Profil</th><th>Accès principal</th><th>Périmètre</th></tr></thead><tbody>{profiles.map(([profile, access, scope]) => <tr key={profile}><td><span className="b2b-profile-mark" />{profile}</td><td>{access}</td><td>{scope}</td></tr>)}</tbody></table></div>
+        </section>
 
-      {/* ── Section 1: Hero Extension & Mockups ── */}
-      <div className="landing-hero-extension reveal-hidden">
-        <div className="landing-devices">
-          {/* Laptop Mockup */}
-          <div className="device-laptop">
-            <div className="mock-header">
-              <div className="mock-dot red" />
-              <div className="mock-dot yellow" />
-              <div className="mock-dot green" />
-            </div>
-            <div className="mock-body">
-              <div className="mock-sidebar">
-                <div className="mock-side-item" />
-                <div className="mock-side-item" />
-                <div className="mock-side-item" />
-              </div>
-              <div className="mock-content">
-                <div className="mock-grid">
-                  <div className="mock-card"><div className="mock-line" style={{width: '60%'}}/></div>
-                  <div className="mock-card"><div className="mock-line" style={{width: '40%'}}/></div>
-                  <div className="mock-card"><div className="mock-line" style={{width: '80%'}}/></div>
-                </div>
-                <div className="mock-chart">
-                  <div className="mock-bar" style={{height: '40%'}} />
-                  <div className="mock-bar" style={{height: '70%'}} />
-                  <div className="mock-bar" style={{height: '50%'}} />
-                  <div className="mock-bar" style={{height: '90%'}} />
-                  <div className="mock-bar" style={{height: '30%'}} />
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Phone Mockup */}
-          <div className="device-phone">
-            <div className="mock-phone-header" />
-            <div className="mock-phone-card">
-              <div className="mock-phone-circle" />
-              <div style={{flex: 1}}>
-                <div className="mock-line" style={{width: '80%'}} />
-                <div className="mock-line" style={{width: '40%'}} />
-              </div>
-            </div>
-            <div className="mock-phone-card">
-              <div className="mock-phone-circle" />
-              <div style={{flex: 1}}>
-                <div className="mock-line" style={{width: '60%'}} />
-                <div className="mock-line" style={{width: '30%'}} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Section 2: La Solution Complète ── */}
-      {isSuperAdmin && (
-        <div className="landing-section reveal-hidden">
-          <h2 className="landing-title-centered">La Solution Complète</h2>
-          <div className="landing-features-grid">
-            <div className="landing-feature-card">
-              <div className="landing-feature-icon" style={{background: '#eff6ff', color: '#3b82f6'}}>
-                <BarChart2 size={32} />
-              </div>
-              <h3>Tableaux de Bord</h3>
-              <p>Visualisez vos données en temps réel avec des dashboards interactifs et des rapports Power BI.</p>
-            </div>
-            <div className="landing-feature-card">
-              <div className="landing-feature-icon" style={{background: '#f3e8ff', color: '#9333ea'}}>
-                <Users size={32} />
-              </div>
-              <h3>Gestion des Accès</h3>
-              <p>Contrôlez les permissions et les accès par département depuis un seul espace centralisé.</p>
-            </div>
-            <div className="landing-feature-card">
-              <div className="landing-feature-icon" style={{background: '#dcfce7', color: '#16a34a'}}>
-                <ShieldCheck size={32} />
-              </div>
-              <h3>Sécurité Avancée</h3>
-              <p>Protégez votre compte avec MFA, WebAuthn et codes de secours pour une sécurité optimale.</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Section 3: Anticipez les Mauvaises Créances ── */}
-      {isAdminArea && (
-        <div className="landing-section gray reveal-hidden">
-          <div className="landing-inner landing-split">
-            <div className="landing-text">
-              <span className="landing-tag ml">Machine Learning</span>
-              <h2 className="landing-title">Anticipez les Mauvaises Créances</h2>
-              <p>Notre dashboard Bad Debts utilise des modèles de Machine Learning pour prédire et analyser les risques financiers en temps réel.</p>
-              {hasRight("dashboard_bad_debts") && (
-                <Link to="/dashboard/bad-debts" className="btn btn-primary" style={{borderRadius: '12px'}}>
-                  Découvrir →
-                </Link>
-              )}
-            </div>
-            <div className="landing-visual">
-              <span className="accueil-card-badge badge-green" style={{top: '-12px', right: '-12px', zIndex: 20}}>ML</span>
-              <div className="browser-mockup">
-                <div className="browser-header">
-                  <div className="mock-dot red" />
-                  <div className="mock-dot yellow" />
-                  <div className="mock-dot green" />
-                </div>
-                <div className="browser-body">
-                  <div className="mock-grid">
-                    <div className="mock-card"><div className="mock-line" style={{width: '70%'}}/><div className="mock-line" style={{width: '30%'}}/></div>
-                    <div className="mock-card"><div className="mock-line" style={{width: '50%'}}/><div className="mock-line" style={{width: '40%'}}/></div>
-                    <div className="mock-card"><div className="mock-line" style={{width: '90%'}}/><div className="mock-line" style={{width: '20%'}}/></div>
-                  </div>
-                  <div className="mock-chart">
-                    <div className="mock-bar" style={{height: '20%', background: '#ef4444'}} />
-                    <div className="mock-bar" style={{height: '40%', background: '#f59e0b'}} />
-                    <div className="mock-bar" style={{height: '60%', background: '#10b981'}} />
-                    <div className="mock-bar" style={{height: '80%', background: '#3b82f6'}} />
-                    <div className="mock-bar" style={{height: '50%', background: '#8b5cf6'}} />
-                    <div className="mock-bar" style={{height: '90%', background: '#6366f1'}} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Section 4: Power BI Integration ── */}
-      {isAdminArea && (
-        <div className="landing-section reveal-hidden">
-          <div className="landing-split reverse">
-            <div className="landing-text">
-              <span className="landing-tag powerbi">Power BI</span>
-              <h2 className="landing-title">Visualisation des Services SOS Solde & Data</h2>
-              <p>Accédez aux tableaux de bord Power BI directement intégrés à la plateforme pour suivre les services SOS Solde et Data de Tunisie Télécom.</p>
-              {(hasRight("dashboard_service_sos") || hasRight("dashboard_parc_service_sos")) && (
-                <Link to="/dashboard/service-sos" className="btn btn-primary" style={{borderRadius: '12px'}}>
-                  Accéder →
-                </Link>
-              )}
-            </div>
-            <div className="landing-visual">
-              <span className="accueil-card-badge badge-orange" style={{top: '-12px', right: '-12px', zIndex: 20}}>PowerBI</span>
-              <div className="browser-mockup">
-                <div className="browser-header">
-                  <div className="mock-dot red" />
-                  <div className="mock-dot yellow" />
-                  <div className="mock-dot green" />
-                </div>
-                <div className="browser-body" style={{flexDirection: 'row', gap: '24px'}}>
-                  <div style={{flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                    <div style={{width: '120px', height: '120px', borderRadius: '50%', background: 'conic-gradient(#8b5cf6 0% 40%, #c084fc 40% 75%, #e9d5ff 75% 100%)'}} />
-                  </div>
-                  <div style={{flex: 1, display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center'}}>
-                    <div className="mock-card"><div className="mock-line" style={{width: '80%'}}/></div>
-                    <div className="mock-card"><div className="mock-line" style={{width: '60%'}}/></div>
-                    <div className="mock-card"><div className="mock-line" style={{width: '90%'}}/></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Section 5: Accès Rapide ── */}
-      <div className="landing-section reveal-hidden" style={{paddingTop: '24px'}}>
-        <h2 className="landing-title-centered">Accès Rapide</h2>
-        <p className="landing-subtitle">Naviguez rapidement vers vos espaces de travail</p>
-        
-        <div className="accueil-carousel">
-          {cards.map((card) => (
-            <Link
-              key={card.to}
-              to={card.to}
-              className="accueil-card-sq"
-            >
-              {card.badge && (
-                <span className={`accueil-card-badge ${card.badgeColor}`}>
-                  {card.badge}
-                </span>
-              )}
-
-              {/* Colored top accent bar */}
-              <div
-                className="accueil-card-sq-bar"
-                style={{ background: `linear-gradient(90deg, ${card.color}, ${card.color}88)` }}
-              />
-
-              <div className="accueil-card-sq-inner">
-                <div
-                  className="accueil-card-sq-icon"
-                  style={{ background: `${card.color}14`, color: card.color }}
-                >
-                  {card.icon}
-                </div>
-                <div className="accueil-card-sq-content">
-                  <strong>{card.label}</strong>
-                  <p>{card.desc}</p>
-                </div>
-                <span
-                  className="accueil-card-sq-arrow"
-                  style={{ color: card.color }}
-                >
-                  <ArrowRight size={22} />
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
       </div>
     </Layout>
   );

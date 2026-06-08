@@ -1,6 +1,7 @@
+from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.agents.graph import run_agent_graph
@@ -24,6 +25,7 @@ from app.services.bad_debts_agent_service import (
     run_bad_debts_agent,
 )
 from app.services.bad_debts_llm_report_service import generate_global_llm_report
+from app.services.bad_debts_pdf_service import build_bad_debts_pdf
 from app.services.bad_debts_import_service import BadDebtsImportService
 from app.services.bad_debts_service import BadDebtsService
 
@@ -133,6 +135,22 @@ def generate_global_bad_debts_report(
     service: BadDebtsService = Depends(get_bad_debts_service),
 ):
     return generate_global_llm_report(service, filters.model_dump(exclude_none=False))
+
+
+@router.post("/bad-debts/reporting/global/pdf")
+def download_global_bad_debts_report_pdf(
+    report: BadDebtsGlobalReportResponse,
+    _: Utilisateur = Depends(require_bad_debts_dashboard),
+):
+    try:
+        payload = report.model_dump()
+        payload["generated_at"] = datetime.now(timezone.utc).isoformat()
+        content = build_bad_debts_pdf(payload)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Generation PDF impossible : {exc}") from exc
+
+    headers = {"Content-Disposition": 'attachment; filename="rapport_bad_debts.pdf"'}
+    return Response(content=content, media_type="application/pdf", headers=headers)
 
 
 @router.post("/bad-debts/imports/upload", response_model=ImportUploadResponse)

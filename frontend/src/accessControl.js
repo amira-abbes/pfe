@@ -14,18 +14,6 @@ export const DEPARTMENT_KEYS = {
   ANALYSE_OPERATIONNELLE: "ANALYSE_OPERATIONNELLE",
 };
 
-const DEPARTMENT_ADMIN_PERMISSIONS = {
-  [DEPARTMENT_KEYS.COMMERCIAL]: ["dashboard_service_sos", "dashboard_parc_service_sos"],
-  [DEPARTMENT_KEYS.ASSURANCE_RISQUE]: ["dashboard_bad_debts"],
-  [DEPARTMENT_KEYS.ANALYSE_OPERATIONNELLE]: ["dashboard_service_sos", "dashboard_parc_service_sos", "lancer_elt"],
-};
-
-const DEPARTMENT_USER_PERMISSIONS = {
-  [DEPARTMENT_KEYS.COMMERCIAL]: ["dashboard_bad_debts"],
-  [DEPARTMENT_KEYS.ASSURANCE_RISQUE]: ["dashboard_service_sos", "dashboard_parc_service_sos", "lancer_elt"],
-  [DEPARTMENT_KEYS.ANALYSE_OPERATIONNELLE]: ["dashboard_service_sos", "dashboard_parc_service_sos", "lancer_elt"],
-};
-
 const DEPARTMENT_ADMIN_ROLES = new Set(["ADMIN", "ADMIN_DEPARTEMENTAL"]);
 
 function normalizeDepartmentName(name) {
@@ -70,12 +58,8 @@ export function departmentKey(name) {
 export function effectivePermissionsForUser(user) {
   const role = String(user?.role || "").toUpperCase();
   if (role === "SUPER_ADMIN") return SUPER_ADMIN_PERMISSIONS;
-  const key = departmentKey(user?.departement_nom);
-  if (DEPARTMENT_ADMIN_ROLES.has(role)) {
-    return DEPARTMENT_ADMIN_PERMISSIONS[key] || [];
-  }
-  if (role === "USER") {
-    return DEPARTMENT_USER_PERMISSIONS[key] || [];
+  if ([...DEPARTMENT_ADMIN_ROLES, "USER"].includes(role) && Array.isArray(user?.permissions)) {
+    return user.permissions;
   }
   return [];
 }

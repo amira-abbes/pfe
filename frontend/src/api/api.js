@@ -140,6 +140,7 @@ api.interceptors.response.use(
     }
 
     if (status === 403 && detailStatus === "forbidden" && !skipAuthRedirect) {
+      window.dispatchEvent(new CustomEvent("permissions:stale"));
       redirectToAuthorizedPageOnce();
     }
 
@@ -245,4 +246,10 @@ export function uploadBadDebtsRawImport(file) {
 
 export function generateBadDebtsGlobalReport(filters = {}) {
   return api.post("/api/v1/bad-debts/reporting/global", filters);
+}
+
+export function downloadBadDebtsGlobalReportPdf(report) {
+  return api.post("/api/v1/bad-debts/reporting/global/pdf", report, {
+    responseType: "blob",
+  });
 }

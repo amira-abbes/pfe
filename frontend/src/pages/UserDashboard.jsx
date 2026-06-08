@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api/api";
 import Layout from "../components/Layout";
+import PageHeader from "../components/PageHeader";
 import { useAuth } from "../context/AuthContext";
 
 export default function UserDashboard() {
@@ -33,12 +34,7 @@ export default function UserDashboard() {
 
   return (
     <Layout>
-      <div style={{ textAlign: 'center', marginBottom: '32px', marginTop: '16px' }}>
-        <h1 style={{ margin: 0, fontSize: "28px", color: "#0f172a", fontWeight: 800 }}>Mon Compte</h1>
-        <p style={{ margin: "8px 0 0", color: "#64748b", fontSize: "15px" }}>
-          Espace personnel sécurisé par mot de passe et Authenticator.
-        </p>
-      </div>
+      <PageHeader eyebrow="Compte" title="Mon compte" subtitle="Consultez vos informations personnelles et votre statut d’accès." />
 
       <div style={{ 
         display: 'flex', 

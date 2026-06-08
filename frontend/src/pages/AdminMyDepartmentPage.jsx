@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { api, getApiError } from "../api/api";
 import Layout from "../components/Layout";
+import PageHeader from "../components/PageHeader";
 import { useAuth } from "../context/AuthContext";
 
 const STATUS_LABELS = {
@@ -175,21 +176,12 @@ export default function AdminMyDepartmentPage() {
 
   return (
     <Layout>
-      <div className="au-page-header">
-        <div>
-          <h1 className="au-page-title">Mon département</h1>
-          <p className="au-page-sub">
-            Gestion des utilisateurs rattachés à {departmentName || "votre département"}.
-          </p>
-        </div>
-        <button
-          className="au-btn-create"
-          onClick={() => { setDrawerOpen(true); setMessage(""); setError(""); }}
-        >
-          <Plus size={18} />
-          Ajouter un utilisateur
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="Administration"
+        title="Mon département"
+        subtitle={`Gérez les utilisateurs rattachés à ${departmentName || "votre département"}.`}
+        action={<button className="au-btn-create" onClick={() => { setDrawerOpen(true); setMessage(""); setError(""); }}><Plus size={18} />Ajouter un utilisateur</button>}
+      />
 
       {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
       {message && <div className="alert alert-success" style={{ marginBottom: 16 }}>{message}</div>}
