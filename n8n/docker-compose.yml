@@ -16,6 +16,7 @@ services:
       N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
     volumes:
       - n8n_data:/home/node/.n8n
+      - ./workflows:/workflows:ro
 
 volumes:
   n8n_data:

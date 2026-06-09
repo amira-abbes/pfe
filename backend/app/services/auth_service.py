@@ -2549,24 +2549,47 @@ class AuthService:
 
     def _get_recovery_code_supervisor(self, user: Utilisateur, role: str):
         if role == ROLE_ADMIN:
-            return (
+            candidates = (
                 self.db.query(Utilisateur)
                 .filter(Utilisateur.role == ROLE_SUPER_ADMIN)
                 .filter(Utilisateur.est_actif.is_(True))
-                .filter(Utilisateur.statut_compte == STATUT_ACTIVE)
                 .filter(Utilisateur.date_suppression.is_(None))
                 .order_by(Utilisateur.date_creation.asc())
-                .first()
+                .all()
             )
-        return (
+            return next((candidate for candidate in candidates if self._account_status(candidate) == STATUT_ACTIVE), None)
+
+        candidates = (
             self.db.query(Utilisateur)
             .filter(Utilisateur.role == ROLE_ADMIN)
             .filter(Utilisateur.departement_id == user.departement_id)
             .filter(Utilisateur.est_actif.is_(True))
-            .filter(Utilisateur.statut_compte == STATUT_ACTIVE)
             .filter(Utilisateur.date_suppression.is_(None))
             .order_by(Utilisateur.date_creation.asc())
-            .first()
+            .all()
+        )
+        department_admin = next(
+            (candidate for candidate in candidates if self._account_status(candidate) == STATUT_ACTIVE),
+            None,
+        )
+        if department_admin:
+            return department_admin
+
+        super_admin_candidates = (
+            self.db.query(Utilisateur)
+            .filter(Utilisateur.role == ROLE_SUPER_ADMIN)
+            .filter(Utilisateur.est_actif.is_(True))
+            .filter(Utilisateur.date_suppression.is_(None))
+            .order_by(Utilisateur.date_creation.asc())
+            .all()
+        )
+        return next(
+            (
+                candidate
+                for candidate in super_admin_candidates
+                if self._account_status(candidate) == STATUT_ACTIVE
+            ),
+            None,
         )
 
     def _disable_account_after_recovery_failures(
@@ -3095,12 +3118,13 @@ class AuthService:
         )
         for row in existing:
             if dict(row.details or {}).get("target_user_id") == str(user.id):
+                supervisor_role = self._user_role(supervisor)
                 return {
                     "success": True,
                     "status": "already_sent",
                     "message": (
                         "Une demande de réactivation a déjà été envoyée. Veuillez attendre le traitement par le super administrateur."
-                        if role == ROLE_ADMIN
+                        if role == ROLE_ADMIN or supervisor_role == ROLE_SUPER_ADMIN
                         else "Une demande de réactivation a déjà été envoyée. Veuillez attendre le traitement par votre administrateur."
                     ),
                 }
@@ -3163,12 +3187,13 @@ class AuthService:
             self.db.commit()
         except Exception:
             self.db.rollback()
+        supervisor_role = self._user_role(supervisor)
         return {
             "success": True,
             "status": "sent",
             "message": (
                 "Votre demande de réactivation a été envoyée au super administrateur."
-                if role == ROLE_ADMIN
+                if role == ROLE_ADMIN or supervisor_role == ROLE_SUPER_ADMIN
                 else "Votre demande de réactivation a été envoyée à l’administrateur de votre département."
             ),
             "mail_sent": bool(mail_sent),

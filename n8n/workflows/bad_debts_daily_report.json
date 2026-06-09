@@ -1,82 +1,14 @@
 {
+  "id": "Cr0LCNN8ASod0w18",
   "name": "Bad Debts — Rapport automatique quotidien",
   "nodes": [
     {
-      "parameters": {
-        "url": "http://host.docker.internal:8000/api/v1/n8n/metrics/summary",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "X-API-Key", "value": "={{$env.N8N_API_KEY}}" }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        208,
-        0
-      ],
-      "id": "e214a02a-e25c-4ebb-b4c6-afe01b8e4ebd",
-      "name": "Récupérer résumé Bad Debts"
-    },
-    {
-      "parameters": {
-        "url": "http://host.docker.internal:8000/api/v1/n8n/agent/reports?limit=5",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "X-API-Key", "value": "={{$env.N8N_API_KEY}}" }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        416,
-        0
-      ],
-      "id": "bd600346-ddda-4264-82f7-f20695ddef5d",
-      "name": "Récupérer rapports agentic"
-    },
-    {
-      "parameters": {
-        "jsCode": "const summary = $('Récupérer résumé Bad Debts').first().json;\nconst reports = $input.all().map(item => item.json);\n\nconst latestReport = reports[0] || null;\n\nconst totalClients = summary.total_clients_scored ?? summary.total_clients ?? 0;\nconst atRisk = summary.at_risk_count ?? 0;\nconst anomalies = summary.anomaly_count ?? 0;\nconst messagesSent = summary.messages_sent ?? 0;\n\nconst byTier = summary.by_tier || {};\nconst low = byTier.low ?? 0;\nconst medium = byTier.medium ?? 0;\nconst high = byTier.high ?? 0;\n\nconst reportSummary = latestReport?.summary || \"Aucun rapport agentic récent disponible.\";\nconst reportRecommendations = latestReport?.recommendations || \"Aucune recommandation disponible.\";\n\nreturn [\n  {\n    json: {\n      title: \"Rapport automatique Bad Debts — Service SOS Solde & Data\",\n      date: summary.date || new Date().toISOString().slice(0, 10),\n\n      kpis: {\n        total_clients_scored: totalClients,\n        at_risk_count: atRisk,\n        high_risk_count: high,\n        medium_risk_count: medium,\n        low_risk_count: low,\n        anomaly_count: anomalies,\n        messages_sent: messagesSent,\n      },\n\n      latest_agentic_report: {\n        summary: reportSummary,\n        recommendations: reportRecommendations,\n      },\n\n      business_text:\n        `Analyse Bad Debts du ${summary.date || \"jour\"} : ` +\n        `${totalClients} clients scorés, ${atRisk} clients à risque, ` +\n        `${high} en risque élevé, ${medium} en risque moyen, ` +\n        `${anomalies} anomalies détectées. ` +\n        `Dernière synthèse agentic : ${reportSummary}`\n    }\n  }\n];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        624,
-        0
-      ],
-      "id": "7d6d14b6-ed3f-4a2f-bf8a-e2511ecf44c7",
-      "name": "Construire résumé métier"
-    },
-    {
-      "parameters": {
-        "fromEmail": "plateforme.tt.interne@gmail.com",
-        "toEmail": "plateforme.tt.systemeadmin@gmail.com",
-        "subject": "=Rapport automatique Clients à risque — {{$json.date}}",
-        "html": "=<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0;padding:0;background:#eef4fb;font-family:Arial,Helvetica,sans-serif;color:#122033;\">\n  <tr>\n    <td align=\"center\" style=\"padding:28px 12px;\">\n\n      <table role=\"presentation\" width=\"680\" cellpadding=\"0\" cellspacing=\"0\" style=\"width:680px;max-width:100%;border-radius:22px;overflow:hidden;box-shadow:0 18px 45px rgba(15,35,80,0.18);background:#ffffff;\">\n        <tr>\n          <td background=\"https://raw.githubusercontent.com/amira-abbes/pfe/main/frontend/public/mail.bg.png\"\n              style=\"background-image:url('https://raw.githubusercontent.com/amira-abbes/pfe/main/frontend/public/mail.bg.png');background-size:100% 100%;background-position:center top;background-repeat:no-repeat;background-color:#ffffff;padding:38px 38px 36px 38px;\">\n\n            <!-- LOGO AU MILIEU -->\n            <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n              <tr>\n                <td align=\"center\" style=\"padding:0 0 18px 0;\">\n                  <img src=\"https://raw.githubusercontent.com/amira-abbes/pfe/main/frontend/public/tt-logo.png\"\n                       width=\"125\"\n                       alt=\"Tunisie Telecom\"\n                       style=\"display:block;width:125px;max-width:125px;border:0;border-radius:22px;background:#ffffff;padding:12px;box-shadow:0 14px 34px rgba(15,35,80,0.22);\">\n                </td>\n              </tr>\n\n              <tr>\n                <td align=\"center\" style=\"padding:0;\">\n                  <div style=\"font-size:12px;letter-spacing:0.7px;text-transform:uppercase;color:#123a8c;font-weight:bold;margin-bottom:8px;\">\n                    Service SOS Solde &amp; Data\n                  </div>\n\n                  <h1 style=\"margin:0;font-size:31px;line-height:38px;color:#071742;font-weight:900;text-align:center;letter-spacing:-0.5px;\">\n                    Rapport de pilotage des clients à risque\n                  </h1>\n\n                  <p style=\"margin:10px 0 0 0;font-size:16px;line-height:24px;color:#334155;text-align:center;font-weight:bold;\">\n                    Synthèse opérationnelle — Service SOS Solde &amp; Data\n                  </p>\n\n                  <div style=\"display:inline-block;margin-top:16px;background:#ffffff;border:1px solid #bfdbfe;border-radius:999px;padding:8px 14px;color:#123a8c;font-size:12px;font-weight:bold;box-shadow:0 6px 16px rgba(15,35,80,0.08);\">\n                    {{$json.date}}\n                  </div>\n                </td>\n              </tr>\n            </table>\n\n            <!-- ESPACE APRES HEADER -->\n            <div style=\"height:30px;line-height:30px;font-size:1px;\">&nbsp;</div>\n\n            <!-- INTRO -->\n            <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:rgba(255,255,255,0.94);border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 22px rgba(15,35,80,0.08);\">\n              <tr>\n                <td style=\"padding:18px 20px;\">\n                  <p style=\"margin:0;font-size:15px;line-height:24px;color:#334155;\">\n                    Bonjour, ce rapport présente les clients les plus sensibles identifiés par la plateforme interne.\n                    L’objectif est de faciliter la priorisation des actions de recouvrement et le suivi des profils à risque.\n                  </p>\n                </td>\n              </tr>\n            </table>\n\n            <!-- CARTE PRINCIPALE RISQUE ELEVE -->\n            <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:22px;background:linear-gradient(135deg,#fff1f5 0%,#fdf2f8 45%,#eef2ff 100%);border:1px solid #fbcfe8;border-radius:20px;box-shadow:0 12px 30px rgba(190,24,93,0.12);\">\n              <tr>\n                <td style=\"padding:24px 26px;\">\n                  <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n                    <tr>\n                      <td valign=\"middle\">\n                        <div style=\"font-size:12px;color:#9d174d;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;\">\n                          Priorité du jour\n                        </div>\n\n                        <div style=\"margin-top:8px;font-size:19px;line-height:26px;color:#172033;font-weight:bold;\">\n                          Clients à risque élevé\n                        </div>\n\n                        <div style=\"margin-top:8px;font-size:14px;line-height:22px;color:#475569;\">\n                          Ces clients doivent être traités en priorité par les équipes métier.\n                        </div>\n                      </td>\n\n                      <td width=\"150\" align=\"right\" valign=\"middle\">\n                        <div style=\"font-size:50px;line-height:52px;color:#be185d;font-weight:900;\">\n                          {{$json.kpis.high_risk_count}}\n                        </div>\n                        <div style=\"font-size:13px;color:#64748b;font-weight:bold;margin-top:4px;\">\n                          clients\n                        </div>\n                      </td>\n                    </tr>\n                  </table>\n                </td>\n              </tr>\n            </table>\n\n            <!-- KPI CONTEXTE -->\n            <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:18px;\">\n              <tr>\n                <td width=\"33.33%\" style=\"padding:6px;\">\n                  <div style=\"border-radius:14px;background:rgba(248,251,255,0.96);border:1px solid #dbeafe;padding:14px;text-align:center;box-shadow:0 6px 16px rgba(15,35,80,0.05);\">\n                    <div style=\"font-size:12px;color:#64748b;font-weight:bold;\">\n                      Clients scorés\n                    </div>\n                    <div style=\"font-size:22px;color:#0f2f72;font-weight:800;margin-top:5px;\">\n                      {{$json.kpis.total_clients_scored}}\n                    </div>\n                  </div>\n                </td>\n\n                <td width=\"33.33%\" style=\"padding:6px;\">\n                  <div style=\"border-radius:14px;background:rgba(240,253,255,0.96);border:1px solid #cffafe;padding:14px;text-align:center;box-shadow:0 6px 16px rgba(15,35,80,0.05);\">\n                    <div style=\"font-size:12px;color:#64748b;font-weight:bold;\">\n                      Clients à risque\n                    </div>\n                    <div style=\"font-size:22px;color:#087c91;font-weight:800;margin-top:5px;\">\n                      {{$json.kpis.at_risk_count}}\n                    </div>\n                  </div>\n                </td>\n\n                <td width=\"33.33%\" style=\"padding:6px;\">\n                  <div style=\"border-radius:14px;background:rgba(251,247,255,0.96);border:1px solid #e9d5ff;padding:14px;text-align:center;box-shadow:0 6px 16px rgba(15,35,80,0.05);\">\n                    <div style=\"font-size:12px;color:#64748b;font-weight:bold;\">\n                      Anomalies\n                    </div>\n                    <div style=\"font-size:22px;color:#7e22ce;font-weight:800;margin-top:5px;\">\n                      {{$json.kpis.anomaly_count}}\n                    </div>\n                  </div>\n                </td>\n              </tr>\n            </table>\n\n            <!-- REPARTITION -->\n            <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:18px;background:rgba(255,255,255,0.94);border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 8px 22px rgba(15,35,80,0.08);\">\n              <tr>\n                <td style=\"padding:18px 18px 14px 18px;\">\n                  <h2 style=\"margin:0 0 12px 0;font-size:18px;line-height:24px;color:#172033;\">\n                    Répartition du risque\n                  </h2>\n\n                  <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">\n                    <tr>\n                      <td width=\"33.33%\" style=\"padding:5px;\">\n                        <div style=\"border-radius:12px;background:#ecfdf5;border:1px solid #bbf7d0;padding:13px;text-align:center;\">\n                          <div style=\"font-size:12px;color:#166534;font-weight:bold;\">Faible</div>\n                          <div style=\"font-size:20px;color:#047857;font-weight:800;margin-top:4px;\">{{$json.kpis.low_risk_count}}</div>\n                        </div>\n                      </td>\n\n                      <td width=\"33.33%\" style=\"padding:5px;\">\n                        <div style=\"border-radius:12px;background:#fff7ed;border:1px solid #fed7aa;padding:13px;text-align:center;\">\n                          <div style=\"font-size:12px;color:#9a3412;font-weight:bold;\">Moyen</div>\n                          <div style=\"font-size:20px;color:#c2410c;font-weight:800;margin-top:4px;\">{{$json.kpis.medium_risk_count}}</div>\n                        </div>\n                      </td>\n\n                      <td width=\"33.33%\" style=\"padding:5px;\">\n                        <div style=\"border-radius:12px;background:#fdf2f8;border:1px solid #fbcfe8;padding:13px;text-align:center;\">\n                          <div style=\"font-size:12px;color:#9d174d;font-weight:bold;\">Élevé</div>\n                          <div style=\"font-size:20px;color:#be185d;font-weight:800;margin-top:4px;\">{{$json.kpis.high_risk_count}}</div>\n                        </div>\n                      </td>\n                    </tr>\n                  </table>\n                </td>\n              </tr>\n            </table>\n\n            <!-- RECOMMANDATIONS -->\n            <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:22px;border:1px solid #e9d5ff;background:rgba(251,247,255,0.96);border-radius:16px;box-shadow:0 8px 22px rgba(15,35,80,0.08);\">\n              <tr>\n                <td style=\"padding:22px 24px;\">\n                  <h2 style=\"margin:0 0 10px 0;font-size:18px;line-height:24px;color:#6d28d9;\">\n                    Recommandations opérationnelles\n                  </h2>\n                  <p style=\"margin:0;font-size:14px;line-height:23px;color:#334155;\">\n                    {{$json.latest_agentic_report.recommendations}}\n                  </p>\n                </td>\n              </tr>\n            </table>\n\n            <!-- CTA -->\n            <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:28px;\">\n              <tr>\n                <td align=\"center\">\n                  <a href=\"http://localhost:5173/dashboard/bad-debts/overview\"\n                     style=\"display:inline-block;background:linear-gradient(135deg,#0f3f9c,#2563eb,#d8208f);color:#ffffff;text-decoration:none;font-size:16px;font-weight:800;border-radius:999px;padding:16px 34px;box-shadow:0 14px 30px rgba(18,58,140,0.30);\">\n                    Accéder au dashboard\n                  </a>\n                </td>\n              </tr>\n            </table>\n\n            <!-- FOOTER -->\n            <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin-top:32px;\">\n              <tr>\n                <td align=\"center\" style=\"padding-top:20px;border-top:1px solid #cbd5e1;\">\n                  <p style=\"margin:0;text-align:center;font-size:13px;line-height:20px;color:#0f172a;font-weight:700;\">\n                    © Tunisie Telecom — Rapport interne généré automatiquement.\n                  </p>\n                </td>\n              </tr>\n            </table>\n\n          </td>\n        </tr>\n      </table>\n\n    </td>\n  </tr>\n</table>",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.emailSend",
-      "typeVersion": 2.1,
-      "position": [
-        832,
-        0
-      ],
-      "id": "d4f7dccf-d20e-4a98-8389-698321a8d233",
-      "name": "Envoyer rapport email",
-      "webhookId": "dc89ca97-e3ab-4180-a770-85cd0acda03e",
-      "credentials": {
-        "smtp": {
-          "id": "DlpP9psOuAnx13Vy",
-          "name": "SMTP account"
-        }
-      }
+      "parameters": {},
+      "id": "manual-trigger-bad-debts",
+      "name": "Declencheur manuel",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-520, 120]
     },
     {
       "parameters": {
@@ -88,52 +20,162 @@
           ]
         }
       },
+      "id": "daily-trigger-bad-debts",
+      "name": "Declencheur quotidien 08h",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
-      "position": [
-        -16,
-        -160
-      ],
-      "id": "81834c4c-5486-4286-afd7-ef147dec4521",
-      "name": "Déclencheur quotidien 08h"
+      "position": [-520, -80]
     },
     {
-      "parameters": {},
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        0,
-        0
-      ],
-      "id": "b703d4ff-ecd4-4560-bf4d-e0f3fe4a2c96",
-      "name": "Déclencheur manuel"
+      "parameters": {
+        "url": "={{$env.PFE_API_URL}}/api/v1/n8n/metrics/summary",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.N8N_API_KEY}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-bad-debts-summary",
+      "name": "Recuperer synthese Bad Debts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-280, 20]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.PFE_API_URL}}/api/v1/n8n/agent/reports?limit=1",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.N8N_API_KEY}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-agent-report",
+      "name": "Recuperer rapport agent IA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [-40, 20]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.PFE_API_URL}}/api/v1/n8n/clients/at-risk?tier=high&page=1&page_size=10",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-Key",
+              "value": "={{$env.N8N_API_KEY}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "get-at-risk-clients",
+      "name": "Recuperer clients a risque",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [200, 20]
+    },
+    {
+      "parameters": {
+        "jsCode": "const summary = $('Recuperer synthese Bad Debts').first().json;\nconst reportResponse = $('Recuperer rapport agent IA').first().json;\nconst clientsResponse = $('Recuperer clients a risque').first().json;\n\nconst report = Array.isArray(reportResponse) ? reportResponse[0] : reportResponse;\nconst clients = clientsResponse.items || [];\nconst byTier = summary.by_tier || {};\nconst latestImport = summary.latest_import || {};\n\nconst totalClients = summary.total_clients_scored ?? summary.total_clients ?? 0;\nconst atRiskCount = summary.at_risk_count ?? 0;\nconst highRisk = byTier.high ?? summary.high_risk_count ?? 0;\nconst mediumRisk = byTier.medium ?? summary.medium_risk_count ?? 0;\nconst lowRisk = byTier.low ?? summary.low_risk_count ?? 0;\nconst anomalies = summary.anomaly_count ?? 0;\nconst avgScore = summary.avg_final_risk_score ?? summary.average_score ?? null;\nconst today = summary.date || new Date().toISOString().slice(0, 10);\nconst dashboardUrl = $env.PFE_DASHBOARD_URL || 'http://localhost:5173/dashboard/bad-debts';\n\nconst formatNumber = (value) => value === null || value === undefined ? '-' : new Intl.NumberFormat('fr-FR').format(value);\nconst formatScore = (value) => value === null || value === undefined ? '-' : Number(value).toFixed(3);\nconst escapeHtml = (value) => String(value ?? '-').replace(/[&<>\"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[char]));\n\nconst clientRows = clients.map((client) => `\n<tr>\n  <td style=\"padding:9px;border-bottom:1px solid #e5e7eb;\">${escapeHtml(client.msisdn)}</td>\n  <td style=\"padding:9px;border-bottom:1px solid #e5e7eb;\">${escapeHtml(client.segment || client.cluster_name)}</td>\n  <td style=\"padding:9px;border-bottom:1px solid #e5e7eb;\">${escapeHtml(client.risk_label || client.risk_tier)}</td>\n  <td style=\"padding:9px;border-bottom:1px solid #e5e7eb;text-align:right;\">${formatScore(client.final_risk_score)}</td>\n  <td style=\"padding:9px;border-bottom:1px solid #e5e7eb;text-align:right;\">${formatNumber(client.total_outstanding_amount)}</td>\n</tr>`).join('');\n\nconst html = `\n<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:#f3f6fb;margin:0;padding:24px;font-family:Arial,Helvetica,sans-serif;color:#111827;\">\n  <tr>\n    <td align=\"center\">\n      <table role=\"presentation\" width=\"760\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:100%;background:#ffffff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;\">\n        <tr>\n          <td style=\"background:#123a8c;color:#ffffff;padding:24px 28px;\">\n            <h1 style=\"margin:0;font-size:24px;line-height:31px;\">Rapport automatique Bad Debts</h1>\n            <p style=\"margin:8px 0 0 0;font-size:14px;opacity:.92;\">Service SOS Solde & Data - ${escapeHtml(today)}</p>\n          </td>\n        </tr>\n        <tr>\n          <td style=\"padding:24px 28px;\">\n            <p style=\"margin:0 0 18px 0;font-size:15px;line-height:23px;\">\n              Ce rapport est genere automatiquement par n8n a partir des donnees ML disponibles dans PostgreSQL via les API FastAPI. Il n'est pas statique : les chiffres changent apres chaque import ou recalcul des scores.\n            </p>\n            <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 18px 0;\">\n              <tr>\n                <td style=\"padding:10px;background:#eff6ff;border:1px solid #bfdbfe;\"><strong>Clients scores</strong><br>${formatNumber(totalClients)}</td>\n                <td style=\"padding:10px;background:#fff7ed;border:1px solid #fed7aa;\"><strong>Clients a risque</strong><br>${formatNumber(atRiskCount)}</td>\n                <td style=\"padding:10px;background:#fdf2f8;border:1px solid #fbcfe8;\"><strong>Risque eleve</strong><br>${formatNumber(highRisk)}</td>\n                <td style=\"padding:10px;background:#f5f3ff;border:1px solid #ddd6fe;\"><strong>Anomalies</strong><br>${formatNumber(anomalies)}</td>\n              </tr>\n            </table>\n            <table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:0 0 20px 0;border-collapse:collapse;\">\n              <tr><td style=\"padding:8px;border-bottom:1px solid #e5e7eb;\"><strong>Risque faible</strong></td><td style=\"padding:8px;border-bottom:1px solid #e5e7eb;text-align:right;\">${formatNumber(lowRisk)}</td></tr>\n              <tr><td style=\"padding:8px;border-bottom:1px solid #e5e7eb;\"><strong>Risque moyen</strong></td><td style=\"padding:8px;border-bottom:1px solid #e5e7eb;text-align:right;\">${formatNumber(mediumRisk)}</td></tr>\n              <tr><td style=\"padding:8px;border-bottom:1px solid #e5e7eb;\"><strong>Score moyen</strong></td><td style=\"padding:8px;border-bottom:1px solid #e5e7eb;text-align:right;\">${formatScore(avgScore)}</td></tr>\n              <tr><td style=\"padding:8px;border-bottom:1px solid #e5e7eb;\"><strong>Dernier import</strong></td><td style=\"padding:8px;border-bottom:1px solid #e5e7eb;text-align:right;\">${escapeHtml(latestImport.nom_fichier || latestImport.filename || latestImport.id || '-')}</td></tr>\n            </table>\n            <h2 style=\"margin:0 0 10px 0;font-size:18px;\">Synthese IA</h2>\n            <p style=\"margin:0 0 8px 0;font-size:14px;line-height:22px;\">${escapeHtml(report?.summary || 'Aucune synthese disponible.')}</p>\n            <p style=\"margin:0 0 22px 0;font-size:14px;line-height:22px;\"><strong>Recommandations :</strong> ${escapeHtml(report?.recommendations || 'Aucune recommandation disponible.')}</p>\n            <h2 style=\"margin:0 0 10px 0;font-size:18px;\">Top clients a risque eleve</h2>\n            <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"border-collapse:collapse;font-size:13px;\">\n              <thead>\n                <tr style=\"background:#f9fafb;\">\n                  <th align=\"left\" style=\"padding:9px;border-bottom:1px solid #d1d5db;\">MSISDN</th>\n                  <th align=\"left\" style=\"padding:9px;border-bottom:1px solid #d1d5db;\">Segment</th>\n                  <th align=\"left\" style=\"padding:9px;border-bottom:1px solid #d1d5db;\">Risque</th>\n                  <th align=\"right\" style=\"padding:9px;border-bottom:1px solid #d1d5db;\">Score</th>\n                  <th align=\"right\" style=\"padding:9px;border-bottom:1px solid #d1d5db;\">Impayes</th>\n                </tr>\n              </thead>\n              <tbody>${clientRows || '<tr><td colspan=\"5\" style=\"padding:12px;text-align:center;\">Aucun client a risque eleve retourne par l API.</td></tr>'}</tbody>\n            </table>\n            <p style=\"margin:24px 0 0 0;text-align:center;\">\n              <a href=\"${dashboardUrl}\" style=\"display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:bold;border-radius:999px;padding:12px 22px;\">Ouvrir le dashboard Bad Debts</a>\n            </p>\n          </td>\n        </tr>\n      </table>\n    </td>\n  </tr>\n</table>`;\n\nreturn [{\n  json: {\n    date: today,\n    subject: `Rapport Bad Debts - ${today} - ${formatNumber(highRisk)} clients risque eleve`,\n    html_body: html,\n    kpis: { totalClients, atRiskCount, highRisk, mediumRisk, lowRisk, anomalies, avgScore },\n    clients_count: clients.length,\n    source_latest_import: latestImport\n  }\n}];"
+      },
+      "id": "build-mail-report",
+      "name": "Construire email dynamique",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 20]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{$env.N8N_SMTP_SENDER}}",
+        "toEmail": "={{$env.PFE_REPORT_EMAIL}}",
+        "subject": "={{$json.subject}}",
+        "html": "={{$json.html_body}}",
+        "options": {}
+      },
+      "id": "send-bad-debts-report",
+      "name": "Envoyer rapport email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [700, 20],
+      "webhookId": "bad-debts-daily-report-email",
+      "credentials": {
+        "smtp": {
+          "id": "DlpP9psOuAnx13Vy",
+          "name": "SMTP account"
+        }
+      }
     }
   ],
   "pinData": {},
   "connections": {
-    "Récupérer résumé Bad Debts": {
+    "Declencheur manuel": {
       "main": [
         [
           {
-            "node": "Récupérer rapports agentic",
+            "node": "Recuperer synthese Bad Debts",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Récupérer rapports agentic": {
+    "Declencheur quotidien 08h": {
       "main": [
         [
           {
-            "node": "Construire résumé métier",
+            "node": "Recuperer synthese Bad Debts",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Construire résumé métier": {
+    "Recuperer synthese Bad Debts": {
+      "main": [
+        [
+          {
+            "node": "Recuperer rapport agent IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recuperer rapport agent IA": {
+      "main": [
+        [
+          {
+            "node": "Recuperer clients a risque",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recuperer clients a risque": {
+      "main": [
+        [
+          {
+            "node": "Construire email dynamique",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Construire email dynamique": {
       "main": [
         [
           {
@@ -143,40 +185,15 @@
           }
         ]
       ]
-    },
-    "Déclencheur quotidien 08h": {
-      "main": [
-        [
-          {
-            "node": "Récupérer résumé Bad Debts",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Déclencheur manuel": {
-      "main": [
-        [
-          {
-            "node": "Récupérer résumé Bad Debts",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
     }
   },
   "active": true,
   "settings": {
-    "executionOrder": "v1",
-    "binaryMode": "separate"
+    "executionOrder": "v1"
   },
-  "versionId": "41eaed0b-ffac-4304-8380-f1be908de39d",
+  "versionId": "bad-debts-dynamic-email-v2",
   "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "7e8e551d8f4329691dc48c4150ec0b36282f52c5236bffbc2af5b9c4b1b3b398"
+    "templateCredsSetupCompleted": true
   },
-  "id": "KDZZ5AAwFmVtjGCV",
   "tags": []
 }

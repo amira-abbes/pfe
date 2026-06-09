@@ -2079,6 +2079,27 @@ select {
   width: min(720px, 100%);
 }
 
+.activation-totp-card {
+  max-width: 460px;
+}
+
+.activation-totp-card .qr-img {
+  margin: 4px auto 18px;
+}
+
+.activation-totp-card .actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.activation-totp-card .actions .btn,
+.activation-totp-card .form .btn,
+.activation-totp-card .form .btn-primary {
+  width: 100%;
+  justify-content: center;
+}
+
 .mini-stat {
   background: #f9fafb;
   border: 1px solid var(--line);

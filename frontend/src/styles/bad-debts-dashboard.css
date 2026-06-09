@@ -19,7 +19,7 @@ body,
   --bdx-green: #0f9f8a;
   --bdx-orange: #d97706;
   display: grid;
-  grid-template-columns: 82px minmax(0, 1fr);
+  grid-template-columns: 76px minmax(0, 1fr);
   width: 100%;
   max-width: 100%;
   min-height: 100vh;
@@ -64,9 +64,10 @@ body,
   height: 100vh;
   min-width: 0;
   overflow: hidden;
-  padding: 18px 12px;
+  margin: 14px 0 14px 14px;
+  padding: 18px 10px;
   border: 1px solid rgba(148, 163, 184, 0.16);
-  border-radius: 0 26px 26px 0;
+  border-radius: 20px;
   background:
     radial-gradient(circle at 50% 100%, rgba(109, 93, 246, 0.1), transparent 32%),
     linear-gradient(180deg, rgba(11, 35, 68, 0.96), rgba(7, 26, 51, 0.94));
@@ -102,7 +103,8 @@ body,
 .bdx-side-nav {
   display: grid;
   align-content: start;
-  gap: 8px;
+  gap: 14px;
+  padding-top: 42px;
 }
 
 .bdx-side-nav a,
@@ -113,9 +115,9 @@ body,
   align-items: center;
   gap: 12px;
   width: 100%;
-  min-height: 46px;
+  min-height: 48px;
   border: 0;
-  border-radius: 16px;
+  border-radius: 14px;
   background: transparent;
   justify-content: center;
   padding: 0;
@@ -2483,9 +2485,9 @@ button.bdx-kpi {
 
 .bdx-overview {
   display: grid;
-  grid-template-columns: clamp(240px, 19vw, 280px) minmax(0, 1fr);
+  grid-template-columns: clamp(280px, 20vw, 360px) minmax(0, 1fr);
   align-items: start;
-  gap: 18px;
+  gap: 14px;
   min-width: 0;
   max-width: 100%;
   overflow-x: hidden;
@@ -2503,7 +2505,7 @@ button.bdx-kpi {
 
 .bdx-overview-main {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   width: 100%;
   min-width: 0;
   max-width: 100%;
@@ -2512,14 +2514,14 @@ button.bdx-kpi {
 .bdx-overview .bdx-kpi {
   --kpi-accent: #38bdf8;
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);
+  grid-template-columns: 62px minmax(0, 1fr);
   grid-template-rows: auto auto;
-  column-gap: 12px;
+  column-gap: 18px;
   align-items: center;
-  min-height: 96px;
+  min-height: 118px;
   border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 22px;
-  padding: 13px;
+  border-radius: 14px;
+  padding: 18px 22px;
   background:
     radial-gradient(circle at 96% 12%, color-mix(in srgb, var(--kpi-accent) 16%, transparent), transparent 28%),
     linear-gradient(135deg, rgba(16, 43, 78, 0.95), rgba(11, 35, 68, 0.92));
@@ -2551,31 +2553,31 @@ button.bdx-kpi {
 
 .bdx-overview .bdx-kpi-icon {
   grid-row: 1 / 3;
-  width: 42px;
-  height: 42px;
-  border-radius: 16px;
+  width: 62px;
+  height: 62px;
+  border-radius: 18px;
   background: color-mix(in srgb, var(--kpi-accent) 82%, #0b2344);
   box-shadow: 0 10px 22px color-mix(in srgb, var(--kpi-accent) 22%, transparent);
 }
 
 .bdx-overview .bdx-kpi-icon svg {
-  width: 20px;
-  height: 20px;
+  width: 27px;
+  height: 27px;
 }
 
 .bdx-overview .bdx-kpi span {
   margin-top: 0;
   overflow: hidden;
   color: #cbd5e1;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .bdx-overview .bdx-kpi strong {
-  margin-top: 3px;
-  font-size: 29px;
+  margin-top: 9px;
+  font-size: 32px;
   letter-spacing: 0;
   color: #fff;
 }
@@ -2597,6 +2599,7 @@ button.bdx-kpi {
 .bdx-overview .bdx-chart-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+  align-items: stretch;
   min-width: 0;
   max-width: 100%;
 }
@@ -2667,9 +2670,9 @@ button.bdx-kpi {
 }
 
 .bdx-overview .bdx-chart-grid .bdx-panel {
-  min-height: 270px;
-  border-radius: 19px;
-  padding: 14px;
+  min-height: 286px;
+  border-radius: 18px;
+  padding: 16px 18px;
   overflow: hidden;
 }
 
@@ -2683,13 +2686,13 @@ button.bdx-kpi {
 
 .bdx-overview .bdx-donut-wrap {
   grid-template-columns: 1fr;
-  min-height: 212px;
-  gap: 12px;
+  min-height: 216px;
+  gap: 10px;
 }
 
 .bdx-overview .bdx-donut-wrap svg {
-  width: 166px;
-  height: 166px;
+  width: 176px;
+  height: 176px;
   max-width: 100%;
   filter: drop-shadow(0 15px 26px rgba(24, 31, 73, 0.2));
 }
@@ -2703,7 +2706,7 @@ button.bdx-kpi {
 }
 
 .bdx-overview .bdx-donut-center {
-  top: 58px;
+  top: 62px;
   width: 126px;
   max-width: 126px;
 }
@@ -2722,7 +2725,7 @@ button.bdx-kpi {
 }
 
 .bdx-overview .bdx-vbars-plot {
-  height: 188px;
+  height: 204px;
   gap: clamp(10px, 1.5vw, 18px);
 }
 
@@ -2750,7 +2753,7 @@ button.bdx-kpi {
 }
 
 .bdx-overview .bdx-hbars {
-  gap: 10px;
+  gap: 13px;
 }
 
 .bdx-overview .score-cluster-row {
@@ -2786,7 +2789,7 @@ button.bdx-kpi {
 }
 
 .bdx-overview .debt-radial-card {
-  min-height: 218px;
+  min-height: 228px;
 }
 
 .bdx-overview .debt-radial-chart {
@@ -5994,4 +5997,138 @@ body.bad-debts-overview-fullscreen-open {
   .bdx-overview.is-fullscreen-fallback {
     overflow-y: auto;
   }
+}
+/* Final alignment pass for the Bad Debts overview page */
+.bdx-shell.is-light {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+
+.bdx-shell.is-light .bdx-sidebar {
+  width: 76px;
+  height: calc(100vh - 28px);
+  margin: 14px 0 14px 14px;
+  border-radius: 20px;
+  padding: 18px 10px;
+}
+
+.bdx-shell.is-light .bdx-side-nav {
+  padding-top: 42px;
+  gap: 14px;
+}
+
+.bdx-shell.is-light .bdx-side-nav a,
+.bdx-shell.is-light .bdx-side-nav button {
+  min-height: 48px;
+  border-radius: 14px;
+}
+
+.bdx-shell.is-light .bdx-main:has(.bdx-overview) {
+  padding: 14px 16px 78px 12px;
+}
+
+.bdx-shell.is-light .bdx-overview {
+  grid-template-columns: clamp(300px, 21vw, 380px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
+  width: 100%;
+}
+
+.bdx-shell.is-light .bdx-overview-kpi-grid {
+  gap: 12px;
+  align-content: stretch;
+  height: 100%;
+}
+
+.bdx-shell.is-light .bdx-overview .bdx-kpi {
+  min-height: 118px;
+  height: 100%;
+  grid-template-columns: 62px minmax(0, 1fr);
+  gap: 18px;
+  padding: 18px 22px;
+  border-radius: 14px;
+}
+
+.bdx-shell.is-light .bdx-overview .bdx-kpi-icon {
+  width: 62px;
+  height: 62px;
+  border-radius: 18px;
+}
+
+.bdx-shell.is-light .bdx-overview .bdx-kpi-icon svg {
+  width: 27px;
+  height: 27px;
+}
+
+.bdx-shell.is-light .bdx-overview .bdx-kpi span {
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.bdx-shell.is-light .bdx-overview .bdx-kpi strong {
+  margin-top: 9px;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.bdx-shell.is-light .bdx-overview-main {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+}
+
+.bdx-shell.is-light .bdx-overview-header-row {
+  min-height: 58px;
+  align-items: center;
+  gap: 16px;
+}
+
+.bdx-shell.is-light .bdx-overview-header-row .bdx-header--institutional {
+  min-height: 0;
+  margin: 0;
+}
+
+.bdx-shell.is-light .bdx-overview-header-row .platform-page-title {
+  font-size: clamp(2.1rem, 2.8vw, 2.85rem);
+  line-height: 1.05;
+}
+
+.bdx-shell.is-light .bdx-overview-fullscreen-button {
+  height: 42px;
+  padding: 0 18px;
+  border-radius: 14px;
+  flex: 0 0 auto;
+}
+
+.bdx-shell.is-light .bdx-overview .bdx-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(286px, 1fr);
+  gap: 12px;
+  height: auto;
+  align-items: stretch;
+}
+
+.bdx-shell.is-light .bdx-overview .bdx-chart-grid .bdx-panel {
+  min-height: 286px;
+  height: 100%;
+  padding: 16px 18px;
+  border-radius: 18px;
+}
+
+.bdx-shell.is-light .bdx-overview .bdx-donut-wrap svg {
+  width: 176px;
+  height: 176px;
+}
+
+.bdx-shell.is-light .bdx-overview .bdx-vbars {
+  height: 204px;
+}
+
+.bdx-shell.is-light .bdx-overview .bdx-hbars {
+  gap: 13px;
+}
+
+.bdx-shell.is-light .bdx-overview .debt-radial-card {
+  min-height: 228px;
 }

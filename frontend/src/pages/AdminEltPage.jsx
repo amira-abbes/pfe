@@ -178,6 +178,17 @@ function badgeClass(value) {
   return "elt-badge neutral";
 }
 
+function formatArchiveDate(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value).split(/[T\s]/)[0] || "-";
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  }).format(date);
+}
+
 function isWatcherActive(watchStatus) {
   const raw = watchStatus || {};
   const state = String(raw.state || raw.status || raw.etat || "").toUpperCase();
@@ -1080,6 +1091,9 @@ function ArchiveFileTable({ title, rows, columns, accent }) {
 }
 
 function renderFileCell(key, value) {
+  if (["date_fichier", "date_traitement"].includes(key)) {
+    return formatArchiveDate(value);
+  }
   if (["chargement", "detail", "aggregation", "service", "parc", "archivage"].includes(key)) {
     return <span className={badgeClass(value)}>{value || "Non renseigné"}</span>;
   }

@@ -2,6 +2,7 @@ import { Download, Mail, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, getApiError } from "../api/api";
+import AuthTriangles from "../components/AuthTriangles";
 import OtpInput from "../components/OtpInput";
 
 export default function ActivationTotpPage() {
@@ -160,17 +161,20 @@ export default function ActivationTotpPage() {
 
   return (
     <div className="auth-page">
-      <div className="auth-card recovery-card">
+      <AuthTriangles />
+
+      <div className="auth-card activation-totp-card">
         <img src="/tt-logo.png" alt="Tunisie Telecom" className="auth-logo" />
 
         {!recoveryCodes.length && (
           <>
             <h1>Configurer Authenticator</h1>
+            <div className="rainbow-line" />
             <p>
               Scannez le QR code avec Google Authenticator ou Microsoft Authenticator.
             </p>
 
-            {error && <div className="alert alert-error">{error}</div>}
+            {error && <div className="auth-error-banner">{error}</div>}
 
             {setup?.qr_code_base64 && (
               <img
@@ -198,7 +202,7 @@ export default function ActivationTotpPage() {
                 />
               </div>
 
-              <button className="btn btn-primary" disabled={loading}>
+              <button className="btn-primary" disabled={loading}>
                 <ShieldCheck size={18} />
                 {loading ? "Vérification en cours" : "Activer mon compte"}
               </button>
@@ -209,8 +213,9 @@ export default function ActivationTotpPage() {
         {recoveryCodes.length > 0 && (
           <>
             <h1>Sauvegarder vos codes</h1>
+            <div className="rainbow-line" />
 
-            {error && <div className="alert alert-error">{error}</div>}
+            {error && <div className="auth-error-banner">{error}</div>}
             {message && <div className="alert alert-success">{message}</div>}
 
             <div className="alert alert-info">
@@ -247,7 +252,7 @@ export default function ActivationTotpPage() {
             </div>
 
             <div className="form">
-              <button className="btn btn-primary" onClick={continueToLogin}>
+              <button className="btn-primary" onClick={continueToLogin}>
                 J’ai sauvegardé mes codes, continuer
               </button>
 
