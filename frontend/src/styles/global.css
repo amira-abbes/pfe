@@ -5666,7 +5666,6 @@ body {
 }
 
 .users-filter-group select,
-.users-inline-editor select,
 .users-per-page select {
   min-height: 42px;
   padding: 0 31px 0 11px;
@@ -5785,7 +5784,7 @@ body {
   transition: background 220ms ease;
 }
 
-.users-premium-table tbody tr:not(.users-edit-row):hover td,
+.users-premium-table tbody tr:hover td,
 .users-premium-table tbody tr.is-selected td {
   background: rgba(238, 243, 255, 0.76);
 }
@@ -5883,6 +5882,29 @@ body {
   font-weight: 700;
 }
 
+.users-inline-access-select {
+  width: min(132px, 100%);
+  min-height: 34px;
+  padding: 0 27px 0 10px;
+  border: 1px solid #dce3ef;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.88);
+  color: #46536d;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.users-inline-department-select {
+  width: min(160px, 100%);
+}
+
+.users-inline-access-select:focus {
+  border-color: rgba(79, 70, 229, 0.42);
+  outline: 0;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.08);
+}
+
 .users-status-badge i {
   width: 6px;
   height: 6px;
@@ -5947,8 +5969,9 @@ body {
   top: 40px;
   right: 0;
   display: grid;
+  gap: 2px;
   width: 172px;
-  padding: 6px;
+  padding: 7px;
   border: 1px solid rgba(148, 163, 184, 0.25);
   border-radius: 13px;
   background: rgba(255, 255, 255, 0.97);
@@ -5984,58 +6007,6 @@ body {
 
 .users-action-menu button.is-danger:hover {
   background: #fff0f3;
-}
-
-.users-edit-row td {
-  padding: 10px 14px;
-  background: rgba(239, 243, 255, 0.82);
-}
-
-.users-inline-editor {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px;
-  border: 1px solid rgba(79, 70, 229, 0.14);
-  border-radius: 13px;
-  background: rgba(255, 255, 255, 0.76);
-}
-
-.users-inline-editor > span {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-right: auto;
-  color: #65728c;
-  font-size: 0.71rem;
-}
-
-.users-inline-editor label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: #7a879e;
-  font-size: 0.65rem;
-  font-weight: 750;
-}
-
-.users-inline-editor select {
-  min-height: 35px;
-}
-
-.users-inline-editor button {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  min-height: 35px;
-  border: 1px solid #dce3ef;
-  border-radius: 9px;
-  background: #fff;
-  color: #5d6981;
-  font: inherit;
-  font-size: 0.68rem;
-  font-weight: 700;
-  cursor: pointer;
 }
 
 .users-table-state {
@@ -6173,14 +6144,6 @@ body {
     justify-content: center;
   }
 
-  .users-inline-editor {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .users-inline-editor > span {
-    margin-right: 0;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -6539,46 +6502,40 @@ body {
   white-space: nowrap;
 }
 
-.governance-row-menu {
-  position: relative;
-  margin-right: 7px;
-}
-
-.governance-row-menu summary {
+.governance-row-menu-trigger {
   display: grid;
   width: 32px;
   height: 32px;
+  flex: 0 0 auto;
+  margin-right: 7px;
   place-items: center;
   border: 1px solid transparent;
   border-radius: 9px;
+  background: transparent;
   color: #77849a;
   cursor: pointer;
-  list-style: none;
 }
 
-.governance-row-menu summary::-webkit-details-marker { display: none; }
-
-.governance-row-menu summary:hover,
-.governance-row-menu[open] summary {
+.governance-row-menu-trigger:hover,
+.governance-row-menu-trigger.is-open {
   border-color: #dce3ef;
   background: #fff;
   color: var(--tt-violet);
 }
 
-.governance-row-menu > div {
-  position: absolute;
-  z-index: 8;
-  top: 36px;
-  right: 0;
+.governance-row-menu-dropdown {
+  position: fixed;
+  z-index: 10000;
   width: 140px;
   padding: 5px;
   border: 1px solid rgba(148, 163, 184, 0.25);
   border-radius: 11px;
   background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 14px 30px rgba(34, 45, 75, 0.16);
+  backdrop-filter: blur(16px);
 }
 
-.governance-row-menu button {
+.governance-row-menu-dropdown button {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -6594,7 +6551,7 @@ body {
   cursor: pointer;
 }
 
-.governance-row-menu button:hover {
+.governance-row-menu-dropdown button:hover {
   background: #fff0f3;
 }
 
