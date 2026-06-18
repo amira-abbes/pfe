@@ -1,22 +1,19 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Building2,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  Edit3,
   EllipsisVertical,
   FilterX,
   KeyRound,
   Plus,
   RefreshCw,
   Search,
-  ShieldCheck,
   Trash2,
   UserCheck,
   Users,
   UserX,
-  X,
 } from "lucide-react";
 import Layout from "../components/Layout";
 import PageHeader from "../components/PageHeader";
@@ -88,7 +85,6 @@ export default function AdminUsersPage() {
   const [page, setPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
   const [selectedIds, setSelectedIds] = useState(new Set());
-  const [editingId, setEditingId] = useState(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -377,7 +373,6 @@ export default function AdminUsersPage() {
                 ) : paginatedUsers.length === 0 ? (
                   <tr><td colSpan="7" className="users-table-state">Aucun utilisateur ne correspond aux filtres.</td></tr>
                 ) : paginatedUsers.map((item) => (
-                  <Fragment key={item.id}>
                     <tr key={item.id} className={selectedIds.has(item.id) ? "is-selected" : ""}>
                       <td className="users-check-column">
                         <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelected(item.id)} aria-label={`Sélectionner ${item.email}`} />
@@ -388,8 +383,38 @@ export default function AdminUsersPage() {
                           <div><strong>{item.nom_complet || "Nom non renseigné"}</strong><span>{item.email}</span></div>
                         </div>
                       </td>
-                      <td><span className={`users-role-badge role-${roleClass(item.role)}`}>{ROLE_LABELS[item.role] || item.role}</span></td>
-                      <td><span className="users-department-tag">{item.departement_nom || "Aucun"}</span></td>
+                      <td>
+                        {isSuperAdmin ? (
+                          <select
+                            className="users-inline-access-select"
+                            value={item.role}
+                            aria-label={`Rôle de ${item.email}`}
+                            onChange={(event) => updateUserProfile(item, { role: event.target.value })}
+                          >
+                            <option value="SUPER_ADMIN">Super admin</option>
+                            <option value="ADMIN">Admin</option>
+                            <option value="USER">Utilisateur</option>
+                          </select>
+                        ) : (
+                          <span className={`users-role-badge role-${roleClass(item.role)}`}>{ROLE_LABELS[item.role] || item.role}</span>
+                        )}
+                      </td>
+                      <td>
+                        {isSuperAdmin ? (
+                          <select
+                            className="users-inline-access-select users-inline-department-select"
+                            value={item.departement_nom || ""}
+                            aria-label={`Département de ${item.email}`}
+                            onChange={(event) => updateUserProfile(item, { departement_nom: event.target.value })}
+                          >
+                            {departments.map((department) => (
+                              <option key={department.id} value={department.nom_departement}>{department.nom_departement}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="users-department-tag">{item.departement_nom || "Aucun"}</span>
+                        )}
+                      </td>
                       <td>
                         <span className={`users-status-badge ${item.est_actif ? "is-active" : "is-inactive"}`}>
                           <i />{item.est_actif ? "Actif" : "Inactif"}
@@ -400,9 +425,6 @@ export default function AdminUsersPage() {
                         <details className="users-action-dropdown">
                           <summary aria-label={`Actions pour ${item.email}`}><EllipsisVertical size={19} /></summary>
                           <div className="users-action-menu">
-                            {isSuperAdmin && (
-                              <button onClick={() => setEditingId(editingId === item.id ? null : item.id)}><Edit3 size={15} /> Modifier</button>
-                            )}
                             <button onClick={() => regenerateRecoveryCodes(item)}><KeyRound size={15} /> Codes de secours</button>
                             {canDeactivate(item) && (
                               <button onClick={() => toggleStatus(item)}><UserX size={15} /> Désactiver</button>
@@ -415,31 +437,6 @@ export default function AdminUsersPage() {
                         </details>
                       </td>
                     </tr>
-                    {editingId === item.id && (
-                      <tr key={`${item.id}-edit`} className="users-edit-row">
-                        <td colSpan="7">
-                          <div className="users-inline-editor">
-                            <span><ShieldCheck size={17} /> Modifier les accès de <strong>{item.nom_complet || item.email}</strong></span>
-                            <label>Rôle
-                              <select value={item.role} onChange={(event) => updateUserProfile(item, { role: event.target.value })}>
-                                <option value="SUPER_ADMIN">Super admin</option>
-                                <option value="ADMIN">Admin</option>
-                                <option value="USER">Utilisateur</option>
-                              </select>
-                            </label>
-                            <label>Département
-                              <select value={item.departement_nom || ""} onChange={(event) => updateUserProfile(item, { departement_nom: event.target.value })}>
-                                {departments.map((department) => (
-                                  <option key={department.id} value={department.nom_departement}>{department.nom_departement}</option>
-                                ))}
-                              </select>
-                            </label>
-                            <button onClick={() => setEditingId(null)}><X size={16} /> Fermer</button>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
                 ))}
               </tbody>
             </table>
