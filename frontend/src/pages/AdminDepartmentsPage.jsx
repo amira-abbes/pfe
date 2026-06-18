@@ -11,7 +11,8 @@ import {
   TrendingDown,
   Workflow,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { api, getApiError } from "../api/api";
 import { DEPARTMENT_KEYS, departmentKey } from "../accessControl";
 import Layout from "../components/Layout";
@@ -63,6 +64,95 @@ const DEPARTMENT_ALLOWED_PERMISSIONS = {
     "voir_resultat_elt",
   ],
 };
+
+function DepartmentActionMenu({ departmentName, onDelete }) {
+  const buttonRef = useRef(null);
+  const menuRef = useRef(null);
+  const [open, setOpen] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    function updatePosition() {
+      const trigger = buttonRef.current;
+      if (!trigger) return;
+
+      const rect = trigger.getBoundingClientRect();
+      const viewportPadding = 10;
+      const gap = 6;
+      const menuWidth = 150;
+      const menuHeight = menuRef.current?.offsetHeight || 46;
+      const left = Math.min(
+        Math.max(viewportPadding, rect.right - menuWidth),
+        window.innerWidth - menuWidth - viewportPadding
+      );
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const top = spaceBelow >= menuHeight + gap + viewportPadding
+        ? rect.bottom + gap
+        : Math.max(viewportPadding, rect.top - menuHeight - gap);
+
+      setPosition({ top, left });
+    }
+
+    function handlePointerDown(event) {
+      if (buttonRef.current?.contains(event.target) || menuRef.current?.contains(event.target)) return;
+      setOpen(false);
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
+    updatePosition();
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open]);
+
+  function handleDelete() {
+    setOpen(false);
+    onDelete(departmentName);
+  }
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        type="button"
+        className={`governance-row-menu-trigger ${open ? "is-open" : ""}`}
+        aria-label={`Actions pour ${departmentName}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <EllipsisVertical size={18} />
+      </button>
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          className="governance-row-menu-popover"
+          role="menu"
+          style={{ top: position.top, left: position.left }}
+        >
+          <button type="button" className="danger" role="menuitem" onClick={handleDelete}>
+            <Trash2 size={15} />
+            Supprimer
+          </button>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+}
 
 export default function AdminDepartmentsPage() {
   const [departements, setDepartements] = useState([]);
@@ -256,10 +346,10 @@ export default function AdminDepartmentsPage() {
                       <span className="governance-department-icon"><Building2 size={18} /></span>
                       <span><strong>{department.nom_departement}</strong><small>{isSelected ? `${selectedDroits.length} permission${selectedDroits.length > 1 ? "s" : ""}` : "Sélectionner pour gérer les accès"}</small></span>
                     </button>
-                    <details className="governance-row-menu">
-                      <summary aria-label={`Actions pour ${department.nom_departement}`}><EllipsisVertical size={18} /></summary>
-                      <div><button className="danger" onClick={() => deleteDepartement(department.nom_departement)}><Trash2 size={15} />Supprimer</button></div>
-                    </details>
+                    <DepartmentActionMenu
+                      departmentName={department.nom_departement}
+                      onDelete={deleteDepartement}
+                    />
                   </div>
                 );
               })}

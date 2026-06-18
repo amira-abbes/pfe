@@ -6539,46 +6539,44 @@ body {
   white-space: nowrap;
 }
 
-.governance-row-menu {
-  position: relative;
-  margin-right: 7px;
-}
-
-.governance-row-menu summary {
+.governance-row-menu-trigger {
   display: grid;
   width: 32px;
   height: 32px;
+  flex: 0 0 auto;
+  margin-right: 7px;
+  padding: 0;
   place-items: center;
   border: 1px solid transparent;
   border-radius: 9px;
+  background: transparent;
   color: #77849a;
   cursor: pointer;
-  list-style: none;
+  transition: border-color 180ms ease, background 180ms ease, color 180ms ease;
 }
 
-.governance-row-menu summary::-webkit-details-marker { display: none; }
-
-.governance-row-menu summary:hover,
-.governance-row-menu[open] summary {
+.governance-row-menu-trigger:hover,
+.governance-row-menu-trigger.is-open {
   border-color: #dce3ef;
   background: #fff;
   color: var(--tt-violet);
 }
 
-.governance-row-menu > div {
-  position: absolute;
-  z-index: 8;
-  top: 36px;
-  right: 0;
-  width: 140px;
+.governance-row-menu-popover {
+  position: fixed;
+  z-index: 13000;
+  width: 150px;
+  box-sizing: border-box;
   padding: 5px;
   border: 1px solid rgba(148, 163, 184, 0.25);
   border-radius: 11px;
   background: rgba(255, 255, 255, 0.98);
   box-shadow: 0 14px 30px rgba(34, 45, 75, 0.16);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
 }
 
-.governance-row-menu button {
+.governance-row-menu-popover button {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -6594,7 +6592,7 @@ body {
   cursor: pointer;
 }
 
-.governance-row-menu button:hover {
+.governance-row-menu-popover button:hover {
   background: #fff0f3;
 }
 
