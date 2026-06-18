@@ -20,6 +20,7 @@ from app.schemas.auth import (
     LogoutResponse,
     RecoveryCodeVerifyRequest,
     SecureRecoveryCompleteRequest,
+    SuperAdminReactivationResendRequest,
     TotpVerifyRequest,
 )
 from app.services.auth_service import AuthService
@@ -239,6 +240,21 @@ def execute_account_reactivation_action(
     return service.execute_account_reactivation_action(
         token=payload.token,
         action=payload.action,
+        adresse_ip=adresse_ip,
+        user_agent=user_agent,
+    )
+
+
+@router.post("/auth/super-admin-reactivation/resend")
+def resend_super_admin_reactivation_link(
+    payload: SuperAdminReactivationResendRequest,
+    request: Request,
+    service: AuthService = Depends(get_auth_service),
+):
+    adresse_ip, user_agent = get_client_context(request)
+
+    return service.resend_super_admin_reactivation_link(
+        token=payload.token,
         adresse_ip=adresse_ip,
         user_agent=user_agent,
     )

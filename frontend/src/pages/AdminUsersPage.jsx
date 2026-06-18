@@ -42,6 +42,7 @@ function roleClass(role) {
   return String(role || "USER").toLowerCase().replaceAll("_", "");
 }
 
+
 function formatDate(value) {
   if (!value) return "Jamais";
   const date = new Date(value);
@@ -248,6 +249,7 @@ export default function AdminUsersPage() {
     };
   }, [users]);
 
+
   const resetFilters = () => {
     setSearch("");
     setFilterDept("");
@@ -324,7 +326,9 @@ export default function AdminUsersPage() {
             <select value={filterDept} onChange={(event) => setFilter(setFilterDept, event.target.value)}>
               <option value="">Tous les départements</option>
               {departments.map((department) => (
-                <option key={department.id} value={department.nom_departement}>{department.nom_departement}</option>
+                <option key={department.id} value={department.nom_departement}>
+                  {department.nom_departement}
+                </option>
               ))}
             </select>
             <select value={filterRole} onChange={(event) => setFilter(setFilterRole, event.target.value)}>
@@ -373,70 +377,91 @@ export default function AdminUsersPage() {
                 ) : paginatedUsers.length === 0 ? (
                   <tr><td colSpan="7" className="users-table-state">Aucun utilisateur ne correspond aux filtres.</td></tr>
                 ) : paginatedUsers.map((item) => (
-                    <tr key={item.id} className={selectedIds.has(item.id) ? "is-selected" : ""}>
-                      <td className="users-check-column">
-                        <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelected(item.id)} aria-label={`Sélectionner ${item.email}`} />
-                      </td>
-                      <td>
-                        <div className="users-person-cell">
-                          <span className="users-avatar">{getInitials(item.nom_complet, item.email)}</span>
-                          <div><strong>{item.nom_complet || "Nom non renseigné"}</strong><span>{item.email}</span></div>
+                  <tr key={item.id} className={selectedIds.has(item.id) ? "is-selected" : ""}>
+                    <td className="users-check-column">
+                      <input type="checkbox" checked={selectedIds.has(item.id)} onChange={() => toggleSelected(item.id)} aria-label={`Sélectionner ${item.email}`} />
+                    </td>
+                    <td>
+                      <div className="users-person-cell">
+                        <span className="users-avatar">{getInitials(item.nom_complet, item.email)}</span>
+                        <div><strong>{item.nom_complet || "Nom non renseigné"}</strong><span>{item.email}</span></div>
+                      </div>
+                    </td>
+                    <td>
+                      {isSuperAdmin ? (
+                        <select
+                          className="users-inline-access-select"
+                          value={item.role}
+                          aria-label={`Rôle de ${item.email}`}
+                          onChange={(event) => updateUserProfile(item, { role: event.target.value })}
+                        >
+                          <option value="SUPER_ADMIN">Super admin</option>
+                          <option value="ADMIN">Admin</option>
+                          <option value="USER">Utilisateur</option>
+                        </select>
+                      ) : (
+                        <span className={`users-role-badge role-${roleClass(item.role)}`}>{ROLE_LABELS[item.role] || item.role}</span>
+                      )}
+                    </td>
+                     <td>
+                      {isSuperAdmin ? (
+                        <select
+                          className="users-inline-access-select users-inline-department-select"
+                          value={item.departement_nom || ""}
+                          aria-label={`Département de ${item.email}`}
+                          onChange={(event) => {
+                            const val = event.target.value;
+                            // Seul SUPER_ADMIN peut avoir un département vide
+                            if (!val && item.role !== "SUPER_ADMIN") return;
+                            updateUserProfile(item, { departement_nom: val || null });
+                          }}
+                        >
+                          {item.role === "SUPER_ADMIN" && <option value="">Aucun</option>}
+                          {departments.map((department) => (
+                            <option key={department.id} value={department.nom_departement}>
+                              {department.nom_departement}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="users-department-tag">{item.departement_nom || "Aucun"}</span>
+                      )}
+                    </td>
+                    <td>
+                      {(() => {
+                        const st = normalizeStatus(item);
+                        const statusConfig = {
+                          ACTIF: { cls: "is-active", label: "Actif" },
+                          EN_ATTENTE_PREMIERE_CONNEXION: { cls: "is-pending", label: "En attente" },
+                          DESACTIVE_ADMIN: { cls: "is-inactive", label: "Désactivé" },
+                          BLOQUE_TENTATIVES: { cls: "is-blocked", label: "Bloqué" },
+                          SUPPRIME: { cls: "is-deleted", label: "Supprimé" },
+                        };
+                        const cfg = statusConfig[st] || { cls: "is-inactive", label: st };
+                        return (
+                          <span className={`users-status-badge ${cfg.cls}`}>
+                            <i />{cfg.label}
+                          </span>
+                        );
+                      })()}
+                    </td>
+                    <td><span className="users-last-login">{formatDate(item.date_derniere_connexion)}</span></td>
+                    <td className="users-actions-cell">
+                      <details className="users-action-dropdown">
+                        <summary aria-label={`Actions pour ${item.email}`}><EllipsisVertical size={19} /></summary>
+                        <div className="users-action-menu">
+                          <button onClick={() => regenerateRecoveryCodes(item)}><KeyRound size={15} /> Codes de secours</button>
+                          {canDeactivate(item) && (
+                            <button onClick={() => toggleStatus(item)}><UserX size={15} /> Désactiver</button>
+                          )}
+                          {canReactivate(item) && (
+                            <button onClick={() => toggleStatus(item)}><CheckCircle2 size={15} /> Réactiver</button>
+                          )}
+                          <button className="is-danger" onClick={() => deleteUser(item)}><Trash2 size={15} /> Supprimer</button>
                         </div>
-                      </td>
-                      <td>
-                        {isSuperAdmin ? (
-                          <select
-                            className="users-inline-access-select"
-                            value={item.role}
-                            aria-label={`Rôle de ${item.email}`}
-                            onChange={(event) => updateUserProfile(item, { role: event.target.value })}
-                          >
-                            <option value="SUPER_ADMIN">Super admin</option>
-                            <option value="ADMIN">Admin</option>
-                            <option value="USER">Utilisateur</option>
-                          </select>
-                        ) : (
-                          <span className={`users-role-badge role-${roleClass(item.role)}`}>{ROLE_LABELS[item.role] || item.role}</span>
-                        )}
-                      </td>
-                      <td>
-                        {isSuperAdmin ? (
-                          <select
-                            className="users-inline-access-select users-inline-department-select"
-                            value={item.departement_nom || ""}
-                            aria-label={`Département de ${item.email}`}
-                            onChange={(event) => updateUserProfile(item, { departement_nom: event.target.value })}
-                          >
-                            {departments.map((department) => (
-                              <option key={department.id} value={department.nom_departement}>{department.nom_departement}</option>
-                            ))}
-                          </select>
-                        ) : (
-                          <span className="users-department-tag">{item.departement_nom || "Aucun"}</span>
-                        )}
-                      </td>
-                      <td>
-                        <span className={`users-status-badge ${item.est_actif ? "is-active" : "is-inactive"}`}>
-                          <i />{item.est_actif ? "Actif" : "Inactif"}
-                        </span>
-                      </td>
-                      <td><span className="users-last-login">{formatDate(item.date_derniere_connexion)}</span></td>
-                      <td className="users-actions-cell">
-                        <details className="users-action-dropdown">
-                          <summary aria-label={`Actions pour ${item.email}`}><EllipsisVertical size={19} /></summary>
-                          <div className="users-action-menu">
-                            <button onClick={() => regenerateRecoveryCodes(item)}><KeyRound size={15} /> Codes de secours</button>
-                            {canDeactivate(item) && (
-                              <button onClick={() => toggleStatus(item)}><UserX size={15} /> Désactiver</button>
-                            )}
-                            {canReactivate(item) && (
-                              <button onClick={() => toggleStatus(item)}><CheckCircle2 size={15} /> Réactiver</button>
-                            )}
-                            <button className="is-danger" onClick={() => deleteUser(item)}><Trash2 size={15} /> Supprimer</button>
-                          </div>
-                        </details>
-                      </td>
-                    </tr>
+                      </details>
+                    </td>
+                  </tr>
                 ))}
               </tbody>
             </table>
@@ -478,39 +503,41 @@ export default function AdminUsersPage() {
           </button>
         )}
       >
-            <form id="create-user-form" onSubmit={createUser} className="platform-drawer-form">
-              <div className="au-field">
-                <label className="au-label">Nom complet</label>
-                <input className="au-input" value={form.nom_complet} onChange={(event) => setForm({ ...form, nom_complet: event.target.value })} required />
-              </div>
-              <div className="au-field">
-                <label className="au-label">Email</label>
-                <input className="au-input" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required />
-              </div>
-              <div className="au-field">
-                <label className="au-label">Rôle</label>
-                {isSuperAdmin ? (
-                  <select className="au-input" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>
-                    <option value="USER">Utilisateur</option>
-                    <option value="ADMIN">Admin</option>
-                  </select>
-                ) : (
-                  <div className="au-input au-input-readonly">USER</div>
-                )}
-              </div>
-              <div className="au-field">
-                <label className="au-label">Département</label>
-                {isSuperAdmin ? (
-                  <select className="au-input" value={form.departement_nom} onChange={(event) => setForm({ ...form, departement_nom: event.target.value })} required>
-                    {departments.map((department) => (
-                      <option key={department.id} value={department.nom_departement}>{department.nom_departement}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <div className="au-input au-input-readonly">{currentUser?.departement_nom || "Département associé à votre compte"}</div>
-                )}
-              </div>
-            </form>
+        <form id="create-user-form" onSubmit={createUser} className="platform-drawer-form">
+          <div className="au-field">
+            <label className="au-label">Nom complet</label>
+            <input className="au-input" value={form.nom_complet} onChange={(event) => setForm({ ...form, nom_complet: event.target.value })} required />
+          </div>
+          <div className="au-field">
+            <label className="au-label">Email</label>
+            <input className="au-input" type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required />
+          </div>
+          <div className="au-field">
+            <label className="au-label">Rôle</label>
+            {isSuperAdmin ? (
+              <select className="au-input" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>
+                <option value="USER">Utilisateur</option>
+                <option value="ADMIN">Admin</option>
+              </select>
+            ) : (
+              <div className="au-input au-input-readonly">USER</div>
+            )}
+          </div>
+          <div className="au-field">
+            <label className="au-label">Département</label>
+            {isSuperAdmin ? (
+              <select className="au-input" value={form.departement_nom} onChange={(event) => setForm({ ...form, departement_nom: event.target.value })} required>
+                {departments.map((department) => (
+                  <option key={department.id} value={department.nom_departement}>
+                    {department.nom_departement}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="au-input au-input-readonly">{currentUser?.departement_nom || "Département associé à votre compte"}</div>
+            )}
+          </div>
+        </form>
       </Drawer>
     </Layout>
   );

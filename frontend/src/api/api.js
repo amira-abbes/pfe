@@ -3,7 +3,6 @@ import { firstAuthorizedPath } from "../accessControl";
 
 const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
-const LAST_ACTIVITY_KEY = "lastActivityAt";
 const AUTH_FLOW_PREFIXES = [
   "/login",
   "/session-expired",
@@ -38,7 +37,6 @@ function isAuthFlowPath(pathname = window.location.pathname) {
 function clearStoredAuth() {
   localStorage.removeItem("access_token");
   localStorage.removeItem("current_user");
-  localStorage.removeItem(LAST_ACTIVITY_KEY);
   delete api.defaults.headers.common.Authorization;
 }
 

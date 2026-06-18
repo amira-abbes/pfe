@@ -5,13 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { api, getApiError } from "../api/api";
 import AuthTriangles from "../components/AuthTriangles";
 import OtpInput from "../components/OtpInput";
-
-function formatCountdown(seconds) {
-  const safeSeconds = Math.max(0, Number(seconds || 0));
-  const minutes = String(Math.floor(safeSeconds / 60)).padStart(2, "0");
-  const rest = String(safeSeconds % 60).padStart(2, "0");
-  return `${minutes}:${rest}`;
-}
+import { formatRemainingTime } from "../utils/time";
 
 export default function PasswordResetMfaPage() {
   const navigate = useNavigate();
@@ -147,7 +141,7 @@ export default function PasswordResetMfaPage() {
             {isCooldown && (
               <>
                 <br />
-                Temps restant : {formatCountdown(cooldown)}
+                Temps restant : {formatRemainingTime(cooldown)}
               </>
             )}
           </div>

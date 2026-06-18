@@ -815,6 +815,50 @@ class MailService:
             details={"type": "SUPER_ADMIN_SECURE_RECOVERY_24H"},
         )
 
+    def send_super_admin_account_reactivation_email(
+        self,
+        to_email: str,
+        reactivation_link: str,
+        db: Session | None = None,
+        utilisateur_id=None,
+        adresse_ip: str | None = None,
+        user_agent: str | None = None,
+        details: dict | None = None,
+    ) -> bool:
+        subject = "Réactivation de votre compte Super Administrateur"
+        message = (
+            "Votre compte a été temporairement bloqué suite à plusieurs tentatives de connexion.\n\n"
+            "Pour réactiver votre compte, veuillez utiliser le lien sécurisé ci-dessous :\n\n"
+            "Ce lien est valable pendant 24 heures."
+        )
+        html_body = render_layout(
+            subject,
+            multiline_html(message)
+            + action_button("Réactiver mon compte", reactivation_link, danger=False),
+            danger=True,
+            use_background=True,
+        )
+        text_body = (
+            "Votre compte a été temporairement bloqué suite à plusieurs tentatives de connexion.\n\n"
+            "Pour réactiver votre compte, veuillez utiliser le lien sécurisé ci-dessous :\n\n"
+            f"{reactivation_link}\n\n"
+            "Ce lien est valable pendant 24 heures.\n"
+        )
+        return self._send_and_record(
+            to_email=to_email,
+            subject=subject,
+            html_body=html_body,
+            text_body=text_body,
+            db=db,
+            utilisateur_id=utilisateur_id,
+            type_notification="SUPER_ADMIN_ACCOUNT_REACTIVATION",
+            adresse_ip=adresse_ip,
+            user_agent=user_agent,
+            details=details or {},
+            debug_details={**(details or {}), "reactivation_link": reactivation_link},
+            attach_background=True,
+        )
+
     def _send_and_record(
         self,
         to_email: str,

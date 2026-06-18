@@ -1,13 +1,7 @@
 import { ShieldAlert } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-
-function formatSeconds(totalSeconds) {
-  const safe = Math.max(0, Number(totalSeconds) || 0);
-  return `${String(Math.floor(safe / 60)).padStart(2, "0")}:${String(
-    safe % 60
-  ).padStart(2, "0")}`;
-}
+import { formatRemainingTime } from "../utils/time";
 
 export default function MfaBlockedPage() {
   const navigate = useNavigate();
@@ -48,7 +42,7 @@ export default function MfaBlockedPage() {
         </p>
 
         <div className="alert alert-info">
-          Temps restant : {formatSeconds(remainingSeconds)}
+          Temps restant : {formatRemainingTime(remainingSeconds)}
         </div>
 
         <button className="btn btn-primary" type="button" onClick={() => navigate("/login")}>

@@ -1,14 +1,18 @@
+import ast
 import json
+import logging
+import re
 import shutil
 import subprocess
 import sys
+import traceback
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 import pandas as pd
 from fastapi import UploadFile
-from sqlalchemy import text
+from sqlalchemy import MetaData, Table, text
 from sqlalchemy.orm import Session
 
 
@@ -76,6 +80,30 @@ COLUMN_MAPPING = {
     "is_dormant_like": "is_dormant_like",
 }
 
+APP_CLIENT_COLUMNS = [*COLUMN_MAPPING.values(), "imported_at"]
+BOOLEAN_COLUMNS = [
+    "is_anomaly",
+    "has_debt",
+    "uses_sos",
+    "never_repaid",
+    "full_repayer",
+    "is_dormant_like",
+]
+INTEGER_COLUMNS = ["cluster_id", "risk_level", "nb_sos", "tenure_days"]
+FLOAT_COLUMNS = [
+    "final_risk_score",
+    "risk_score_raw",
+    "anomaly_score",
+    "avg_credit_amount",
+    "avg_reimburse_ratio",
+    "avg_days_since_credit",
+    "total_outstanding_amount",
+    "debt_to_credit",
+    "credit_intensity",
+]
+STRING_COLUMNS = ["state", "cluster_name", "risk_label", "risk_tier"]
+logger = logging.getLogger(__name__)
+
 
 class BadDebtsImportError(RuntimeError):
     pass
@@ -107,8 +135,10 @@ class BadDebtsImportService:
                 "pipeline_type": pipeline_type,
             }
         except Exception as exc:
-            self.mark_import_failed(import_id, str(exc))
-            return {"import_id": import_id, "status": "ECHEC", "rows_imported": 0, "error_message": str(exc)}
+            error_message = self._format_exception(exc)
+            logger.exception("Bad Debts import failed for import_id=%s", import_id)
+            self.mark_import_failed(import_id, error_message)
+            return {"import_id": import_id, "status": "ECHEC", "rows_imported": 0, "error_message": error_message}
 
     def create_import_run(self, file_name: str) -> int:
         self._ensure_import_table()
@@ -241,16 +271,18 @@ class BadDebtsImportService:
         if not segmented_path.exists() or segmented_path.stat().st_size == 0:
             raise BadDebtsImportError("clients_segmented.csv n'a pas ete genere.")
 
-        df = self._read_table(segmented_path)
+        df = self._standardize_segmented_columns(self._read_table(segmented_path))
         missing = [col for col in SEGMENTED_COLUMNS if col not in df.columns]
         if missing:
-            raise BadDebtsImportError(f"Colonnes manquantes dans clients_segmented.csv : {missing}")
+            provided = [str(col) for col in df.columns]
+            raise BadDebtsImportError(
+                "Colonnes manquantes dans clients_segmented.csv : "
+                f"{missing}. Colonnes detectees : {provided}"
+            )
         if df.empty:
             raise BadDebtsImportError("clients_segmented.csv ne contient aucun client.")
 
         df = self._clean_segmented_dataframe(df)
-        if df["msisdn"].duplicated().any():
-            raise BadDebtsImportError("Doublons MSISDN detectes dans clients_segmented.csv.")
         invalid_tiers = sorted(set(df["risk_tier"].dropna().astype(str)) - {"low", "medium", "high"})
         if invalid_tiers:
             raise BadDebtsImportError(f"risk_tier invalides : {invalid_tiers}")
@@ -259,18 +291,18 @@ class BadDebtsImportService:
         return df
 
     def replace_clients_transaction(self, import_id: int, df: pd.DataFrame) -> int:
-        rows_imported = int(len(df))
+        prepared_df = self._prepare_dataframe_for_target_table(df)
+        rows_imported = int(len(prepared_df))
+        records = self._dataframe_to_records(prepared_df)
         try:
-            self.db.execute(text("TRUNCATE TABLE ml.bad_debts_clients;"))
-            df.to_sql(
-                name="bad_debts_clients",
-                con=self.db.connection(),
-                schema="ml",
-                if_exists="append",
-                index=False,
-                method="multi",
-                chunksize=1000,
+            target_table = Table(
+                "bad_debts_clients",
+                MetaData(schema="ml"),
+                autoload_with=self.db.connection(),
             )
+            self.db.execute(text("TRUNCATE TABLE ml.bad_debts_clients;"))
+            if records:
+                self.db.connection().execute(target_table.insert(), records)
             tables = self._existing_tables(["agent_actions", "agent_runs"])
             if tables:
                 joined = ", ".join(f"ml.{name}" for name in tables)
@@ -285,7 +317,7 @@ class BadDebtsImportService:
     def mark_import_failed(self, import_id: int, error_message: str) -> None:
         self.db.rollback()
         has_finished_at = self._column_exists("ml_import_runs", "finished_at")
-        params = {"id": import_id, "error_message": error_message[:1500]}
+        params = {"id": import_id, "error_message": error_message}
         if has_finished_at:
             query = """
                 UPDATE ml.ml_import_runs
@@ -355,27 +387,24 @@ class BadDebtsImportService:
 
     def _clean_segmented_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df[SEGMENTED_COLUMNS].rename(columns=COLUMN_MAPPING).copy()
-        df["msisdn"] = df["msisdn"].astype(str).str.strip().str.replace(".0", "", regex=False)
+        df = self._normalize_risk_columns(df)
+        df["msisdn"] = df["msisdn"].map(self._normalize_msisdn)
         df = df[(df["msisdn"] != "") & (df["msisdn"].str.lower() != "nan")]
-        df["is_anomaly"] = self._to_bool(df["is_anomaly"])
-        for col in ["cluster_id", "risk_level", "nb_sos", "has_debt", "uses_sos", "never_repaid", "full_repayer", "is_dormant_like"]:
+        for col in BOOLEAN_COLUMNS:
+            df[col] = self._to_bool(df[col])
+        for col in INTEGER_COLUMNS:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
-        for col in [
-            "final_risk_score",
-            "risk_score_raw",
-            "anomaly_score",
-            "avg_credit_amount",
-            "avg_reimburse_ratio",
-            "avg_days_since_credit",
-            "total_outstanding_amount",
-            "debt_to_credit",
-            "credit_intensity",
-            "tenure_days",
-        ]:
+        for col in FLOAT_COLUMNS:
             df[col] = pd.to_numeric(df[col], errors="coerce")
-        for col in ["state", "cluster_name", "risk_label", "risk_tier", "top_drivers"]:
+        df["final_risk_score"] = self._normalize_probability_score(df["final_risk_score"])
+        for col in STRING_COLUMNS:
             df[col] = df[col].fillna("").astype(str).str.strip()
+        df["top_drivers"] = df["top_drivers"].map(self._normalize_top_drivers)
         df["risk_tier"] = df["risk_tier"].str.lower()
+        duplicate_count = int(df["msisdn"].duplicated(keep="last").sum())
+        if duplicate_count:
+            logger.warning("Bad Debts import deduplicated %s duplicate MSISDN values", duplicate_count)
+            df = df.drop_duplicates(subset=["msisdn"], keep="last").copy()
         df["imported_at"] = datetime.utcnow()
         return df
 
@@ -441,7 +470,8 @@ class BadDebtsImportService:
             raise BadDebtsImportError(f"Erreur pendant {label} : {stderr[:1500]}")
 
     def _has_segmented_contract(self, df: pd.DataFrame) -> bool:
-        return all(col in df.columns for col in SEGMENTED_COLUMNS)
+        normalized_df = self._standardize_segmented_columns(df)
+        return all(col in normalized_df.columns for col in SEGMENTED_COLUMNS)
 
     def _find_column(self, df: pd.DataFrame, candidates: set[str]) -> str | None:
         lower = {str(col).lower(): str(col) for col in df.columns}
@@ -464,6 +494,173 @@ class BadDebtsImportService:
             "none": False,
             "": False,
         }).fillna(False).astype(bool)
+
+    def _normalize_msisdn(self, value: Any) -> str:
+        if pd.isna(value):
+            return ""
+        if isinstance(value, str):
+            raw = value.strip()
+        elif isinstance(value, (int, bool)):
+            raw = str(int(value))
+        elif isinstance(value, float):
+            raw = str(int(value)) if value.is_integer() else format(value, "f")
+        else:
+            raw = str(value).strip()
+        raw = raw.strip()
+        if re.fullmatch(r"\d+\.0+", raw):
+            raw = raw.split(".", 1)[0]
+        return raw
+
+    def _normalize_top_drivers(self, value: Any) -> Any:
+        if isinstance(value, (list, dict)):
+            return value
+        if value in ("", None):
+            return []
+        if pd.isna(value):
+            return []
+        raw = str(value).strip()
+        if not raw:
+            return []
+        for parser in (json.loads, ast.literal_eval):
+            try:
+                parsed = parser(raw)
+                if isinstance(parsed, (list, dict, str, int, float, bool)) or parsed is None:
+                    return parsed
+            except Exception:
+                continue
+        return raw
+
+    def _normalize_risk_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        normalized = df.copy()
+        risk_level_values = {
+            str(value).strip().lower()
+            for value in normalized["risk_level"].dropna().tolist()
+            if str(value).strip()
+        }
+        risk_tier_values = {
+            str(value).strip().lower()
+            for value in normalized["risk_tier"].dropna().tolist()
+            if str(value).strip()
+        }
+        tier_labels = {"low", "medium", "high"}
+        numeric_scale = {"1", "2", "3", "4", "5"}
+        if risk_level_values and risk_level_values.issubset(tier_labels) and risk_tier_values.issubset(numeric_scale):
+            logger.info("Bad Debts import detected swapped risk_level/risk_tier synthetic format; normalizing columns")
+            normalized["risk_level"], normalized["risk_tier"] = normalized["risk_tier"], normalized["risk_level"]
+        return normalized
+
+    def _normalize_probability_score(self, series: pd.Series) -> pd.Series:
+        numeric = pd.to_numeric(series, errors="coerce")
+        max_value = numeric.max(skipna=True)
+        if pd.notna(max_value) and max_value > 1 and max_value <= 100:
+            logger.info("Bad Debts import detected percentage-based final_risk_score; converting to 0..1 scale")
+            return numeric / 100.0
+        return numeric
+
+    def _standardize_segmented_columns(self, df: pd.DataFrame) -> pd.DataFrame:
+        rename_map: dict[str, str] = {}
+        normalized_sources: dict[str, list[str]] = {}
+        for column in df.columns:
+            normalized = self._normalize_column_name(column)
+            normalized_sources.setdefault(normalized, []).append(str(column))
+        for expected in SEGMENTED_COLUMNS:
+            if expected in df.columns:
+                continue
+            aliases = {
+                self._normalize_column_name(expected),
+                self._normalize_column_name(COLUMN_MAPPING[expected]),
+            }
+            matches = [source for alias in aliases for source in normalized_sources.get(alias, [])]
+            if matches:
+                rename_map[matches[0]] = expected
+        return df.rename(columns=rename_map)
+
+    def _normalize_column_name(self, value: Any) -> str:
+        return re.sub(r"[^a-z0-9]+", "_", str(value).strip().lower()).strip("_")
+
+    def _prepare_dataframe_for_target_table(self, df: pd.DataFrame) -> pd.DataFrame:
+        columns = self._get_table_columns("bad_debts_clients")
+        db_columns = [column["column_name"] for column in columns]
+        missing_in_table = [column for column in APP_CLIENT_COLUMNS if column not in db_columns]
+        if missing_in_table:
+            raise BadDebtsImportError(
+                "La table ml.bad_debts_clients ne contient pas les colonnes attendues par l'application : "
+                f"{missing_in_table}. Colonnes presentes en base : {db_columns}"
+            )
+
+        missing_required_in_df = [
+            column["column_name"]
+            for column in columns
+            if column["column_name"] not in df.columns
+            and column["is_nullable"] == "NO"
+            and column["column_default"] is None
+        ]
+        if missing_required_in_df:
+            raise BadDebtsImportError(
+                "Le fichier ne fournit pas toutes les colonnes requises pour ml.bad_debts_clients : "
+                f"{missing_required_in_df}. Colonnes fichier : {list(df.columns)}. Colonnes base : {db_columns}"
+            )
+
+        extra_df_columns = [column for column in df.columns if column not in db_columns]
+        if extra_df_columns:
+            logger.info("Bad Debts import ignored extra columns not present in database: %s", extra_df_columns)
+
+        prepared = df.copy()
+        for column in db_columns:
+            if column not in prepared.columns:
+                prepared[column] = None
+        return prepared.loc[:, db_columns]
+
+    def _get_table_columns(self, table_name: str) -> list[dict[str, Any]]:
+        rows = self.db.execute(
+            text(
+                """
+                SELECT column_name, data_type, udt_name, is_nullable, column_default
+                FROM information_schema.columns
+                WHERE table_schema = 'ml'
+                  AND table_name = :table_name
+                ORDER BY ordinal_position
+                """
+            ),
+            {"table_name": table_name},
+        ).mappings().all()
+        if not rows:
+            raise BadDebtsImportError(f"Table introuvable : ml.{table_name}")
+        return [dict(row) for row in rows]
+
+    def _dataframe_to_records(self, df: pd.DataFrame) -> list[dict[str, Any]]:
+        records: list[dict[str, Any]] = []
+        for record in df.to_dict(orient="records"):
+            normalized_record: dict[str, Any] = {}
+            for key, value in record.items():
+                normalized_record[key] = self._normalize_record_value(value)
+            records.append(normalized_record)
+        return records
+
+    def _normalize_record_value(self, value: Any) -> Any:
+        if isinstance(value, (list, dict)):
+            return value
+        if isinstance(value, pd.Timestamp):
+            return value.to_pydatetime()
+        if hasattr(value, "item"):
+            try:
+                value = value.item()
+            except Exception:
+                return value
+        if pd.isna(value):
+            return None
+        return value
+
+    def _format_exception(self, exc: Exception) -> str:
+        message = str(exc).strip() or exc.__class__.__name__
+        origin = getattr(exc, "orig", None)
+        details = [f"{exc.__class__.__name__}: {message}"]
+        if origin is not None:
+            details.append(f"Origine SQL: {origin!r}")
+        tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__)).strip()
+        if tb:
+            details.append(tb)
+        return "\n\n".join(details)
 
     def _ensure_import_table(self) -> None:
         self.db.execute(text("CREATE SCHEMA IF NOT EXISTS ml;"))

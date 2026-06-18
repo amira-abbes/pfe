@@ -1,3 +1,22 @@
+# ============================================================
+# Fichier : nodes.py
+# Objet   : Nœuds de l'agent décisionnel Bad Debts / SOS Solde
+# Projet  : Plateforme de détection et suivi des clients à risque
+#
+# Rôle général du module :
+# Ce fichier représente le cœur de l'orchestration IA côté backend.
+# Chaque fonction appelée "node" correspond à une étape du workflow :
+#   1. profiling_node          -> construire le profil client
+#   2. explainability_node     -> expliquer le risque
+#   3. decision_node           -> décider l'action métier
+#   4. business_analysis_node  -> produire une analyse lisible métier
+#   5. message_generation_node -> préparer un message ou une note
+#   6. monitoring_node         -> tracer et persister le résultat
+#
+# Les autres fonctions commençant par "_" sont des helpers internes :
+# elles normalisent les données, sécurisent les messages et préparent
+# des fallbacks en cas d'erreur.
+# ============================================================
 from __future__ import annotations
 
 import json
@@ -22,6 +41,14 @@ try:
 except Exception:
     settings = None
 
+# Fonction utilitaire qui calcule le tier final à partir des sorties ML.
+# ------------------------------------------------------------
+# Calcule le niveau de risque effectif.
+# Le modèle ML fournit un risque initial : low / medium / high.
+# Si le client est aussi détecté comme anomalie, on augmente le risque
+# d'un niveau pour être plus prudent côté métier.
+# Exemple : low + anomalie => medium ; medium + anomalie => high.
+# ------------------------------------------------------------
 
 def effective_risk_tier(ml_outputs: dict[str, Any] | None) -> str:
     outputs = ml_outputs or {}
@@ -35,6 +62,13 @@ def effective_risk_tier(ml_outputs: dict[str, Any] | None) -> str:
     return risk_tier
 
 
+# ------------------------------------------------------------
+# Nœud 1 : Profiling
+# Objectif : récupérer les informations client depuis l'état LangGraph
+# puis construire un profil métier normalisé.
+# Ce profil sera utilisé par les étapes suivantes.
+# ------------------------------------------------------------
+
 def profiling_node(state: AgentState) -> AgentState:
     try:
         client = _client_from_state(state)
@@ -44,6 +78,13 @@ def profiling_node(state: AgentState) -> AgentState:
         return {"errors": [f"profiling_node: {exc}"], "profile": _fallback_profile(state)}
 
 
+# ------------------------------------------------------------
+# Nœud 2 : Explainability
+# Objectif : produire les explications du risque client.
+# Exemple : dette restante élevée, faible remboursement, anomalie, etc.
+# Cette étape rend la décision compréhensible pour les équipes métier.
+# ------------------------------------------------------------
+
 def explainability_node(state: AgentState) -> AgentState:
     try:
         client = _client_from_state(state)
@@ -52,6 +93,15 @@ def explainability_node(state: AgentState) -> AgentState:
     except Exception as exc:
         return {"errors": [f"explainability_node: {exc}"], "explanations": _fallback_explanations(state)}
 
+
+# ------------------------------------------------------------
+# Nœud 3 : Décision
+# Objectif : choisir la prochaine meilleure action métier.
+# La décision peut être :
+#   - monitor_only          : simple suivi
+#   - sms_retention_offer   : SMS préventif proposé
+#   - call_center_priority  : appel prioritaire par le centre client
+# ------------------------------------------------------------
 
 def decision_node(state: AgentState) -> AgentState:
     try:
@@ -63,6 +113,15 @@ def decision_node(state: AgentState) -> AgentState:
     except Exception as exc:
         return {"errors": [f"decision_node: {exc}"], "decision": _fallback_decision(state)}
 
+
+# ------------------------------------------------------------
+# Nœud 4/5 : Génération du message
+# Objectif : générer un message client ou une note interne à partir
+# de la décision.
+# Important : le message est préparé mais pas forcément envoyé.
+# La métadonnée safe_to_send indique si le message peut être proposé
+# à validation avant envoi.
+# ------------------------------------------------------------
 
 def message_generation_node(state: AgentState) -> AgentState:
     try:
@@ -83,6 +142,12 @@ def message_generation_node(state: AgentState) -> AgentState:
     return {"message": _lock_message_metadata(message, generated_by="deterministic_template")}
 
 
+# ------------------------------------------------------------
+# Nœud d'analyse métier
+# Objectif : synthétiser le profil, les explications et la décision
+# dans une analyse claire pour le dashboard ou le rapport client.
+# ------------------------------------------------------------
+
 def business_analysis_node(state: AgentState) -> AgentState:
     try:
         client = _client_from_state(state)
@@ -97,6 +162,13 @@ def business_analysis_node(state: AgentState) -> AgentState:
             "business_analysis": build_ai_analysis(_client_from_state(state), state.get("decision") or {}, state.get("explanations") or {}),
         }
 
+
+# ------------------------------------------------------------
+# Nœud final : Monitoring / Persistance
+# Objectif : enregistrer l'action proposée et le run complet de l'agent.
+# Cette étape permet la traçabilité : qui a été analysé, quelle décision
+# a été proposée, avec quel niveau de risque et quelles erreurs éventuelles.
+# ------------------------------------------------------------
 
 def monitoring_node(state: AgentState) -> AgentState:
     db = state.get("db")
@@ -186,6 +258,12 @@ def monitoring_node(state: AgentState) -> AgentState:
     }
 
 
+# ------------------------------------------------------------
+# Helper : récupération du client depuis l'état global.
+# L'état peut contenir directement un client, un raw_client, ou seulement
+# des features ML. Cette fonction garantit un dictionnaire client exploitable.
+# ------------------------------------------------------------
+
 def _client_from_state(state: AgentState) -> dict[str, Any]:
     client = state.get("client") or state.get("raw_client")
     if client is not None:
@@ -199,6 +277,13 @@ def _client_from_state(state: AgentState) -> dict[str, Any]:
         "msisdn": state.get("msisdn") or ml_outputs.get("msisdn") or features.get("msisdn"),
     }
 
+
+# ------------------------------------------------------------
+# Helper : normalisation de la décision.
+# Objectif : garantir que la décision possède toujours les champs attendus
+# par le frontend et par la persistance : action_type, recommendation,
+# effective_tier, safe_to_send, etc.
+# ------------------------------------------------------------
 
 def _normalize_decision_contract(client: dict[str, Any], decision: dict[str, Any]) -> dict[str, Any]:
     action_type = decision.get("action_type") or decision.get("recommended_action") or "monitor_only"
@@ -215,6 +300,12 @@ def _normalize_decision_contract(client: dict[str, Any], decision: dict[str, Any
     }
 
 
+# ------------------------------------------------------------
+# Helper : normalisation du message.
+# Objectif : garantir que le message contient toujours les mêmes clés,
+# même si la fonction generate_message retourne un format partiel.
+# ------------------------------------------------------------
+
 def _normalize_message_contract(message: dict[str, Any]) -> dict[str, Any]:
     content = message.get("content") or message.get("message_text") or ""
     return {
@@ -229,6 +320,13 @@ def _normalize_message_contract(message: dict[str, Any]) -> dict[str, Any]:
         "llm_used": bool(message.get("llm_used")),
     }
 
+
+# ------------------------------------------------------------
+# Helper optionnel : génération locale par LLM.
+# Cette fonction n'est utilisée que si les conditions sont réunies :
+# action SMS, client anomalie, et option Ollama activée dans settings.
+# Sinon, on garde le message de secours déterministe.
+# ------------------------------------------------------------
 
 def _generate_local_contact_message(
     client: dict[str, Any],
@@ -258,6 +356,11 @@ def _generate_local_contact_message(
     return fallback_message
 
 
+# ------------------------------------------------------------
+# Helper : appel sécurisé au LLM local.
+# Si l'appel échoue, la fonction retourne None pour éviter de casser le workflow.
+# ------------------------------------------------------------
+
 def _call_contact_llm(prompt: str, model_name: str | None) -> dict[str, Any] | None:
     try:
         from app.services.bad_debts_llm_report_service import call_ollama_json
@@ -266,6 +369,13 @@ def _call_contact_llm(prompt: str, model_name: str | None) -> dict[str, Any] | N
     except Exception:
         return None
 
+
+# ------------------------------------------------------------
+# Helper : construction du prompt LLM.
+# Le prompt impose un SMS court, neutre et conforme aux règles métier.
+# Il interdit les termes sensibles comme anomalie, risque, sanction,
+# recouvrement, score ML, etc.
+# ------------------------------------------------------------
 
 def _contact_prompt(client: dict[str, Any], decision: dict[str, Any], fallback_message: dict[str, Any]) -> str:
     debt = _as_float(client.get("total_outstanding_amount"))
@@ -302,6 +412,12 @@ def _contact_prompt(client: dict[str, Any], decision: dict[str, Any], fallback_m
     )
 
 
+# ------------------------------------------------------------
+# Helper : transformation de la réponse LLM en message applicatif.
+# Il nettoie le texte généré, applique le contrat de contact,
+# puis ajoute les métadonnées nécessaires au frontend.
+# ------------------------------------------------------------
+
 def _build_contact_message(
     client: dict[str, Any],
     decision: dict[str, Any],
@@ -328,6 +444,12 @@ def _build_contact_message(
     }
 
 
+# ------------------------------------------------------------
+# Helper : nettoyage du SMS généré.
+# Objectif : retirer les formulations techniques ou sensibles,
+# corriger les mots interdits et éviter de parler de solde si la dette vaut zéro.
+# ------------------------------------------------------------
+
 def _clean_generated_sms(text: str, client: dict[str, Any]) -> str:
     cleaned = str(text or "").strip().strip('"').strip("'")
     if not cleaned:
@@ -353,6 +475,12 @@ def _clean_generated_sms(text: str, client: dict[str, Any]) -> str:
     return cleaned
 
 
+# ------------------------------------------------------------
+# Helper : contrat de contact.
+# Il associe chaque action métier à un type de message, un titre,
+# et une autorisation d'envoi.
+# ------------------------------------------------------------
+
 def _contact_contract(action_type: str, has_anomaly: bool = False) -> tuple[str, str, bool]:
     if action_type == "call_center_priority":
         return "call_script", "Script conseiller", False
@@ -363,6 +491,11 @@ def _contact_contract(action_type: str, has_anomaly: bool = False) -> tuple[str,
     return "monitoring_note", "Note de suivi", False
 
 
+# ------------------------------------------------------------
+# Helper : déduit le type de contact à partir du canal.
+# Canal call => script d'appel ; canal sms => SMS ; sinon note de suivi.
+# ------------------------------------------------------------
+
 def _contact_type_for_action(channel: Any) -> str:
     if channel == "call":
         return "call_script"
@@ -370,6 +503,10 @@ def _contact_type_for_action(channel: Any) -> str:
         return "preventive_sms"
     return "monitoring_note"
 
+
+# ------------------------------------------------------------
+# Helper : titre affiché dans le dashboard selon le type de contact.
+# ------------------------------------------------------------
 
 def _contact_title_for_type(contact_type: Any) -> str:
     if contact_type == "call_script":
@@ -379,11 +516,22 @@ def _contact_title_for_type(contact_type: Any) -> str:
     return "Note de suivi"
 
 
+# ------------------------------------------------------------
+# Helper : notice interne affichée avec le message.
+# Elle rappelle que la proposition doit être validée avant tout envoi.
+# ------------------------------------------------------------
+
 def _contact_notice(contact_type: Any) -> str:
     if contact_type in {"preventive_sms", "preventive_sms_ai"}:
         return "Proposition interne à valider avant envoi."
     return "Proposition interne non envoyée automatiquement."
 
+
+# ------------------------------------------------------------
+# Helper : validation anti-hallucination / conformité du message.
+# Objectif : refuser tout texte dangereux, trop long, incohérent,
+# contenant des numéros interdits, des termes techniques ou des promesses.
+# ------------------------------------------------------------
 
 def _validate_contact_message(message: dict[str, Any], client: dict[str, Any], decision: dict[str, Any]) -> bool:
     text = str(message.get("message_text") or message.get("content") or "").strip()
@@ -417,6 +565,12 @@ def _validate_contact_message(message: dict[str, Any], client: dict[str, Any], d
         return False
     return True
 
+
+# ------------------------------------------------------------
+# Helper : détecte les expressions interdites dans un message client.
+# Cette liste protège contre les messages agressifs, techniques,
+# juridiques ou non conformes métier.
+# ------------------------------------------------------------
 
 def _contains_forbidden_contact_text(text: str) -> bool:
     lowered = str(text or "").lower()
@@ -463,6 +617,12 @@ def _contains_forbidden_contact_text(text: str) -> bool:
     return any(term in lowered for term in forbidden) or bool(re.search(r"\bia\b", lowered)) or _contains_complete_msisdn(lowered)
 
 
+# ------------------------------------------------------------
+# Helper : contrôle des nombres dans le message.
+# Le LLM ne doit pas inventer de chiffres. Seuls les chiffres déjà présents
+# dans les données client ou la décision sont autorisés.
+# ------------------------------------------------------------
+
 def _numbers_allowed(text: str, client: dict[str, Any], decision: dict[str, Any]) -> bool:
     allowed: set[str] = {"1", "2", "3", "4"}
     for value in (
@@ -483,6 +643,11 @@ def _numbers_allowed(text: str, client: dict[str, Any], decision: dict[str, Any]
     return True
 
 
+# ------------------------------------------------------------
+# Helper : ajoute un nombre à la liste des valeurs autorisées.
+# On ajoute plusieurs formats pour éviter les faux rejets liés à l'arrondi.
+# ------------------------------------------------------------
+
 def _add_allowed_number(allowed: set[str], value: Any) -> None:
     if value is None or value == "":
         return
@@ -496,9 +661,19 @@ def _add_allowed_number(allowed: set[str], value: Any) -> None:
     allowed.add(str(round(numeric, 3)).rstrip("0").rstrip("."))
 
 
+# ------------------------------------------------------------
+# Helper : détecte un numéro complet de ligne mobile.
+# On évite d'exposer un MSISDN complet dans un message généré.
+# ------------------------------------------------------------
+
 def _contains_complete_msisdn(text: str) -> bool:
     return bool(re.search(r"\b216\d{5,9}\b", str(text or ""))) or bool(re.search(r"\b\d{8,12}\b", str(text or "")))
 
+
+# ------------------------------------------------------------
+# Fallback : profil minimal si la construction normale du profil échoue.
+# Il garde les informations essentielles pour ne pas bloquer le workflow.
+# ------------------------------------------------------------
 
 def _fallback_profile(state: AgentState) -> dict[str, Any]:
     client = _client_from_state(state)
@@ -513,6 +688,11 @@ def _fallback_profile(state: AgentState) -> dict[str, Any]:
     }
 
 
+# ------------------------------------------------------------
+# Fallback : explications minimales en cas d'erreur.
+# On signale au moins les règles simples comme anomalie ou client sensible.
+# ------------------------------------------------------------
+
 def _fallback_explanations(state: AgentState) -> dict[str, Any]:
     client = _client_from_state(state)
     rules = []
@@ -522,6 +702,12 @@ def _fallback_explanations(state: AgentState) -> dict[str, Any]:
         rules.append("Client sensible detecte")
     return {"primary_factors": [], "business_rules": rules, "explanation_text": "; ".join(rules)}
 
+
+# ------------------------------------------------------------
+# Fallback : décision de secours.
+# Si decide_next_action échoue, on utilise compute_client_decision
+# pour obtenir une décision métier minimale.
+# ------------------------------------------------------------
 
 def _fallback_decision(state: AgentState) -> dict[str, Any]:
     client = _client_from_state(state)
@@ -534,6 +720,12 @@ def _fallback_decision(state: AgentState) -> dict[str, Any]:
         "safe_to_send": action_type != "monitor_only",
     }
 
+
+# ------------------------------------------------------------
+# Compatibilité : produit une analyse métier déterministe.
+# Le nom contient "ai", mais ici on réutilise l'analyse déterministe
+# pour garder un résultat stable et contrôlable.
+# ------------------------------------------------------------
 
 def build_ai_analysis(
     client: dict[str, Any],
@@ -548,6 +740,12 @@ def build_ai_analysis(
     )
 
 
+# ------------------------------------------------------------
+# Helper : normalisation d'une analyse IA ou fallback.
+# Garantit les champs attendus : résumé, raisonnement, facteurs,
+# prochaines étapes et note interne.
+# ------------------------------------------------------------
+
 def _normalize_ai_analysis(value: Any, fallback: dict[str, Any]) -> dict[str, Any]:
     source = value if isinstance(value, dict) else {}
     return {
@@ -558,6 +756,11 @@ def _normalize_ai_analysis(value: Any, fallback: dict[str, Any]) -> dict[str, An
         "internal_note": str(source.get("internal_note") or fallback.get("internal_note") or ""),
     }
 
+
+# ------------------------------------------------------------
+# Fallback : message de secours selon l'action décidée.
+# Permet de toujours retourner une note ou un message même si la génération échoue.
+# ------------------------------------------------------------
 
 def _fallback_message(decision: dict[str, Any]) -> dict[str, Any]:
     action_type = decision.get("action_type")
@@ -584,6 +787,12 @@ def _fallback_message(decision: dict[str, Any]) -> dict[str, Any]:
     content = "Aucune action immédiate n’est recommandée. Conserver un suivi périodique lors des prochains imports."
     return {"contact_type": "monitoring_note", "title": "Note de suivi", "channel": "monitoring", "message_text": content, "content": content, "language": "fr", "internal_notice": "Proposition interne non envoyée automatiquement.", "safe_to_send": False, "generated_by": "deterministic_template", "llm_used": False}
 
+
+# ------------------------------------------------------------
+# Helper : construit le payload complet du run agent.
+# Ce payload rassemble profil, explications, décision, message,
+# analyse métier, signature ML et erreurs éventuelles.
+# ------------------------------------------------------------
 
 def _response_payload(
     state: AgentState,
@@ -622,6 +831,12 @@ def _response_payload(
     }
 
 
+# ------------------------------------------------------------
+# Helper : verrouillage des métadonnées du message.
+# Il indique si le message vient d'un template ou d'un LLM,
+# si un fallback a été utilisé et si la décision est verrouillée.
+# ------------------------------------------------------------
+
 def _lock_message_metadata(
     message: dict[str, Any],
     *,
@@ -649,6 +864,10 @@ def _lock_message_metadata(
     }
 
 
+# ------------------------------------------------------------
+# Helper d'affichage : transforme low/medium/high en libellé français.
+# ------------------------------------------------------------
+
 def _risk_label(value: Any) -> str:
     tier = _normalize_tier(value)
     if tier == "high":
@@ -658,6 +877,10 @@ def _risk_label(value: Any) -> str:
     return "faible"
 
 
+# ------------------------------------------------------------
+# Helper d'affichage : transforme l'action technique en libellé métier.
+# ------------------------------------------------------------
+
 def _action_label(value: Any) -> str:
     labels = {
         "call_center_priority": "Appel prioritaire centre de relation client",
@@ -666,6 +889,10 @@ def _action_label(value: Any) -> str:
     }
     return labels.get(str(value or ""), "Suivi routine")
 
+
+# ------------------------------------------------------------
+# Helper d'affichage : transforme une priorité numérique en libellé lisible.
+# ------------------------------------------------------------
 
 def _priority_label(value: Any) -> str:
     try:
@@ -681,6 +908,10 @@ def _priority_label(value: Any) -> str:
     return "Normal"
 
 
+# ------------------------------------------------------------
+# Helper d'affichage : traduit certains segments techniques en français.
+# ------------------------------------------------------------
+
 def _segment_label(value: Any) -> str:
     labels = {
         "DISCONNECTED": "Déconnecté",
@@ -691,6 +922,11 @@ def _segment_label(value: Any) -> str:
     }
     return labels.get(str(value or ""), "Segment non défini")
 
+
+# ------------------------------------------------------------
+# Helper d'affichage : traduit les noms de variables ML en facteurs métier.
+# Exemple : TOTAL_OUTSTANDING_AMOUNT => Encours restant.
+# ------------------------------------------------------------
 
 def _business_factor_labels(value: Any) -> list[str]:
     labels = {
@@ -718,6 +954,10 @@ def _business_factor_labels(value: Any) -> list[str]:
     return factors
 
 
+# ------------------------------------------------------------
+# Helper : garantit qu'une valeur est retournée sous forme de liste de chaînes.
+# ------------------------------------------------------------
+
 def _string_list(value: Any) -> list[str]:
     if isinstance(value, list):
         return [str(item) for item in value if str(item).strip()]
@@ -725,6 +965,11 @@ def _string_list(value: Any) -> list[str]:
         return [str(value)]
     return []
 
+
+# ------------------------------------------------------------
+# Helper : formate une valeur optionnelle pour affichage.
+# Si la valeur est absente, retourne "non disponible".
+# ------------------------------------------------------------
 
 def _format_optional(value: Any) -> str:
     if value is None or value == "":
@@ -735,6 +980,11 @@ def _format_optional(value: Any) -> str:
         return str(value)
 
 
+# ------------------------------------------------------------
+# Helper métier : détecte un client sensible.
+# Exemple : client déconnecté ou présent dans un label blacklist.
+# ------------------------------------------------------------
+
 def _is_sensitive_client(client: dict[str, Any]) -> bool:
     return (
         "disconnected" in _lower_text(client.get("state"))
@@ -744,10 +994,20 @@ def _is_sensitive_client(client: dict[str, Any]) -> bool:
     )
 
 
+# ------------------------------------------------------------
+# Helper : sécurise le niveau de risque.
+# Toute valeur inconnue est ramenée à low par défaut.
+# ------------------------------------------------------------
+
 def _normalize_tier(value: Any) -> str:
     tier = str(value or "low").strip().lower()
     return tier if tier in {"low", "medium", "high"} else "low"
 
+
+# ------------------------------------------------------------
+# Helper : convertit différents objets Python en dictionnaire.
+# Utile car les données peuvent venir d'un ORM, d'une Row SQL ou d'un dict.
+# ------------------------------------------------------------
 
 def _as_dict(value: Any) -> dict[str, Any]:
     if isinstance(value, dict):
@@ -764,6 +1024,11 @@ def _as_dict(value: Any) -> dict[str, Any]:
         }
 
 
+# ------------------------------------------------------------
+# Helper : conversion sécurisée en float.
+# Si la valeur est absente ou invalide, retourne None.
+# ------------------------------------------------------------
+
 def _as_float(value: Any) -> float | None:
     if value is None:
         return None
@@ -773,6 +1038,11 @@ def _as_float(value: Any) -> float | None:
         return None
 
 
+# ------------------------------------------------------------
+# Helper : formatage propre des montants.
+# Évite d'afficher des zéros inutiles après la virgule.
+# ------------------------------------------------------------
+
 def _format_amount(value: Any) -> str:
     numeric = _as_float(value)
     if numeric is None:
@@ -781,6 +1051,10 @@ def _format_amount(value: Any) -> str:
         return str(int(numeric))
     return f"{numeric:.2f}".rstrip("0").rstrip(".")
 
+
+# ------------------------------------------------------------
+# Helper : transforme une valeur en texte minuscule nettoyé.
+# ------------------------------------------------------------
 
 def _lower_text(value: Any) -> str:
     return str(value or "").strip().lower()

@@ -1,0 +1,24 @@
+========================================================================
+RAPPORT DE CONFLITS - ADMINISTRATEURS ACTIFS MULTIPLES PAR DÉPARTEMENT
+========================================================================
+
+ATTENTION : 1 département(s) avec des administrateurs actifs multiples ont été détectés.
+
+Département : Commercial
+Nombre d'administrateurs actifs : 2
+Utilisateurs concernés :
+  - ID : 8ff88a29-6218-446b-9003-a99923bd5012
+    Nom complet : amira
+    Email : benabdsmadamira@gmail.com
+    Rôle : ADMIN
+    Statut compte : ACTIVE
+    Est actif : True
+    Date de création : 2026-04-29 02:03:57.341247+01:00
+  - ID : 951d69e4-f119-4b62-902f-1a6dcd4cebf1
+    Nom complet : amira ben abdessmad
+    Email : amira.benabdessamad.2023@ihec.ucar.tn
+    Rôle : ADMIN
+    Statut compte : ACTIF
+    Est actif : True
+    Date de création : 2026-06-02 18:29:01.722994+01:00
+----------------------------------------

@@ -1,4 +1,4 @@
-import argparse
+import os
 import pandas as pd
 from pathlib import Path
 
@@ -60,7 +60,9 @@ def read_excel_safely(path: Path) -> pd.DataFrame:
     )
     return df
 
-
+#Cette fonction regarde l’extension du fichier
+#Si le fichier est en CSV : read_csv_safely()
+#.xlsx ou .xls : read_excel_safely()
 def read_sos_file(path: Path) -> pd.DataFrame:
     suffix = path.suffix.lower()
     if suffix in {".xlsx", ".xls"}:
@@ -69,35 +71,34 @@ def read_sos_file(path: Path) -> pd.DataFrame:
         return read_csv_safely(path)
     raise ValueError(f"Format SOS non supporté : {path.suffix}")
 
-
+#Cette fonction va nettoyer la clé MSISDN pour garantir une jointure fiable entre les deux datasets.
+#elle recoit le le tableau de données à nettoyer + le nom de la base, juste pour afficher un message clair.
 def clean_msisdn(df: pd.DataFrame, dataset_name: str) -> pd.DataFrame:
-    """
-    Normalise la clé MSISDN pour garantir une jointure fiable.
-    """
-    if "MSISDN" not in df.columns:
+  
+    if "MSISDN" not in df.columns:#vérifie que la colonne MSISDN existe
         raise ValueError(f"La colonne MSISDN est absente dans {dataset_name}")
 
-    df = df.copy()
+    df = df.copy()#crée une copie du DataFrame Cela évite de modifier directement la base originale en mémoire
 
     df["MSISDN"] = (
         df["MSISDN"]
-        .astype(str)
-        .str.strip()
-        .str.replace(".0", "", regex=False)
-    )
+        .astype(str) #Il transforme la colonne MSISDN en texte
+        .str.strip() #Il supprime les espaces au début et à la fin
+        .str.replace(".0", "", regex=False) #Il supprime le .0 ajouté parfois par Excel
+    ) 
 
-    df = df[df["MSISDN"].notna()]
-    df = df[df["MSISDN"] != ""]
-    df = df[df["MSISDN"].str.lower() != "nan"]
+    df = df[df["MSISDN"].notna()] #supprime les vraies valeurs nulles
+    df = df[df["MSISDN"] != ""]#supprime les chaînes vides
+    df = df[df["MSISDN"].str.lower() != "nan"] #supprime le texte "nan"
 
     print(f"{dataset_name} après nettoyage MSISDN : {df.shape[0]} lignes")
 
     return df
 
 
-def main(sos_file: Path | None = None, output_file: Path | None = None):
-    active_sos_file = sos_file or SOS_FILE
-    active_merged_file = output_file or MERGED_FILE
+def main():
+    active_sos_file = Path(os.environ.get("BAD_DEBTS_SOS_FILE", SOS_FILE))
+    active_merged_file = Path(os.environ.get("BAD_DEBTS_OUTPUT_FILE", MERGED_FILE))
 
     print("=" * 90)
     print("Construction du dataset fusionné Machine Learning Bad Debts")
@@ -118,7 +119,7 @@ def main(sos_file: Path | None = None, output_file: Path | None = None):
     print("\n4. Vérification des doublons MSISDN")
     pop_duplicates = pop_df["MSISDN"].duplicated().sum()
     sos_duplicates = sos_df["MSISDN"].duplicated().sum()
-
+#Étape de vérification +delete  des doublons
     print(f"Doublons MSISDN population : {pop_duplicates}")
     print(f"Doublons MSISDN SOS Solde  : {sos_duplicates}")
 
@@ -167,8 +168,4 @@ def main(sos_file: Path | None = None, output_file: Path | None = None):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Construit merged_dataset_inner.csv pour le ML Bad Debts.")
-    parser.add_argument("--sos-file", type=Path, default=None, help="Fichier SOS Solde uploadé à utiliser.")
-    parser.add_argument("--output-file", type=Path, default=None, help="Chemin de sortie optionnel du dataset fusionné.")
-    args = parser.parse_args()
-    main(sos_file=args.sos_file, output_file=args.output_file)
+    main()

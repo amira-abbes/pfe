@@ -5,6 +5,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import { api, getApiError } from "../api/api";
 import { useAuth } from "../context/AuthContext";
 import AuthTriangles from "../components/AuthTriangles";
+import { formatRemainingTime } from "../utils/time";
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -21,11 +22,8 @@ export default function LoginPage() {
 
   const loginReason = location.state?.reason || searchParams.get("reason");
   const infoMessage =
-    loginReason === "session_expired"
-      ? "Votre session a expiré après 30 minutes d’inactivité. Veuillez vous reconnecter."
-      : loginReason === "auth_required"
-        ? "Veuillez vous reconnecter."
-        : "";
+    location.state?.message ||
+    (loginReason === "auth_required" ? "Veuillez vous reconnecter." : "");
 
   function updateField(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
@@ -241,7 +239,7 @@ export default function LoginPage() {
             {loading
               ? "Connexion..."
               : cooldownSeconds > 0
-                ? `Réessayer (${cooldownSeconds}s)`
+                ? `Réessayer (${formatRemainingTime(cooldownSeconds)})`
                 : "Se connecter"}
             {!loading && cooldownSeconds <= 0 && <ArrowRight size={18} />}
           </button>

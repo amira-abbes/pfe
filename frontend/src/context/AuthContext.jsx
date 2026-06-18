@@ -4,12 +4,8 @@ import { effectivePermissionsForUser } from "../accessControl";
 import { api } from "../api/api";
 
 const AuthContext = createContext(null);
-const SESSION_EXPIRED_REASON = "session_expired";
-const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000;
-const ACTIVITY_THROTTLE_MS = 1500;
 const ACCOUNT_STATUS_CHECK_MS = 30 * 1000;
 const PERMISSIONS_CHANGED_KEY = "permissionsChangedAt";
-const LAST_ACTIVITY_KEY = "lastActivityAt";
 const AUTH_FLOW_PREFIXES = [
   "/login",
   "/session-expired",
@@ -27,6 +23,7 @@ const MFA_SESSION_KEYS = [
   "mfa_email",
   "mfa_role",
   "mfa_setup_token",
+  "mfa_totp_cooldown",
 ];
 
 const ADMIN_ROLES = ["ADMIN", "ADMIN_DEPARTEMENTAL", "SUPER_ADMIN"];
@@ -51,15 +48,6 @@ function dashboardForRole(role) {
 
 function cleanupMfaSession() {
   MFA_SESSION_KEYS.forEach((key) => sessionStorage.removeItem(key));
-}
-
-function markActivity() {
-  localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
-}
-
-function readLastActivityAt() {
-  const value = Number(localStorage.getItem(LAST_ACTIVITY_KEY));
-  return Number.isFinite(value) && value > 0 ? value : Date.now();
 }
 
 function userHasRight(user, code) {
@@ -99,11 +87,8 @@ function stopEltWatchOnUnload() {
 export function AuthProvider({ children }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const inactivityTimerRef = useRef(null);
   const accountStatusTimerRef = useRef(null);
-  const lastActivityResetRef = useRef(0);
   const redirectingRef = useRef(false);
-  const sessionExpiredByInactivityRef = useRef(false);
   const [accessToken, setAccessToken] = useState(() =>
     localStorage.getItem("access_token")
   );
@@ -116,11 +101,6 @@ export function AuthProvider({ children }) {
   const isAuthenticated = Boolean(accessToken);
   const isAdmin = ADMIN_ROLES.includes(user?.role);
   const hasRight = (code) => userHasRight(user, code);
-
-  function clearInactivityTimer() {
-    window.clearTimeout(inactivityTimerRef.current);
-    inactivityTimerRef.current = null;
-  }
 
   function clearAccountStatusTimer() {
     window.clearInterval(accountStatusTimerRef.current);
@@ -140,7 +120,6 @@ export function AuthProvider({ children }) {
     }
 
     localStorage.setItem("access_token", token);
-    markActivity();
     api.defaults.headers.common.Authorization = `Bearer ${token}`;
     setAccessToken(token);
   }
@@ -148,52 +127,11 @@ export function AuthProvider({ children }) {
   function logoutLocal() {
     localStorage.removeItem("access_token");
     localStorage.removeItem("current_user");
-    localStorage.removeItem(LAST_ACTIVITY_KEY);
     delete api.defaults.headers.common.Authorization;
-    clearInactivityTimer();
     clearAccountStatusTimer();
     setAccessToken(null);
     setUser(null);
     setLoading(false);
-  }
-
-  async function expireSessionDueToInactivity() {
-    sessionExpiredByInactivityRef.current = true;
-    try {
-      await stopEltWatchBestEffort();
-    } finally {
-      logoutLocal();
-      if (!isAuthFlowPath()) {
-        navigateOnce(`/login?reason=${SESSION_EXPIRED_REASON}`);
-      }
-    }
-  }
-
-  function resetInactivityTimer() {
-    if (!accessToken) return;
-    clearInactivityTimer();
-    const elapsed = Date.now() - readLastActivityAt();
-    const remaining = Math.max(0, INACTIVITY_TIMEOUT_MS - elapsed);
-
-    // The frontend session expires only after 30 minutes without real user activity.
-    inactivityTimerRef.current = window.setTimeout(() => {
-      const inactiveFor = Date.now() - readLastActivityAt();
-      if (inactiveFor >= INACTIVITY_TIMEOUT_MS) {
-        expireSessionDueToInactivity();
-        return;
-      }
-      resetInactivityTimer();
-    }, remaining);
-  }
-
-  // Any real interaction in the active tab refreshes the shared lastActivity timestamp.
-  function handleUserActivity() {
-    if (!localStorage.getItem("access_token")) return;
-    const now = Date.now();
-    if (now - lastActivityResetRef.current < ACTIVITY_THROTTLE_MS) return;
-    lastActivityResetRef.current = now;
-    markActivity();
-    resetInactivityTimer();
   }
 
   async function refreshMe(options = {}) {
@@ -220,15 +158,14 @@ export function AuthProvider({ children }) {
   }
 
   async function completeLogin(data) {
-    sessionExpiredByInactivityRef.current = false;
     if (!data?.access_token) {
       throw new Error("La connexion a réussi, mais le token est absent.");
     }
 
     localStorage.setItem("access_token", data.access_token);
-    markActivity();
     api.defaults.headers.common.Authorization = `Bearer ${data.access_token}`;
     setAccessToken(data.access_token);
+    cleanupMfaSession();
 
     await refreshMe({ skipAuthRedirect: true });
 
@@ -237,7 +174,6 @@ export function AuthProvider({ children }) {
   }
 
   async function logout() {
-    sessionExpiredByInactivityRef.current = false;
     try {
       await stopEltWatchBestEffort();
       await api.post("/auth/logout");
@@ -262,50 +198,6 @@ export function AuthProvider({ children }) {
         }
       }
     });
-  }, [accessToken]);
-
-  useEffect(() => {
-    if (!accessToken) {
-      clearInactivityTimer();
-      return undefined;
-    }
-
-    if (!localStorage.getItem(LAST_ACTIVITY_KEY)) {
-      markActivity();
-    }
-    resetInactivityTimer();
-
-    const events = [
-      "mousemove",
-      "mousedown",
-      "click",
-      "keydown",
-      "scroll",
-      "touchstart",
-    ];
-
-    events.forEach((eventName) => {
-      window.addEventListener(eventName, handleUserActivity, eventName === "scroll" ? { capture: true, passive: true } : { passive: true });
-    });
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState !== "visible") return;
-      const inactiveFor = Date.now() - readLastActivityAt();
-      if (inactiveFor >= INACTIVITY_TIMEOUT_MS) {
-        expireSessionDueToInactivity();
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      clearInactivityTimer();
-      // Cleanup prevents duplicated listeners/timers after navigation or refresh.
-      events.forEach((eventName) => {
-        window.removeEventListener(eventName, handleUserActivity, eventName === "scroll" ? { capture: true } : undefined);
-      });
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
   }, [accessToken]);
 
   useEffect(() => {
@@ -367,7 +259,6 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     function handleAuthRedirect(event) {
-      sessionExpiredByInactivityRef.current = false;
       logoutLocal();
       const target = event.detail?.to;
       if (target && !isAuthFlowPath(location.pathname)) {

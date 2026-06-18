@@ -11,6 +11,8 @@ class AdminCreateDepartementRequest(BaseModel):
 class AdminDepartementResponse(BaseModel):
     id: UUID
     nom_departement: str
+    admin_attribue: bool = False
+    administrateur_actif_email: str | None = None
 
 
 class AdminCreateDroitRequest(BaseModel):

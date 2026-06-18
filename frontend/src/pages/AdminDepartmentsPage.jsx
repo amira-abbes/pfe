@@ -14,7 +14,6 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { api, getApiError } from "../api/api";
-import { DEPARTMENT_KEYS, departmentKey } from "../accessControl";
 import Layout from "../components/Layout";
 import PageHeader from "../components/PageHeader";
 import Drawer from "../components/Drawer";
@@ -47,23 +46,10 @@ const PERMISSIONS = {
   },
 };
 
+delete PERMISSIONS.voir_resultat_elt;
+
 const VALID_PERMISSION_NAMES = Object.keys(PERMISSIONS);
 
-const DEPARTMENT_ALLOWED_PERMISSIONS = {
-  [DEPARTMENT_KEYS.COMMERCIAL]: ["voir_dashboard_bad_debts"],
-  [DEPARTMENT_KEYS.ASSURANCE_RISQUE]: [
-    "voir_dashboard_service_sos",
-    "voir_dashboard_parc_service_sos",
-    "lancer_traitement_elt",
-    "voir_resultat_elt",
-  ],
-  [DEPARTMENT_KEYS.ANALYSE_OPERATIONNELLE]: [
-    "voir_dashboard_service_sos",
-    "voir_dashboard_parc_service_sos",
-    "lancer_traitement_elt",
-    "voir_resultat_elt",
-  ],
-};
 
 function DepartmentActionMenu({ departmentName, onDelete }) {
   const buttonRef = useRef(null);
@@ -168,14 +154,9 @@ export default function AdminDepartmentsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchDept, setSearchDept] = useState("");
 
-  const allowedPermissionNames = useMemo(
-    () => DEPARTMENT_ALLOWED_PERMISSIONS[departmentKey(selectedDepartement)] || [],
-    [selectedDepartement]
-  );
-
   const displayedPermissions = useMemo(
-    () => droits.filter((droit) => allowedPermissionNames.includes(droit.nom_droit)),
-    [droits, allowedPermissionNames]
+    () => droits.filter((droit) => VALID_PERMISSION_NAMES.includes(droit.nom_droit)),
+    [droits]
   );
 
   const selectedPermissionNames = useMemo(

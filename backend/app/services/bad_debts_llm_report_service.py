@@ -1481,49 +1481,118 @@ def _global_report_prompt_legacy_unused(kpis: dict[str, Any], active_filters: di
 
 
 def _global_report_prompt(kpis: dict[str, Any], active_filters: dict[str, Any], decision_context: dict[str, Any]) -> str:
+    # Total de clients dans le perimetre analyse.
+    # Sans filtre : total du portefeuille.
+    # Avec filtre : total de la sous-population selectionnee.
     total = int(kpis.get("total_clients") or 0)
+    # Contexte compact qui sera envoye au LLM.
+    # Tous les chiffres et decisions sont deja calcules par Python/PostgreSQL.
+    # Le LLM ne doit donc pas recalculer, seulement rediger.
     compact_context = {
+        # Titre determine par Python selon les filtres actifs.
+        # Cela evite que le LLM invente un titre different du perimetre reel.
         "titre_python": _global_report_title(active_filters, total),
+        # Bloc KPI calcule par PostgreSQL via BadDebtsService.compute_global_kpis().
         "kpis": {
+            # Nombre total de clients analyses.
             "total_clients": total,
+            # Nombre de clients a risque eleve effectif.
             "clients_high": int(kpis.get("clients_high") or 0),
+            # Nombre de clients a risque moyen effectif.
             "clients_medium": int(kpis.get("clients_medium") or 0),
+            # Nombre de clients a risque faible effectif.
             "clients_low": int(kpis.get("clients_low") or 0),
+            # Nombre de clients avec anomalie detectee.
             "clients_with_anomaly": int(kpis.get("clients_with_anomaly") or 0),
+            # Score moyen de risque ML sur le perimetre.
             "average_risk_score": kpis.get("average_risk_score"),
+            # Dette moyenne du perimetre.
             "average_debt": kpis.get("average_debt"),
+            # Taux moyen de remboursement du perimetre.
             "average_reimbursement_ratio": kpis.get("average_reimbursement_ratio"),
+            # Segment client le plus represente.
             "dominant_segment": kpis.get("dominant_segment"),
+            # Action recommandee la plus frequente.
             "dominant_recommended_action": kpis.get("dominant_recommended_action"),
         },
+        # Filtres transformes en libelles lisibles pour le prompt.
+        # Exemple : "Risque eleve", "Avec anomalie", "Segment Standard".
         "filtres": _filter_labels_for_prompt(active_filters),
+        # Contexte decisionnel construit par Python pour encadrer la redaction.
         "decision_context": {
+            # Indique si on parle du global ou d'un filtre.
             "report_scope": decision_context.get("report_scope"),
+            # Lecture synthetique de la posture de risque.
             "risk_posture": decision_context.get("risk_posture"),
+            # Niveau de priorite calcule cote backend.
             "priority_level": decision_context.get("priority_level"),
+            # Axe principal que le rapport doit mettre en avant.
             "main_focus": decision_context.get("main_focus"),
+            # Objectif metier associe au rapport.
             "business_goal": decision_context.get("business_goal"),
+            # Base des priorites operationnelles limitee a 3 elements.
             "decision_support_base": (decision_context.get("decision_support_base") or [])[:3],
+            # Consignes de recommandation limitees a 4 elements.
             "recommendation_guidelines": (decision_context.get("recommendation_guidelines") or [])[:4],
         },
+        # Recommandations deja produites par Python.
+        # Le LLM peut les reformuler, mais ne doit pas inventer de nouvelle action.
         "recommandations_python": _global_structured_business_recommendations(kpis, active_filters)[:3],
     }
+    # Transformation du contexte en JSON compact pour reduire la taille du prompt.
+    # ensure_ascii=False garde les accents francais lisibles.
     compact = json.dumps(compact_context, ensure_ascii=False, default=str, separators=(",", ":"))
+    # Instruction de perimetre : elle evite qu'un rapport filtre soit presente comme global.
     scope_instruction = (
         "Si un filtre est actif, utilise les termes périmètre filtré, périmètre sélectionné ou groupe sélectionné. "
         "Ne présente jamais un périmètre filtré comme tout le portefeuille. "
         "Le mot portefeuille est autorisé seulement pour une comparaison explicite avec le portefeuille global."
+        # Si active_filters existe, le rapport concerne une sous-population filtree.
         if active_filters
+        # Sinon, aucun filtre n'est applique : le rapport couvre tout le portefeuille.
         else "Ce rapport couvre le portefeuille global."
     )
+    # Construction finale du prompt envoye a Ollama.
+    # Le prompt fixe le role du modele, les limites, le format JSON attendu,
+    # les interdits et le contexte chiffre/decisionnel.
     return (
+        # Ligne 1 du prompt : donne le role au LLM.
+        # Il est presente comme redacteur metier Bad Debts.
+        # Cette ligne lui rappelle aussi que Python a deja calcule les KPI,
+        # les filtres, les risques, les actions, les priorites, les graphes
+        # et les recommandations. Donc le modele ne doit pas creer la logique.
+        #
+        # Ligne 2 du prompt : limite strictement le role du LLM.
+        # Il doit produire seulement trois textes courts en francais.
+        # Il ne doit ni calculer, ni prendre une decision.
+        #
+        # Ligne 3 du prompt : impose une reponse JSON uniquement.
+        # C'est important car le backend parse ensuite la reponse automatiquement.
+        #
+        # Ligne 4 du prompt : impose les trois champs autorises.
+        # decision_summary = synthese courte.
+        # risk_reading = lecture du risque.
+        # business_recommendations_narrative = recommandations metier.
+        # Les limites de phrases evitent les rapports trop longs.
+        #
+        # Ligne 5 du prompt : interdit les hallucinations metier.
+        # Le LLM ne peut pas inventer de chiffres, de nouvelle decision,
+        # de nouvelle priorite ou de nouvelle action.
+        # Les remises, bonus et cadeaux sont interdits pour eviter une promesse commerciale.
+        #
+        # Ligne 6 du prompt : interdit les termes sensibles et techniques.
+        # Le rapport doit rester professionnel et metier :
+        # pas de menace, sanction, contentieux, ni jargon API/backend/LLM.
         "Tu es rédacteur métier Bad Debts. Python a déjà calculé les KPIs, filtres, risques, actions, priorités, graphes et recommandations. "
         "Tu rédiges uniquement trois textes courts en français; tu ne calcules rien et tu ne décides rien. "
         "Réponds seulement avec un objet JSON contenant exactement: "
         "decision_summary string max 3 phrases; risk_reading string max 3 phrases; business_recommendations_narrative string max 4 phrases. "
         "Interdits: chiffres inventés, décision nouvelle, priorité nouvelle, action nouvelle, remise, réduction, bonus, cadeau, "
         "offre commerciale, promotion, sanction, menace, contentieux, poursuite, API, JSON, backend, frontend, Ollama, Qwen, LLM, modèle IA. "
+        # Ajout de la consigne global/filtre.
         f"{scope_instruction} "
+        # Ajout du contexte calcule par Python.
+        # C'est la seule source autorisee pour rediger le rapport.
         f"CONTEXTE:{compact}"
     )
 

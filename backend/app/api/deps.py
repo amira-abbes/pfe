@@ -1,10 +1,7 @@
-﻿from datetime import timedelta
-
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session, selectinload
 
-from app.core.config import settings
 from app.core.access_control import DEPARTMENT_ADMIN_ROLES, user_effective_permissions
 from app.core.constants import (
     AUDIT_ADMIN_SESSION_EXPIRED,
@@ -80,31 +77,12 @@ def get_current_user(
 
     now = utc_now()
     expire_a = ensure_aware_utc(session.expire_a)
-    derniere_activite_a = ensure_aware_utc(session.derniere_activite_a)
 
     if expire_a and expire_a <= now:
         _expire_session(
             db=db,
             session=session,
             reason="Expiration absolue de session",
-            role=session.role,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Session expirée. Veuillez vous reconnecter.",
-        )
-
-    inactivity_limit = (
-        timedelta(minutes=settings.ADMIN_SESSION_IDLE_MINUTES)
-        if str(session.role or "").upper() in {*DEPARTMENT_ADMIN_ROLES, ROLE_SUPER_ADMIN}
-        else timedelta(minutes=settings.USER_SESSION_IDLE_MINUTES)
-    )
-
-    if derniere_activite_a and derniere_activite_a + inactivity_limit <= now:
-        _expire_session(
-            db=db,
-            session=session,
-            reason="Expiration par inactivité",
             role=session.role,
         )
         raise HTTPException(

@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, String, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import Text
@@ -9,7 +9,17 @@ from app.db.base import Base
 
 class Utilisateur(Base):
     __tablename__ = "utilisateurs"
-    __table_args__ = {"schema": "app"}
+    __table_args__ = (
+        Index(
+            "ux_utilisateurs_active_admin_per_departement",
+            "departement_id",
+            unique=True,
+            postgresql_where=text(
+                "UPPER(role) = 'ADMIN' AND est_actif IS TRUE AND date_suppression IS NULL"
+            ),
+        ),
+        {"schema": "app"},
+    )
 
     id = Column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))
 

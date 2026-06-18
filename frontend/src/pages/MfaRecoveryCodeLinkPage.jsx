@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
 import { useAuth } from "../context/AuthContext";
+import { formatRemainingTime } from "../utils/time";
 
 const ROLE_COPY = {
   SUPER_ADMIN: {
@@ -31,13 +32,6 @@ const ROLE_COPY = {
       "Vos codes de secours vous ont été fournis lors de l'activation de votre compte. Vérifiez votre boîte mail ou vos téléchargements.",
   },
 };
-
-function formatSeconds(totalSeconds) {
-  const safe = Math.max(0, Number(totalSeconds) || 0);
-  return `${String(Math.floor(safe / 60)).padStart(2, "0")}:${String(
-    safe % 60
-  ).padStart(2, "0")}`;
-}
 
 export default function MfaRecoveryCodeLinkPage() {
   const navigate = useNavigate();
@@ -120,7 +114,7 @@ export default function MfaRecoveryCodeLinkPage() {
         {error && <div className="alert alert-error">{error}</div>}
         {cooldownSeconds > 0 && (
           <div className="alert alert-info">
-            Temps restant : {formatSeconds(cooldownSeconds)}
+            Temps restant : {formatRemainingTime(cooldownSeconds)}
           </div>
         )}
 

@@ -10,15 +10,11 @@ import {
   Home,
   Loader2,
   LogOut,
-  Maximize2,
   Menu,
-  Minimize2,
-  Moon,
   Printer,
   RotateCcw,
   Search,
   ShieldAlert,
-  Sun,
   TrendingDown,
   Users,
   Zap,
@@ -44,7 +40,6 @@ import {
 import { useAuth } from "../context/AuthContext";
 import "../styles/bad-debts-dashboard.css";
 
-const BAD_DEBTS_THEME_KEY = "badDebtsTheme";
 const DEFAULT_CLIENT_FILTERS = { risk_tier: "", search: "", is_anomaly: "", cluster_name: "", action_type: "" };
 
 const ACTION_LABELS = {
@@ -338,7 +333,7 @@ export default function DashboardBadDebtsPage() {
 }
 
 function BadDebtsWorkspace({ view }) {
-  const [theme, setTheme] = useState(() => localStorage.getItem(BAD_DEBTS_THEME_KEY) || "dark");
+  const theme = "light";
   const [summary, setSummary] = useState(null);
   const [clients, setClients] = useState({ items: [], total: 0, page: 1, page_size: 10, total_pages: 0 });
   const [imports, setImports] = useState([]);
@@ -352,10 +347,6 @@ function BadDebtsWorkspace({ view }) {
   const [globalReportError, setGlobalReportError] = useState("");
   const globalReportCacheRef = useRef(new Map());
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    localStorage.setItem(BAD_DEBTS_THEME_KEY, theme);
-  }, [theme]);
 
   useEffect(() => {
     refreshDashboard();
@@ -510,9 +501,9 @@ function BadDebtsWorkspace({ view }) {
   const headerNode = <BadDebtsHeader />;
 
   return (
-    <Layout>
+    <Layout className="app-shell--bad-debts">
       <div className={`bdx-shell ${theme === "light" ? "is-light" : "is-dark"}`}>
-        <BadDebtsSidebar theme={theme} onThemeToggle={() => setTheme((current) => (current === "dark" ? "light" : "dark"))} />
+        <BadDebtsSidebar />
         <main className="bdx-main">
           {view !== "overview" && view !== "clients" && headerNode}
           {error && <div className="bdx-alert"><AlertTriangle size={18} />{error}</div>}
@@ -526,7 +517,7 @@ function BadDebtsWorkspace({ view }) {
     </Layout>  );
 }
 
-function BadDebtsSidebar({ theme, onThemeToggle }) {
+function BadDebtsSidebar() {
   const items = [
     ["overview", "Vue globale", Home],
     ["clients", "Clients à risque", Users],
@@ -546,10 +537,6 @@ function BadDebtsSidebar({ theme, onThemeToggle }) {
             <span className="bdx-side-label">{label}</span>
           </NavLink>
         ))}
-        <button className="bdx-theme-nav-button" type="button" onClick={onThemeToggle} title="Mode clair/sombre">
-          {theme === "dark" ? <Moon size={18} /> : <Sun size={18} />}
-          <span className="bdx-side-label">Mode clair/sombre</span>
-        </button>
       </nav>
     </aside>
   );
@@ -573,9 +560,6 @@ function ViewRenderer({ view, context }) {
 
 function OverviewPage({ summary, clients, headerNode }) {
   const navigate = useNavigate();
-  const overviewRef = useRef(null);
-  const [nativeFullscreen, setNativeFullscreen] = useState(false);
-  const [fallbackFullscreen, setFallbackFullscreen] = useState(false);
   const [activeRisk, setActiveRisk] = useState(null);
   const [activeSegment, setActiveSegment] = useState(null);
   const [activeScoreSegment, setActiveScoreSegment] = useState(null);
@@ -583,7 +567,7 @@ function OverviewPage({ summary, clients, headerNode }) {
   const tierRows = buildTierRows(summary);
   const segmentRows = buildSegmentRows(summary);
   const scoreValue = summary.avg_final_risk_score ?? 0;
-  const scoreRows = buildScoreRows();
+  const scoreRows = buildScoreRows(summary);
   const highRiskCount = summary.high_risk_count ?? 0;
   const kpis = [
     ["Total clients scorés", summary.total_clients ?? 0, Users, "blue"],
@@ -592,52 +576,9 @@ function OverviewPage({ summary, clients, headerNode }) {
     ["Anomalies détectées", summary.anomaly_count ?? 0, AlertTriangle, "orange"],
     ["Score moyen", scoreValue, Gauge, "green", 3],
   ];
-  const isFullscreen = nativeFullscreen || fallbackFullscreen;
-
-  useEffect(() => {
-    const handleFullscreenChange = () => {
-      setNativeFullscreen(document.fullscreenElement === overviewRef.current);
-    };
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
-
-  useEffect(() => {
-    if (!fallbackFullscreen) return undefined;
-    document.body.classList.add("bad-debts-overview-fullscreen-open");
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") setFallbackFullscreen(false);
-    };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.body.classList.remove("bad-debts-overview-fullscreen-open");
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [fallbackFullscreen]);
-
-  async function toggleFullscreen() {
-    if (document.fullscreenElement === overviewRef.current) {
-      await document.exitFullscreen?.();
-      return;
-    }
-    if (fallbackFullscreen) {
-      setFallbackFullscreen(false);
-      return;
-    }
-    if (overviewRef.current?.requestFullscreen) {
-      try {
-        await overviewRef.current.requestFullscreen();
-        return;
-      } catch {
-        setFallbackFullscreen(true);
-        return;
-      }
-    }
-    setFallbackFullscreen(true);
-  }
 
   return (
-    <div ref={overviewRef} className={`bdx-view bdx-overview ${fallbackFullscreen ? "is-fullscreen-fallback" : ""}`}>
+    <div className="bdx-view bdx-overview">
       <section className="bdx-overview-kpi-grid" aria-label="Indicateurs Bad Debts">
         {kpis.map(([label, value, Icon, tone, decimals, to], index) => <KpiCard key={label} label={label} value={value} icon={Icon} tone={tone} index={index} decimals={decimals} onClick={to ? () => navigate(to) : undefined} />)}
       </section>
@@ -645,10 +586,6 @@ function OverviewPage({ summary, clients, headerNode }) {
       <div className="bdx-overview-main">
         <div className="bdx-overview-header-row">
           {headerNode}
-          <button className="bdx-overview-fullscreen-button" type="button" onClick={toggleFullscreen} title={isFullscreen ? "Quitter le plein écran" : "Afficher en plein écran"}>
-            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-            <span>{isFullscreen ? "Quitter le plein écran" : "Plein écran"}</span>
-          </button>
         </div>
         <section className="bdx-chart-grid">
           <Panel title="Répartition du risque" meta="Population ML">
@@ -661,7 +598,7 @@ function OverviewPage({ summary, clients, headerNode }) {
             <HorizontalBars rows={scoreRows} active={activeScoreSegment} onActiveChange={setActiveScoreSegment} />
           </Panel>
           <Panel title="Dette moyenne par niveau de risque">
-            <RadialDebt active={activeDebtRisk} onActiveChange={setActiveDebtRisk} />
+            <RadialDebt active={activeDebtRisk} onActiveChange={setActiveDebtRisk} data={summary.average_debt_by_risk} />
           </Panel>
         </section>
       </div>
@@ -865,13 +802,7 @@ function RiskClientsPage({
             <div className="bad-debts-global-report-loading">
               <Loader2 className="spin" size={24} />
               <div>
-                <strong>Génération du rapport métier en cours</strong>
-                <span>Le système analyse les indicateurs calculés et rédige une synthèse opérationnelle. Les priorités et recommandations sont validées avant affichage.</span>
-                <ol className="global-report-loading-steps">
-                  <li className={globalReportLoadingStage ? "active" : ""}>Analyse des indicateurs</li>
-                  <li>Rédaction de la synthèse métier</li>
-                  <li>Contrôle de cohérence</li>
-                </ol>
+                <strong>Génération en cours</strong>
               </div>
             </div>
           )}
@@ -899,6 +830,7 @@ function BadDebtsFiltersCard({ filters, actionOptions, onChange, onReset, onGene
   function handleSearchChange(event) {
     onChange("search", event.target.value.replace(/\D/g, ""));
   }
+  const searchMode = Boolean(String(filters.search || "").trim());
 
   return (
     <section className="bad-debts-filters-card">
@@ -915,9 +847,9 @@ function BadDebtsFiltersCard({ filters, actionOptions, onChange, onReset, onGene
       <div className="bad-debts-filter-actions">
         {activeFilters && <span className="bad-debts-filter-scope-hint">{activeFilters}</span>}
         <button className="bad-debts-btn secondary" type="button" onClick={onReset}><RotateCcw size={16} />Réinitialiser</button>
-        <button className="bad-debts-btn primary global-report-btn" type="button" onClick={onGenerateReport} disabled={globalReportLoading}>
+        <button className="bad-debts-btn primary global-report-btn" type="button" onClick={onGenerateReport} disabled={globalReportLoading || searchMode} title={searchMode ? "Utilisez le bouton Analyser sur la ligne client." : undefined}>
           {globalReportLoading ? <Loader2 className="spin" size={18} /> : <FileText size={18} />}
-          {globalReportLoading ? "Génération..." : "Générer rapport"}
+          {globalReportLoading ? "Génération..." : searchMode ? "Analyse client disponible" : "Générer rapport"}
         </button>
       </div>
     </section>
@@ -958,7 +890,7 @@ function BadDebtsClientsTable({ rows, loading, title, meta, activeFilters, page,
           <>
             <div className="bad-debts-table-wrap">
               <table className="bad-debts-table">
-                <thead><tr><th>Client</th><th>Segment client</th><th>Risque</th><th>Score</th><th>Dette (TND)</th><th>Remboursement</th><th>Anomalie</th><th>Action recommandée</th><th className="bad-debts-priority-cell">Priorité</th><th className="bad-debts-actions-cell">Actions</th></tr></thead>
+                <thead><tr><th>Client</th><th>Segment client</th><th>Risque</th><th>Signal</th><th>Score</th><th>Dette (TND)</th><th>Remboursement</th><th>Anomalie</th><th>Action recommandée</th><th className="bad-debts-priority-cell">Priorité</th><th className="bad-debts-actions-cell">Actions</th></tr></thead>
                 <tbody>{rows.map((client) => {
                   const actionType = recommendedActionForClient(client);
                   const priority = priorityForClient(client);
@@ -967,7 +899,8 @@ function BadDebtsClientsTable({ rows, loading, title, meta, activeFilters, page,
                     <tr key={client.msisdn}>
                       <td><ClientCell value={client.msisdn} /></td>
                       <td className="bad-debts-segment-cell" title={segmentLabel(client.cluster_name)}>{segmentLabel(client.cluster_name)}</td>
-                      <td className="bad-debts-risk-cell"><RiskBadge tier={client.effective_tier || client.risk_tier} /></td>
+                      <td className="bad-debts-risk-cell"><RiskBadge tier={client.risk_tier} /></td>
+                      <td className="bad-debts-signal-cell"><OperationalSignalBadge client={client} /></td>
                       <td><ScoreBar score={client.final_risk_score} tone={client.effective_tier || client.risk_tier} /></td>
                       <td>{formatNumber(client.total_outstanding_amount)}</td>
                       <td>{formatPercent(client.avg_reimburse_ratio)}</td>
@@ -1032,7 +965,8 @@ function BadDebtsAgentDrawer({ feedback, open, onClose }) {
           <section className="bad-debts-analysis-section">
             <h4>Niveau de risque</h4>
             <div className="bad-debts-drawer-grid highlights">
-              <div className="risk"><span>Niveau de risque</span><strong>{feedback.effectiveTier ? tierLabel(feedback.effectiveTier) : feedback.risk ? tierLabel(feedback.risk) : "Non classé"}</strong></div>
+              <div className="risk"><span>Risque ML</span><strong>{feedback.rawRiskTier ? tierLabel(feedback.rawRiskTier) : feedback.risk ? tierLabel(feedback.risk) : "Non classé"}</strong></div>
+              <div className="risk"><span>Risque opérationnel</span><strong>{feedback.effectiveTier ? tierLabel(feedback.effectiveTier) : feedback.risk ? tierLabel(feedback.risk) : "Non classé"}</strong></div>
               <div className="score"><span>Score ML</span><strong>{formatScore(feedback.score)}</strong></div>
               <div><span>Anomalie</span><strong>{feedback.anomaly ? "Oui" : "Non"}</strong></div>
               <div className="priority"><span>Priorité</span><strong>{feedback.priority}</strong></div>
@@ -1384,6 +1318,16 @@ function RiskBadge({ tier }) {
   return <span className={`bad-debts-badge risk-${normalized || "unknown"}`}>{tierLabel(tier)}</span>;
 }
 
+function OperationalSignalBadge({ client = {} }) {
+  const rawTier = normalizeTier(client.risk_tier);
+  const effectiveTier = normalizeTier(client.effective_tier || client.risk_tier);
+  const hasAnomaly = Boolean(client.is_anomaly);
+  const escalated = Boolean(hasAnomaly && rawTier && effectiveTier && rawTier !== effectiveTier);
+  if (escalated) return <span className="bad-debts-badge risk-escalated">Renforcé par anomalie</span>;
+  if (hasAnomaly) return <span className="bad-debts-badge risk-anomaly">Anomalie sans escalade</span>;
+  return <span className="bad-debts-badge risk-standard">Aucun signal</span>;
+}
+
 function PriorityBadge({ priority, label }) {
   const numeric = Number(priority);
   const tone = numeric === 1 ? "critical" : numeric === 2 ? "warning" : "normal";
@@ -1678,11 +1622,14 @@ function HorizontalBars({ rows, active, onActiveChange }) {
   );
 }
 
-function RadialDebt({ active, onActiveChange }) {
+function RadialDebt({ active, onActiveChange, data = [] }) {
+  const valueByLevel = Array.isArray(data)
+    ? data.reduce((acc, item) => ({ ...acc, [item.level]: Number(item.value) || 0 }), {})
+    : {};
   const rows = [
-    { label: "Faible", value: 24.6, tone: "low", radius: 64, color: "#17D5E8" },
-    { label: "Moyen", value: 53.8, tone: "medium", radius: 52, color: "#8B3FF2" },
-    { label: "Élevé", value: 112.7, tone: "high", radius: 40, color: "#F72585" },
+    { label: "Faible", value: valueByLevel.low || 0, tone: "low", radius: 64, color: "#17D5E8" },
+    { label: "Moyen", value: valueByLevel.medium || 0, tone: "medium", radius: 52, color: "#8B3FF2" },
+    { label: "Élevé", value: valueByLevel.high || 0, tone: "high", radius: 40, color: "#F72585" },
   ];
   const maxValue = Math.max(...rows.map((row) => row.value), 1);
   const activeRow = active ? rows.find((row) => row.label === active) : null;
@@ -1792,13 +1739,18 @@ function buildSegmentRows(summary) {
   return entries.map(([label, value]) => ({ label: segmentLabel(label), value, percent: (Number(value) / max) * 100 }));
 }
 
-function buildScoreRows() {
-  const rows = [
-    ["Déconnecté", 0.812],
-    ["Suspendu", 0.674],
-    ["En attente", 0.523],
-    ["Standard", 0.312],
-    ["Bon payeur", 0.156],
-  ];
-  return rows.map(([label, value]) => ({ label, value, percent: value * 100 }));
+function buildScoreRows(summary) {
+  const source = Array.isArray(summary.average_score_by_segment) && summary.average_score_by_segment.length
+    ? summary.average_score_by_segment
+    : [
+      { label: "Déconnecté", value: 0 },
+      { label: "Suspendu", value: 0 },
+      { label: "En attente", value: 0 },
+      { label: "Standard", value: 0 },
+      { label: "Bon payeur", value: 0 },
+    ];
+  return source.map((row) => {
+    const value = Number(row.value) || 0;
+    return { label: row.label || segmentLabel(row.segment), value, percent: value * 100 };
+  });
 }

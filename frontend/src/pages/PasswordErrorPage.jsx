@@ -1,22 +1,7 @@
 import { AlertTriangle, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-
-function parseTempsRestant(value) {
-  if (!value || typeof value !== "string") return 0;
-  const parts = value.split(":").map((item) => Number(item));
-  if (parts.length !== 2) return 0;
-  const minutes = Number.isFinite(parts[0]) ? parts[0] : 0;
-  const seconds = Number.isFinite(parts[1]) ? parts[1] : 0;
-  return Math.max(0, minutes * 60 + seconds);
-}
-
-function formatSeconds(totalSeconds) {
-  const safeSeconds = Math.max(0, Number(totalSeconds) || 0);
-  const minutes = Math.floor(safeSeconds / 60);
-  const seconds = safeSeconds % 60;
-  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-}
+import { formatRemainingTime, parseRemainingTime } from "../utils/time";
 
 export default function PasswordErrorPage() {
   const location = useLocation();
@@ -29,7 +14,7 @@ export default function PasswordErrorPage() {
   const remainingFromState = Number(location.state?.remaining_seconds) || 0;
 
   const initialSeconds = useMemo(
-    () => remainingFromState || parseTempsRestant(tempsRestantInitial),
+    () => remainingFromState || parseRemainingTime(tempsRestantInitial),
     [remainingFromState, tempsRestantInitial]
   );
 
@@ -45,10 +30,6 @@ export default function PasswordErrorPage() {
       code === "MFA_TEMPORARILY_LOCKED" ||
       initialSeconds > 0);
   const canRetry = !isDelayOnly || remainingSeconds <= 0;
-
-  useEffect(() => {
-    setRemainingSeconds(initialSeconds);
-  }, [initialSeconds]);
 
   useEffect(() => {
     if (!isDelayOnly || remainingSeconds <= 0) return undefined;
@@ -127,7 +108,7 @@ export default function PasswordErrorPage() {
                 <RotateCcw size={18} />
                 {canRetry
                   ? "Réessayer"
-                  : `Réessayer dans ${formatSeconds(remainingSeconds)}`}
+                  : `Réessayer dans ${formatRemainingTime(remainingSeconds)}`}
               </button>
 
               <Link className="btn btn-secondary" to="/forgot-password">

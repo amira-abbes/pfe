@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { api, getApiError } from "../api/api";
 import AuthTriangles from "../components/AuthTriangles";
 import OtpInput from "../components/OtpInput";
+import { formatRemainingTime, parseRemainingTime } from "../utils/time";
 
 export default function ActivationTotpPage() {
   const navigate = useNavigate();
@@ -21,6 +22,17 @@ export default function ActivationTotpPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) return undefined;
+
+    const timer = window.setInterval(() => {
+      setCooldownSeconds((current) => Math.max(0, current - 1));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [cooldownSeconds]);
 
   useEffect(() => {
     async function start() {
@@ -115,6 +127,8 @@ export default function ActivationTotpPage() {
 
   async function handleVerify(event) {
     event.preventDefault();
+    if (cooldownSeconds > 0) return;
+
     setError("");
     setMessage("");
     setLoading(true);
@@ -133,9 +147,8 @@ export default function ActivationTotpPage() {
       const data = response.data;
 
       if (!data.success) {
-        setError(
-          `${data.message}${data.temps_restant ? ` Temps restant : ${data.temps_restant}` : ""}`
-        );
+        setCooldownSeconds(parseRemainingTime(data.temps_restant));
+        setError(data.message);
         return;
       }
 
@@ -175,6 +188,11 @@ export default function ActivationTotpPage() {
             </p>
 
             {error && <div className="auth-error-banner">{error}</div>}
+            {cooldownSeconds > 0 && (
+              <div className="alert alert-info">
+                Temps restant : {formatRemainingTime(cooldownSeconds)}
+              </div>
+            )}
 
             {setup?.qr_code_base64 && (
               <img
@@ -197,12 +215,15 @@ export default function ActivationTotpPage() {
                   value={code}
                   onChange={setCode}
                   autoFocus
-                  disabled={loading}
+                  disabled={loading || cooldownSeconds > 0}
                   ariaLabel="Code Authenticator"
                 />
               </div>
 
-              <button className="btn-primary" disabled={loading}>
+              <button
+                className="btn-primary"
+                disabled={loading || cooldownSeconds > 0}
+              >
                 <ShieldCheck size={18} />
                 {loading ? "Vérification en cours" : "Activer mon compte"}
               </button>

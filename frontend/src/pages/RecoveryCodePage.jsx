@@ -5,6 +5,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { api, getApiError } from "../api/api";
 import { useAuth } from "../context/AuthContext";
 import AuthTriangles from "../components/AuthTriangles";
+import { formatRemainingTime } from "../utils/time";
+
+const RECOVERY_CODE_LENGTH = 10;
 
 export default function RecoveryCodePage() {
   const navigate = useNavigate();
@@ -17,6 +20,7 @@ export default function RecoveryCodePage() {
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
 
   const mfaToken = sessionStorage.getItem("mfa_token");
+  const isCodeComplete = codeSecours.length === RECOVERY_CODE_LENGTH;
 
   useEffect(() => {
     if (cooldownSeconds <= 0) return undefined;
@@ -28,14 +32,39 @@ export default function RecoveryCodePage() {
     return () => window.clearInterval(timer);
   }, [cooldownSeconds]);
 
+  function updateCode(value) {
+    setCodeSecours(value.slice(0, RECOVERY_CODE_LENGTH));
+    setError("");
+  }
+
+  function handlePaste(event) {
+    event.preventDefault();
+    const input = event.currentTarget;
+    const start = input.selectionStart ?? codeSecours.length;
+    const end = input.selectionEnd ?? start;
+    const pasted = event.clipboardData.getData("text");
+    updateCode(
+      `${codeSecours.slice(0, start)}${pasted}${codeSecours.slice(end)}`
+    );
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
+
+    if (!isCodeComplete) {
+      setError("Le code de secours doit contenir exactement 10 caractères.");
+      window.setTimeout(() => codeInputRef.current?.focus(), 0);
+      return;
+    }
+
     setLoading(true);
 
     try {
       if (!mfaToken) {
-        setError("Session de vérification introuvable. Veuillez recommencer la connexion.");
+        setError(
+          "Session de vérification introuvable. Veuillez recommencer la connexion."
+        );
         return;
       }
 
@@ -56,7 +85,10 @@ export default function RecoveryCodePage() {
         setCooldownSeconds(Number(data.remaining_seconds) || 0);
         setError(data.message || "Code de secours invalide ou déjà utilisé.");
 
-        if (data.status === "mfa_session_expired" || data.status === "missing_mfa_token") {
+        if (
+          data.status === "mfa_session_expired" ||
+          data.status === "missing_mfa_token"
+        ) {
           sessionStorage.removeItem("mfa_token");
         }
 
@@ -75,7 +107,12 @@ export default function RecoveryCodePage() {
     } catch (err) {
       setCodeSecours("");
       window.setTimeout(() => codeInputRef.current?.focus(), 0);
-      setError(getApiError(err, "Connexion validée, mais le chargement de votre session a échoué."));
+      setError(
+        getApiError(
+          err,
+          "Connexion validée, mais le chargement de votre session a échoué."
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -91,8 +128,12 @@ export default function RecoveryCodePage() {
         <h1>Code de secours</h1>
         <div className="rainbow-line" />
 
-        <p className="subtitle" style={{ textAlign: 'center', marginBottom: '24px' }}>
-          Utilisez l'un de vos codes de secours à 10 chiffres pour accéder à votre compte.
+        <p
+          className="subtitle"
+          style={{ textAlign: "center", marginBottom: "24px" }}
+        >
+          Utilisez l'un de vos codes de secours à 10 caractères pour accéder à
+          votre compte.
         </p>
 
         {error && <div className="auth-error-banner">{error}</div>}
@@ -100,34 +141,62 @@ export default function RecoveryCodePage() {
         <form className="form" onSubmit={handleSubmit}>
           <div className="input-group">
             <div className="input-icon-wrap">
-              <span className="input-icon-left"><KeyRound size={17} /></span>
+              <span className="input-icon-left">
+                <KeyRound size={17} />
+              </span>
               <input
                 ref={codeInputRef}
                 className="input"
                 value={codeSecours}
-                onChange={(event) => setCodeSecours(event.target.value)}
-                placeholder="Code à 10 chiffres"
+                onChange={(event) => updateCode(event.target.value)}
+                onPaste={handlePaste}
+                placeholder="Code à 10 caractères"
+                maxLength={RECOVERY_CODE_LENGTH}
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
                 required
                 disabled={cooldownSeconds > 0}
               />
+            </div>
+            <div
+              style={{
+                marginTop: "8px",
+                textAlign: "center",
+                color: "#64748b",
+                fontSize: "12.5px",
+              }}
+            >
+              Le code de secours doit contenir exactement 10 caractères.
             </div>
           </div>
 
           <button
             className="btn-primary"
             type="submit"
-            disabled={loading || cooldownSeconds > 0}
+            disabled={loading || cooldownSeconds > 0 || !isCodeComplete}
           >
             {loading
               ? "Vérification..."
               : cooldownSeconds > 0
-                ? `Réessayer (${cooldownSeconds}s)`
+                ? `Réessayer (${formatRemainingTime(cooldownSeconds)})`
                 : "Valider le code"}
           </button>
         </form>
 
-        <div className="auth-forgot" style={{ textAlign: 'center', marginTop: '24px' }}>
-          <Link to="/auth/totp" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+        <div
+          className="auth-forgot"
+          style={{ textAlign: "center", marginTop: "24px" }}
+        >
+          <Link
+            to="/auth/totp"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+            }}
+          >
             <ShieldCheck size={15} /> Retour à l'Authenticator
           </Link>
         </div>

@@ -111,6 +111,8 @@ class BadDebtsSummary(BaseModel):
     latest_import_at: datetime | None = None
     by_tier: dict[str, int]
     by_cluster_name: dict[str, int]
+    average_debt_by_risk: list[dict[str, Any]] = Field(default_factory=list)
+    average_score_by_segment: list[dict[str, Any]] = Field(default_factory=list)
     latest_import: ImportRunItem | None = None
 
 

@@ -35,9 +35,6 @@ class Settings(BaseSettings):
 
     MFA_PENDING_EXPIRE_MINUTES: int = 5
 
-    USER_SESSION_IDLE_MINUTES: int = 20
-    ADMIN_SESSION_IDLE_MINUTES: int = 15
-
     TOTP_ENCRYPTION_KEY: str
     TOTP_ISSUER_NAME: str = "Tunisie Telecom Platform"
 

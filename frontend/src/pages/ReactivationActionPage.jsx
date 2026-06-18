@@ -1,6 +1,6 @@
 import { CheckCircle2, XCircle } from "lucide-react";
 import { useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
 
@@ -22,6 +22,7 @@ const COPY = {
 const SUCCESS_STATUSES = new Set(["reactivated", "ignored", "success"]);
 
 export default function ReactivationActionPage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = useMemo(() => searchParams.get("token") || "", [searchParams]);
   const action = useMemo(() => String(searchParams.get("action") || "").toLowerCase(), [searchParams]);
@@ -31,6 +32,8 @@ export default function ReactivationActionPage() {
   const [done, setDone] = useState(false);
   const [status, setStatus] = useState("");
   const [message, setMessage] = useState("");
+  const [canResend, setCanResend] = useState(false);
+  const [resendMessage, setResendMessage] = useState("");
 
   async function executeAction() {
     if (!token || !copy) {
@@ -49,11 +52,42 @@ export default function ReactivationActionPage() {
       const data = response.data;
       setDone(true);
       setStatus(data.status || (data.success ? "success" : "error"));
+      setCanResend(Boolean(data.can_resend) || data.status === "expired");
       setMessage(data.message || "Action terminée.");
+      if (data.success && data.redirect_to) {
+        navigate(data.redirect_to, {
+          replace: true,
+          state: {
+            reason: "account_reactivated",
+            message: data.message || "Votre compte a été réactivé avec succès.",
+          },
+        });
+      }
     } catch (err) {
       setDone(true);
       setStatus("error");
       setMessage(getApiError(err, "L’action n’a pas pu être exécutée."));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function resendLink() {
+    setLoading(true);
+    setResendMessage("");
+    try {
+      const response = await api.post(
+        "/auth/super-admin-reactivation/resend",
+        { token },
+        { skipAuthRedirect: true }
+      );
+      const data = response.data || {};
+      setResendMessage(data.message || "Un nouveau lien a été envoyé.");
+      if (data.success) {
+        setCanResend(false);
+      }
+    } catch (err) {
+      setResendMessage(getApiError(err, "Le nouveau lien n’a pas pu être envoyé."));
     } finally {
       setLoading(false);
     }
@@ -92,7 +126,18 @@ export default function ReactivationActionPage() {
             <div className={isSuccess ? "alert alert-success" : "alert alert-error"}>
               {message}
             </div>
+            {resendMessage && <div className="alert alert-info">{resendMessage}</div>}
             <div className="form">
+              {canResend && (
+                <button
+                  className="btn btn-primary"
+                  type="button"
+                  onClick={resendLink}
+                  disabled={loading || !token}
+                >
+                  {loading ? "Envoi en cours..." : "Renvoyer un nouveau lien"}
+                </button>
+              )}
               <Link className="btn btn-primary" to="/login">
                 Retour à la connexion
               </Link>

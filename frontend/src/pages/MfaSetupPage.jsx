@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { api, getApiError } from "../api/api";
 import { useAuth } from "../context/AuthContext";
 import OtpInput from "../components/OtpInput";
+import { formatRemainingTime } from "../utils/time";
 
 function downloadCodes(codes) {
   const content = [
@@ -139,7 +140,9 @@ export default function MfaSetupPage() {
             {message && <div className="alert alert-info">{message}</div>}
             {error && <div className="alert alert-error">{error}</div>}
             {cooldownSeconds > 0 && (
-              <div className="alert alert-info">Réessayer dans {cooldownSeconds}s</div>
+              <div className="alert alert-info">
+                Réessayer dans {formatRemainingTime(cooldownSeconds)}
+              </div>
             )}
             {qrCode && (
               <img

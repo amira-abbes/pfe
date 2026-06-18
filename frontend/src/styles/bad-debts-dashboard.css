@@ -32,7 +32,8 @@ body,
   transition: grid-template-columns 0.24s ease, background 0.25s ease, color 0.25s ease;
 }
 
-.bdx-shell:has(.bdx-sidebar:hover) {
+.bdx-shell:has(.bdx-sidebar:hover),
+.bdx-shell:has(.bdx-sidebar.is-open) {
   grid-template-columns: 264px minmax(0, 1fr);
 }
 
@@ -73,7 +74,8 @@ body,
     linear-gradient(180deg, rgba(11, 35, 68, 0.96), rgba(7, 26, 51, 0.94));
   box-shadow: 18px 0 44px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(22px);
-  transition: background 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
+  z-index: 30;
+  transition: width 0.24s ease, background 0.24s ease, border-color 0.24s ease, box-shadow 0.24s ease;
 }
 
 .is-light .bdx-sidebar {
@@ -87,6 +89,11 @@ body,
   justify-content: center;
   min-width: 0;
   min-height: 50px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 
 .bdx-side-brand img {
@@ -148,10 +155,10 @@ body,
   transform: translateX(2px);
 }
 
-.bdx-sidebar:hover .bdx-side-nav a,
-.bdx-sidebar:hover .bdx-side-nav button,
-.bdx-sidebar:hover .bdx-side-bottom a,
-.bdx-sidebar:hover .bdx-side-bottom button {
+.bdx-sidebar:is(:hover, .is-open) .bdx-side-nav a,
+.bdx-sidebar:is(:hover, .is-open) .bdx-side-nav button,
+.bdx-sidebar:is(:hover, .is-open) .bdx-side-bottom a,
+.bdx-sidebar:is(:hover, .is-open) .bdx-side-bottom button {
   justify-content: flex-start;
   padding: 0 14px;
 }
@@ -166,7 +173,7 @@ body,
   transition: opacity 0.18s ease, transform 0.18s ease, max-width 0.24s ease;
 }
 
-.bdx-sidebar:hover .bdx-side-label {
+.bdx-sidebar:is(:hover, .is-open) .bdx-side-label {
   max-width: 180px;
   opacity: 1;
   transform: translateX(0);
@@ -2883,7 +2890,8 @@ button.bdx-kpi {
     grid-template-columns: 1fr;
   }
 
-  .bdx-shell:has(.bdx-sidebar:hover) {
+  .bdx-shell:has(.bdx-sidebar:hover),
+  .bdx-shell:has(.bdx-sidebar.is-open) {
     grid-template-columns: 1fr;
   }
 
@@ -3952,12 +3960,6 @@ button.bdx-kpi {
 /* Bad Debts workspace ergonomics */
 .bdx-sidebar {
   grid-template-rows: auto 1fr;
-}
-
-.bdx-theme-nav-button {
-  margin-top: 10px;
-  border-top: 1px solid var(--bdx-line) !important;
-  border-radius: 0 0 16px 16px !important;
 }
 
 .bad-debts-table {
@@ -5466,12 +5468,12 @@ body.modal-open {
   color: var(--bdx-text);
 }
 
-.bdx-sidebar:hover .bdx-side-brand {
+.bdx-sidebar:is(:hover, .is-open) .bdx-side-brand {
   justify-content: flex-start;
   padding-inline: 14px;
 }
 
-.bdx-sidebar:hover .bdx-side-brand .bdx-side-label {
+.bdx-sidebar:is(:hover, .is-open) .bdx-side-brand .bdx-side-label {
   max-width: 180px;
   opacity: 1;
   transform: translateX(0);
@@ -5480,12 +5482,6 @@ body.modal-open {
 .bdx-side-nav {
   min-height: 0;
   overflow: hidden;
-}
-
-.bdx-theme-nav-button {
-  margin-top: 12px;
-  border-top: 1px solid var(--bdx-line) !important;
-  border-radius: 0 0 16px 16px !important;
 }
 
 @media (max-width: 980px) {
@@ -6011,6 +6007,15 @@ body.bad-debts-overview-fullscreen-open {
   padding: 18px 10px;
 }
 
+.bdx-shell.is-light:has(.bdx-sidebar:hover),
+.bdx-shell.is-light:has(.bdx-sidebar.is-open) {
+  grid-template-columns: 264px minmax(0, 1fr);
+}
+
+.bdx-shell.is-light .bdx-sidebar:is(:hover, .is-open) {
+  width: 100%;
+}
+
 .bdx-shell.is-light .bdx-side-nav {
   padding-top: 42px;
   gap: 14px;
@@ -6131,6 +6136,340 @@ body.bad-debts-overview-fullscreen-open {
 
 .bdx-shell.is-light .bdx-overview .debt-radial-card {
   min-height: 228px;
+}
+
+@media (max-width: 980px) {
+  .bdx-shell,
+  .bdx-shell.is-light,
+  .bdx-shell:has(.bdx-sidebar:hover),
+  .bdx-shell:has(.bdx-sidebar.is-open),
+  .bdx-shell.is-light:has(.bdx-sidebar:hover),
+  .bdx-shell.is-light:has(.bdx-sidebar.is-open) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .bdx-shell.is-light .bdx-sidebar,
+  .bdx-shell.is-light .bdx-sidebar:is(:hover, .is-open) {
+    width: auto;
+  }
+
+  .bdx-sidebar .bdx-side-nav {
+    max-height: 0;
+    padding-top: 0;
+    opacity: 0;
+    visibility: hidden;
+    transition: max-height 0.24s ease, padding-top 0.24s ease, opacity 0.2s ease, visibility 0.2s ease;
+  }
+
+  .bdx-sidebar.is-open .bdx-side-nav {
+    max-height: 420px;
+    padding-top: 14px;
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* Unified dashboard grid: Sidebar + KPI column + ML dashboard */
+.bdx-shell:has(.bdx-overview) {
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+  padding: 14px 16px 78px 14px;
+}
+
+.bdx-shell:has(.bdx-overview):has(.bdx-sidebar:hover),
+.bdx-shell:has(.bdx-overview):has(.bdx-sidebar.is-open) {
+  grid-template-columns: 264px minmax(0, 1fr);
+}
+
+.bdx-shell:has(.bdx-overview) .bdx-sidebar {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: start;
+  top: 14px;
+  width: 100%;
+  height: calc(100vh - 28px);
+  max-height: calc(100vh - 28px);
+  margin: 0;
+}
+
+.bdx-shell:has(.bdx-overview) .bdx-main {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  display: grid;
+  min-width: 0;
+  padding: 0;
+}
+
+.bdx-shell:has(.bdx-overview) .bdx-main > .bdx-alert {
+  grid-column: 1 / -1;
+}
+
+.bdx-shell:has(.bdx-overview) .bdx-overview {
+  display: grid;
+  grid-template-columns: clamp(300px, 21vw, 380px) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+}
+
+.bdx-shell:has(.bdx-overview) .bdx-overview-kpi-grid {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.bdx-shell:has(.bdx-overview) .bdx-overview .bdx-kpi {
+  min-height: 0;
+  height: 100%;
+}
+
+.bdx-shell:has(.bdx-overview) .bdx-overview-main {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: stretch;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+  width: 100%;
+}
+
+.bdx-shell:has(.bdx-overview) .bdx-overview-header-row {
+  margin: 0;
+}
+
+.bdx-shell:has(.bdx-overview) .bdx-overview .bdx-chart-grid {
+  align-self: stretch;
+  height: 100%;
+  gap: 12px;
+}
+
+@media (max-width: 980px) {
+  .bdx-shell:has(.bdx-overview),
+  .bdx-shell:has(.bdx-overview):has(.bdx-sidebar:hover),
+  .bdx-shell:has(.bdx-overview):has(.bdx-sidebar.is-open) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .bdx-shell:has(.bdx-overview) .bdx-sidebar {
+    grid-column: auto;
+    grid-row: auto;
+    position: relative;
+    top: auto;
+    height: auto;
+    max-height: none;
+    min-height: 0;
+  }
+
+  .bdx-shell:has(.bdx-overview) .bdx-main {
+    display: grid;
+    gap: 14px;
+    padding: 0;
+  }
+
+  .bdx-shell:has(.bdx-overview) .bdx-overview {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .bdx-shell:has(.bdx-overview) .bdx-overview-kpi-grid,
+  .bdx-shell:has(.bdx-overview) .bdx-overview-main {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .bdx-shell:has(.bdx-overview) .bdx-overview-kpi-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .bdx-shell:has(.bdx-overview) .bdx-overview-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Shared Bad Debts page layout for overview, clients and imports */
+.bdx-shell {
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+  padding: 14px 16px 78px 14px;
+}
+
+.bdx-shell:has(.bdx-sidebar:hover),
+.bdx-shell:has(.bdx-sidebar.is-open),
+.bdx-shell.is-light:has(.bdx-sidebar:hover),
+.bdx-shell.is-light:has(.bdx-sidebar.is-open) {
+  grid-template-columns: 264px minmax(0, 1fr);
+}
+
+.bdx-shell .bdx-sidebar,
+.bdx-shell.is-light .bdx-sidebar,
+.bdx-shell.is-light .bdx-sidebar:is(:hover, .is-open) {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: start;
+  top: 14px;
+  width: 100%;
+  height: calc(100vh - 28px);
+  max-height: calc(100vh - 28px);
+  margin: 0;
+}
+
+.bdx-shell .bdx-main,
+.bdx-shell.is-light .bdx-main:has(.bdx-overview) {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+}
+
+.bdx-shell .bdx-view {
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+}
+
+.bdx-shell .bad-debts-page {
+  padding-top: 0;
+}
+
+.bdx-shell .bad-debts-page-title {
+  margin-top: 0;
+}
+
+.bdx-shell .bdx-import-history-wrap,
+.bdx-shell .bad-debts-table-wrap {
+  margin-top: 0;
+}
+
+.bdx-shell:has(.bdx-overview) {
+  grid-template-columns: 76px minmax(0, 1fr);
+}
+
+.bdx-shell:has(.bdx-overview):has(.bdx-sidebar:hover),
+.bdx-shell:has(.bdx-overview):has(.bdx-sidebar.is-open) {
+  grid-template-columns: 264px minmax(0, 1fr);
+}
+
+.bdx-shell:has(.bdx-overview) .bdx-overview {
+  display: grid;
+  grid-template-columns: clamp(300px, 21vw, 380px) minmax(0, 1fr);
+  align-items: stretch;
+  gap: 14px;
+  width: 100%;
+  min-width: 0;
+}
+
+.bdx-shell:has(.bdx-overview) .bdx-overview-kpi-grid,
+.bdx-shell.is-light .bdx-overview-kpi-grid {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: stretch;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.bdx-shell:has(.bdx-overview) .bdx-overview-main,
+.bdx-shell.is-light .bdx-overview-main {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: stretch;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  min-width: 0;
+  width: 100%;
+}
+
+.bdx-shell:has(.bdx-overview) .bdx-overview .bdx-kpi,
+.bdx-shell.is-light .bdx-overview .bdx-kpi {
+  min-height: 0;
+  height: 100%;
+}
+
+@media (max-width: 980px) {
+  .bdx-shell,
+  .bdx-shell.is-light,
+  .bdx-shell:has(.bdx-sidebar:hover),
+  .bdx-shell:has(.bdx-sidebar.is-open),
+  .bdx-shell.is-light:has(.bdx-sidebar:hover),
+  .bdx-shell.is-light:has(.bdx-sidebar.is-open),
+  .bdx-shell:has(.bdx-overview),
+  .bdx-shell:has(.bdx-overview):has(.bdx-sidebar:hover),
+  .bdx-shell:has(.bdx-overview):has(.bdx-sidebar.is-open) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding: 14px;
+  }
+
+  .bdx-shell .bdx-sidebar,
+  .bdx-shell.is-light .bdx-sidebar,
+  .bdx-shell.is-light .bdx-sidebar:is(:hover, .is-open) {
+    grid-column: auto;
+    grid-row: auto;
+    position: relative;
+    top: auto;
+    width: auto;
+    height: auto;
+    max-height: none;
+    min-height: 0;
+  }
+
+  .bdx-shell .bdx-main,
+  .bdx-shell.is-light .bdx-main:has(.bdx-overview) {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .bdx-shell:has(.bdx-overview) .bdx-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .bdx-shell:has(.bdx-overview) .bdx-overview-kpi-grid,
+  .bdx-shell.is-light .bdx-overview-kpi-grid {
+    grid-column: auto;
+    grid-row: auto;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: none;
+  }
+
+  .bdx-shell:has(.bdx-overview) .bdx-overview-main,
+  .bdx-shell.is-light .bdx-overview-main {
+    grid-column: auto;
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .bdx-shell:has(.bdx-overview) .bdx-overview-kpi-grid,
+  .bdx-shell.is-light .bdx-overview-kpi-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Compact KPI cards for the Bad Debts overview */

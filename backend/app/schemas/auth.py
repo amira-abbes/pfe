@@ -25,6 +25,7 @@ class LoginResponse(BaseModel):
     email: Optional[EmailStr] = None
     role: Optional[str] = None
     can_request_reactivation: Optional[bool] = None
+    super_admin_reactivation_required: Optional[bool] = None
     redirect_to: Optional[str] = None
     temps_restant: Optional[str] = None
 
@@ -82,6 +83,10 @@ class AccountReactivationActionRequest(BaseModel):
     action: str = ""
 
 
+class SuperAdminReactivationResendRequest(BaseModel):
+    token: str = Field(min_length=10)
+
+
 class AuthTokenResponse(BaseModel):
     success: bool
     code: str
@@ -95,6 +100,8 @@ class AuthTokenResponse(BaseModel):
     supervisor_mail_sent: Optional[bool] = None
     can_use_backup_code: Optional[bool] = None
     can_reset_mfa: Optional[bool] = None
+    can_request_reactivation: Optional[bool] = None
+    super_admin_reactivation_required: Optional[bool] = None
     expires_in_seconds: Optional[int] = None
     otpauth_uri: Optional[str] = None
     qr_code: Optional[str] = None

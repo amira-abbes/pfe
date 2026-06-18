@@ -106,6 +106,8 @@ class BadDebtsService:
 
         by_tier = self._count_by("risk_tier")
         by_cluster_name = self._count_by("cluster_name")
+        average_debt_by_risk = self._average_debt_by_risk()
+        average_score_by_segment = self._average_score_by_segment()
         latest_import = self.get_import_runs(limit=1)
 
         high = int(totals["high_risk_count"] or 0)
@@ -128,8 +130,48 @@ class BadDebtsService:
                 "high": int(by_tier.get("high", 0)),
             },
             "by_cluster_name": by_cluster_name,
+            "average_debt_by_risk": average_debt_by_risk,
+            "average_score_by_segment": average_score_by_segment,
             "latest_import": latest_import[0] if latest_import else None,
         }
+
+    def _average_debt_by_risk(self) -> list[dict[str, Any]]:
+        effective_tier_sql = self._effective_tier_case_sql()
+        rows = self.db.execute(
+            text(
+                f"""
+                SELECT ({effective_tier_sql}) AS tier, AVG(total_outstanding_amount) AS average_debt
+                FROM ml.bad_debts_clients
+                GROUP BY ({effective_tier_sql})
+                """
+            )
+        ).mappings().all()
+        values = {str(row["tier"] or "").lower(): self._json_value(row["average_debt"]) for row in rows}
+        labels = {"low": "Faible", "medium": "Moyen", "high": "Élevé"}
+        return [
+            {"level": level, "label": labels[level], "value": float(values.get(level) or 0)}
+            for level in ("low", "medium", "high")
+        ]
+
+    def _average_score_by_segment(self) -> list[dict[str, Any]]:
+        rows = self.db.execute(
+            text(
+                """
+                SELECT COALESCE(cluster_name, 'unknown') AS segment, AVG(final_risk_score) AS average_score
+                FROM ml.bad_debts_clients
+                GROUP BY COALESCE(cluster_name, 'unknown')
+                ORDER BY AVG(final_risk_score) DESC NULLS LAST, COALESCE(cluster_name, 'unknown') ASC
+                """
+            )
+        ).mappings().all()
+        return [
+            {
+                "segment": str(row["segment"]),
+                "label": _FILTER_SEG_FR.get(str(row["segment"]), "Segment non défini" if str(row["segment"]) == "unknown" else str(row["segment"])),
+                "value": float(self._json_value(row["average_score"]) or 0),
+            }
+            for row in rows
+        ]
 
     def list_clients(
         self,

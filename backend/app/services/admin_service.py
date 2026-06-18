@@ -1,6 +1,8 @@
-﻿from datetime import timedelta
+from datetime import timedelta
 
 from fastapi import HTTPException, status
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.config import settings
@@ -53,6 +55,49 @@ class AdminService:
         if raw == STATUT_BLOQUE_TENTATIVES:
             return STATUT_BLOQUE_TENTATIVES
         return raw or STATUT_DISABLED
+
+    @staticmethod
+    def _active_admin_conflict_message() -> str:
+        return "Ce département possède déjà un administrateur actif. Veuillez désactiver ou changer le rôle de l'administrateur actuel avant d'en affecter un nouveau."
+
+    def _assert_single_active_admin_for_department(
+        self,
+        *,
+        departement: Departement,
+        role: str,
+        est_actif: bool,
+        exclude_user_id=None,
+    ) -> None:
+        if str(role or "").upper() != ROLE_ADMIN or not est_actif:
+            return
+
+        query = (
+            self.db.query(Utilisateur.id)
+            .filter(Utilisateur.departement_id == departement.id)
+            .filter(func.upper(Utilisateur.role) == ROLE_ADMIN)
+            .filter(Utilisateur.est_actif.is_(True))
+            .filter(Utilisateur.date_suppression.is_(None))
+        )
+        if exclude_user_id is not None:
+            query = query.filter(Utilisateur.id != exclude_user_id)
+
+        if query.first():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "status": "active_admin_department_conflict",
+                    "message": self._active_admin_conflict_message(),
+                },
+            )
+
+    def _raise_active_admin_integrity_conflict(self) -> None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "status": "active_admin_department_conflict",
+                "message": "Ce département possède déjà un administrateur actif. Veuillez désactiver ou changer le rôle de l'administrateur actuel avant d'en affecter un nouveau.",
+            },
+        )
 
     def _assert_can_manage_user(self, actor: Utilisateur, target: Utilisateur) -> None:
         if self._is_super_admin(actor):
@@ -180,6 +225,13 @@ class AdminService:
                     },
                 )
 
+            self._assert_single_active_admin_for_department(
+                departement=departement,
+                role=role_clean,
+                est_actif=True,
+                exclude_user_id=existing_user.id if existing_user else None,
+            )
+
             if existing_user and existing_user.date_suppression is not None:
                 user = existing_user
 
@@ -306,6 +358,10 @@ class AdminService:
             self.db.rollback()
             raise
 
+        except IntegrityError:
+            self.db.rollback()
+            self._raise_active_admin_integrity_conflict()
+
         except Exception as exc:
             self.db.rollback()
             raise HTTPException(
@@ -420,6 +476,14 @@ class AdminService:
             now = utc_now()
 
             if est_actif:
+                reactivation_departement = user.departement
+                if str(user.role or "").upper() == ROLE_ADMIN and reactivation_departement:
+                    self._assert_single_active_admin_for_department(
+                        departement=reactivation_departement,
+                        role=user.role,
+                        est_actif=True,
+                        exclude_user_id=user.id,
+                    )
                 if self._account_status(user) not in {STATUT_DISABLED, STATUT_BLOQUE_TENTATIVES}:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
@@ -515,6 +579,10 @@ class AdminService:
             self.db.rollback()
             raise
 
+        except IntegrityError:
+            self.db.rollback()
+            self._raise_active_admin_integrity_conflict()
+
         except Exception as exc:
             self.db.rollback()
             raise HTTPException(
@@ -555,8 +623,11 @@ class AdminService:
 
             self._assert_can_manage_user(admin_user, user)
 
+            current_role = str(user.role or "").upper()
             role_clean = str(role or user.role or ROLE_USER).strip().upper()
-            if role_clean not in {ROLE_USER, ROLE_ADMIN}:
+            if current_role == ROLE_SUPER_ADMIN and role_clean == ROLE_SUPER_ADMIN:
+                pass
+            elif role_clean not in {ROLE_USER, ROLE_ADMIN}:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail={
@@ -574,27 +645,56 @@ class AdminService:
                     },
                 )
 
-            current_departement_name = user.departement.nom_departement if user.departement else ""
-            departement_clean = str(departement_nom or current_departement_name).strip()
-
-            departement = (
-                self.db.query(Departement)
-                .filter(Departement.nom_departement.ilike(departement_clean))
-                .first()
-            )
-
-            if not departement:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Département introuvable.",
-                )
-
-            old_departement = (
-                user.departement.nom_departement if user.departement else None
-            )
+            old_departement = user.departement.nom_departement if user.departement else None
             old_role = user.role
 
-            user.departement_id = departement.id
+            # Seul le rôle final SUPER_ADMIN peut avoir departement_id = NULL.
+            # On utilise role_clean (rôle demandé), pas user.role (rôle actuel),
+            # pour éviter qu'un SUPER_ADMIN en cours de rétrogradation contourne la règle.
+            is_super_admin_user = role_clean == ROLE_SUPER_ADMIN
+            departement_clean = str(departement_nom or "").strip()
+
+            if not departement_clean and is_super_admin_user:
+                # Allow Super Admin to have no department
+                departement = None
+                new_departement_id = None
+            else:
+                if not departement_clean:
+                    # Fallback to existing department
+                    departement_clean = user.departement.nom_departement if user.departement else ""
+
+                if not departement_clean:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail={
+                            "status": "invalid_input",
+                            "message": "Le département est obligatoire pour ce rôle.",
+                        },
+                    )
+
+                departement = (
+                    self.db.query(Departement)
+                    .filter(Departement.nom_departement.ilike(departement_clean))
+                    .first()
+                )
+
+                if not departement:
+                    raise HTTPException(
+                        status_code=status.HTTP_404_NOT_FOUND,
+                        detail="Département introuvable.",
+                    )
+
+                new_departement_id = departement.id
+
+            if departement:
+                self._assert_single_active_admin_for_department(
+                    departement=departement,
+                    role=role_clean,
+                    est_actif=bool(user.est_actif),
+                    exclude_user_id=user.id,
+                )
+
+            user.departement_id = new_departement_id
             user.role = role_clean
             user.date_modification = utc_now()
 
@@ -609,7 +709,7 @@ class AdminService:
                     details={
                         "email": user.email,
                         "old_departement": old_departement,
-                        "new_departement": departement.nom_departement,
+                        "new_departement": departement.nom_departement if departement else None,
                         "old_role": old_role,
                         "new_role": role_clean,
                     },
@@ -623,12 +723,16 @@ class AdminService:
                 "message": "Profil utilisateur mis à jour avec succès.",
                 "email": user.email,
                 "role": user.role,
-                "departement_nom": departement.nom_departement,
+                "departement_nom": departement.nom_departement if departement else None,
             }
 
         except HTTPException:
             self.db.rollback()
             raise
+
+        except IntegrityError:
+            self.db.rollback()
+            self._raise_active_admin_integrity_conflict()
 
         except Exception as exc:
             self.db.rollback()

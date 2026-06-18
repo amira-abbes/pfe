@@ -6,37 +6,103 @@ import { api, getApiError } from "../api/api";
 import { useAuth } from "../context/AuthContext";
 import AuthTriangles from "../components/AuthTriangles";
 import OtpInput from "../components/OtpInput";
+import { formatRemainingTime } from "../utils/time";
+
+const MFA_TOTP_COOLDOWN_KEY = "mfa_totp_cooldown";
+const MAX_STORED_COOLDOWN_MS = 15 * 60 * 1000;
+
+function clearStoredCooldown() {
+  sessionStorage.removeItem(MFA_TOTP_COOLDOWN_KEY);
+}
+
+function readStoredCooldown(mfaToken) {
+  if (!mfaToken) {
+    clearStoredCooldown();
+    return 0;
+  }
+
+  try {
+    const stored = JSON.parse(sessionStorage.getItem(MFA_TOTP_COOLDOWN_KEY));
+    const remainingMs = Number(stored?.endsAt) - Date.now();
+
+    if (
+      stored?.mfaToken !== mfaToken ||
+      !Number.isFinite(remainingMs) ||
+      remainingMs <= 0 ||
+      remainingMs > MAX_STORED_COOLDOWN_MS
+    ) {
+      clearStoredCooldown();
+      return 0;
+    }
+
+    return Number(stored.endsAt);
+  } catch {
+    clearStoredCooldown();
+    return 0;
+  }
+}
 
 export default function TotpPage() {
   const navigate = useNavigate();
   const { completeLogin, isAuthenticated, loading: authLoading } = useAuth();
+  const email = sessionStorage.getItem("mfa_email");
+  const mfaToken = sessionStorage.getItem("mfa_token");
 
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
-  const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const [cooldownUntil, setCooldownUntil] = useState(() =>
+    readStoredCooldown(mfaToken)
+  );
+  const [cooldownSeconds, setCooldownSeconds] = useState(() =>
+    Math.max(0, Math.ceil((readStoredCooldown(mfaToken) - Date.now()) / 1000))
+  );
   const [loading, setLoading] = useState(false);
-
-  const email = sessionStorage.getItem("mfa_email");
-  const mfaToken = sessionStorage.getItem("mfa_token");
 
   useEffect(() => {
     if (!mfaToken && !isAuthenticated && !authLoading) {
+      clearStoredCooldown();
       navigate("/login", { replace: true });
     }
   }, [mfaToken, isAuthenticated, authLoading, navigate]);
 
   useEffect(() => {
-    if (cooldownSeconds <= 0) return undefined;
+    if (cooldownUntil <= 0) return undefined;
 
-    const timer = window.setInterval(() => {
-      setCooldownSeconds((current) => Math.max(0, current - 1));
-    }, 1000);
+    const updateCountdown = () => {
+      const seconds = Math.max(
+        0,
+        Math.ceil((cooldownUntil - Date.now()) / 1000)
+      );
+      setCooldownSeconds(seconds);
 
+      if (seconds === 0) {
+        clearStoredCooldown();
+        setCooldownUntil(0);
+      }
+    };
+
+    const timer = window.setInterval(updateCountdown, 1000);
     return () => window.clearInterval(timer);
-  }, [cooldownSeconds]);
+  }, [cooldownUntil]);
+
+  function startCooldown(secondsValue) {
+    const seconds = Math.max(1, Number(secondsValue) || 60);
+    const endsAt = Date.now() + seconds * 1000;
+
+    sessionStorage.setItem(
+      MFA_TOTP_COOLDOWN_KEY,
+      JSON.stringify({ mfaToken, endsAt })
+    );
+    setCooldownUntil(endsAt);
+    setCooldownSeconds(seconds);
+    setCode("");
+    setError("");
+    setInfo("");
+  }
 
   function handleCodeChange(value) {
+    if (cooldownUntil > Date.now()) return;
     const clean = value.replace(/\D/g, "").slice(0, 6);
     setCode(clean);
   }
@@ -47,6 +113,14 @@ export default function TotpPage() {
 
   async function handleSubmit(event) {
     event.preventDefault();
+
+    if (cooldownUntil > Date.now()) {
+      setCooldownSeconds(
+        Math.max(1, Math.ceil((cooldownUntil - Date.now()) / 1000))
+      );
+      return;
+    }
+
     setError("");
     setInfo("");
     setLoading(true);
@@ -74,11 +148,27 @@ export default function TotpPage() {
 
       const data = response.data || {};
 
+      if (data.status === "account_blocked" || data.reason === "account_blocked") {
+        clearStoredCooldown();
+        navigate(data.redirect_to || "/account-disabled", {
+          replace: true,
+          state: {
+            email: data.email || email,
+            role: data.role || "SUPER_ADMIN",
+            message: data.message,
+            reason: "account_blocked",
+            can_request_reactivation: data.can_request_reactivation,
+          },
+        });
+        return;
+      }
+
       if (
         data.status === "recovery_required" ||
         data.reason === "mfa_blocked" ||
         data.code === "MFA_BLOCKED"
       ) {
+        clearStoredCooldown();
         navigate(data.redirect_to || "/mfa-blocked", {
           replace: true,
           state: {
@@ -99,14 +189,14 @@ export default function TotpPage() {
         return;
       }
 
-      if (data.status === "cooldown") {
-        const seconds = Number(data.remaining_seconds) || 60;
-        setCooldownSeconds(seconds);
-        setInfo(
-          data.message ||
-          `Plusieurs codes incorrects. Veuillez patienter ${seconds} secondes.`
-        );
-        clearCodeAfterError(false);
+      if (
+        data.status === "cooldown" ||
+        data.reason === "mfa_cooldown_active" ||
+        data.reason === "mfa_cooldown_60s" ||
+        data.code === "MFA_DELAY_REQUIRED" ||
+        data.code === "TOTP_TEMPORARILY_LOCKED"
+      ) {
+        startCooldown(data.remaining_seconds || data.expires_in_seconds);
         return;
       }
 
@@ -117,6 +207,7 @@ export default function TotpPage() {
       }
 
       if (data.code === "MFA_TOKEN_INVALID") {
+        clearStoredCooldown();
         sessionStorage.removeItem("mfa_token");
         sessionStorage.removeItem("mfa_email");
         sessionStorage.removeItem("mfa_role");
@@ -139,6 +230,7 @@ export default function TotpPage() {
 
       const destination = await completeLogin(data);
 
+      clearStoredCooldown();
       sessionStorage.removeItem("mfa_token");
       sessionStorage.removeItem("mfa_email");
       sessionStorage.removeItem("mfa_role");
@@ -178,7 +270,13 @@ export default function TotpPage() {
           </div>
         )}
         
-        {info && <div className="auth-error-banner" style={{ background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0' }}>{info}</div>}
+        {cooldownSeconds > 0 && (
+          <div className="auth-error-banner">
+            Trop de tentatives incorrectes. Veuillez réessayer dans{" "}
+            {formatRemainingTime(cooldownSeconds)}.
+          </div>
+        )}
+        {info && cooldownSeconds <= 0 && <div className="auth-error-banner" style={{ background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0' }}>{info}</div>}
         {error && <div className="auth-error-banner">{error}</div>}
 
         <form className="form" onSubmit={handleSubmit}>
@@ -204,7 +302,7 @@ export default function TotpPage() {
             {loading
               ? "Vérification..."
               : cooldownSeconds > 0
-                ? `Réessayer (${cooldownSeconds}s)`
+                ? `Réessayer (${formatRemainingTime(cooldownSeconds)})`
                 : "Vérifier"}
           </button>
         </form>

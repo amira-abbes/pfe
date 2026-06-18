@@ -2,6 +2,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
+from app.core.constants import ROLE_ADMIN
 from app.models.departement import Departement
 from app.models.departement_droit import DepartementDroit
 from app.models.droit_acces import DroitAcces
@@ -9,7 +10,8 @@ from app.models.journal_audit import JournalAudit
 from app.models.utilisateur import Utilisateur
 from app.core.access_control import (
     BUSINESS_PERMISSION_LABELS,
-    business_permissions_for_department,
+    BUSINESS_PERMISSION_LANCER_TRAITEMENT_ELT,
+    LEGACY_BUSINESS_PERMISSION_VOIR_RESULTAT_ELT,
     valid_business_permissions,
 )
 
@@ -41,7 +43,11 @@ class AdminDepartementsService:
         valid_names = list(BUSINESS_PERMISSION_LABELS)
         droits = (
             self.db.query(DroitAcces)
-            .filter(DroitAcces.nom_droit.in_(valid_names))
+            .filter(
+                DroitAcces.nom_droit.in_(
+                    [*valid_names, LEGACY_BUSINESS_PERMISSION_VOIR_RESULTAT_ELT]
+                )
+            )
             .all()
         )
         by_name = {droit.nom_droit: droit for droit in droits}
@@ -56,7 +62,45 @@ class AdminDepartementsService:
             for droit in by_name.values():
                 self.db.refresh(droit)
 
+        self._merge_legacy_elt_permission(by_name)
+        by_name.pop(LEGACY_BUSINESS_PERMISSION_VOIR_RESULTAT_ELT, None)
+
         return by_name
+
+    def _merge_legacy_elt_permission(self, droits_by_name: dict[str, DroitAcces]) -> None:
+        legacy = droits_by_name.get(LEGACY_BUSINESS_PERMISSION_VOIR_RESULTAT_ELT)
+        target = droits_by_name.get(BUSINESS_PERMISSION_LANCER_TRAITEMENT_ELT)
+        if not legacy or not target:
+            return
+
+        changed = False
+        legacy_relations = (
+            self.db.query(DepartementDroit)
+            .filter(DepartementDroit.droit_acces_id == legacy.id)
+            .all()
+        )
+        for relation in legacy_relations:
+            existing = (
+                self.db.query(DepartementDroit)
+                .filter(DepartementDroit.departement_id == relation.departement_id)
+                .filter(DepartementDroit.droit_acces_id == target.id)
+                .first()
+            )
+            if not existing:
+                self.db.add(
+                    DepartementDroit(
+                        departement_id=relation.departement_id,
+                        droit_acces_id=target.id,
+                    )
+                )
+            self.db.delete(relation)
+            changed = True
+
+        if changed:
+            self.db.flush()
+
+        self.db.delete(legacy)
+        self.db.commit()
 
     def _validate_business_droit_name(self, nom_droit: str) -> str:
         nom = self._clean_name(nom_droit)
@@ -75,7 +119,7 @@ class AdminDepartementsService:
         departement: Departement,
         nom_droit: str,
     ) -> None:
-        allowed = business_permissions_for_department(departement.nom_departement)
+        allowed = valid_business_permissions()
         if nom_droit not in allowed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -86,7 +130,9 @@ class AdminDepartementsService:
             )
 
     def _cleanup_invalid_department_rights(self, departement: Departement) -> bool:
-        allowed = business_permissions_for_department(departement.nom_departement)
+        # Si le département n'est pas reconnu par le matching métier,
+        # allowed sera un set vide, ce qui effacerait toutes les permissions.
+        # Dans ce cas, on ne touche pas aux permissions existantes.
         valid = valid_business_permissions()
         relations = (
             self.db.query(DepartementDroit)
@@ -98,7 +144,7 @@ class AdminDepartementsService:
         changed = False
         for relation in relations:
             name = relation.droit_acces.nom_droit if relation.droit_acces else None
-            if name not in valid or name not in allowed:
+            if name not in valid:
                 self.db.delete(relation)
                 changed = True
 
@@ -113,11 +159,29 @@ class AdminDepartementsService:
             .order_by(func.lower(Departement.nom_departement).asc())
             .all()
         )
+        active_admins = (
+            self.db.query(
+                Utilisateur.departement_id,
+                func.min(Utilisateur.email).label("email"),
+                func.count(Utilisateur.id).label("count"),
+            )
+            .filter(func.upper(Utilisateur.role) == ROLE_ADMIN)
+            .filter(Utilisateur.est_actif.is_(True))
+            .filter(Utilisateur.date_suppression.is_(None))
+            .group_by(Utilisateur.departement_id)
+            .all()
+        )
+        admins_by_department = {
+            row.departement_id: {"email": row.email, "count": int(row.count or 0)}
+            for row in active_admins
+        }
 
         return [
             {
                 "id": item.id,
                 "nom_departement": item.nom_departement,
+                "admin_attribue": admins_by_department.get(item.id, {}).get("count", 0) > 0,
+                "administrateur_actif_email": admins_by_department.get(item.id, {}).get("email"),
             }
             for item in departements
         ]
@@ -322,7 +386,6 @@ class AdminDepartementsService:
         self._ensure_business_droits()
         self._cleanup_invalid_department_rights(departement)
 
-        allowed = business_permissions_for_department(departement.nom_departement)
         relations = (
             self.db.query(DepartementDroit)
             .options(selectinload(DepartementDroit.droit_acces))
@@ -333,7 +396,6 @@ class AdminDepartementsService:
             relation.droit_acces
             for relation in relations
             if relation.droit_acces
-            and relation.droit_acces.nom_droit in allowed
             and relation.droit_acces.nom_droit in valid_business_permissions()
         ]
 
@@ -356,9 +418,6 @@ class AdminDepartementsService:
             {self._validate_business_droit_name(item) for item in droit_noms if self._clean_name(item)},
             key=self._business_permission_order,
         )
-        for nom_droit in droit_noms_clean:
-            self._validate_permission_allowed_for_department(departement, nom_droit)
-
         droits_by_name = self._ensure_business_droits()
         droits = [droits_by_name[nom_droit] for nom_droit in droit_noms_clean]
 
@@ -411,7 +470,6 @@ class AdminDepartementsService:
     ):
         departement = self._get_departement_by_nom(nom_departement)
         nom = self._validate_business_droit_name(nom_droit)
-        self._validate_permission_allowed_for_department(departement, nom)
         droit = self._ensure_business_droits()[nom]
 
         try:
@@ -465,7 +523,6 @@ class AdminDepartementsService:
     ):
         departement = self._get_departement_by_nom(nom_departement)
         nom = self._validate_business_droit_name(nom_droit)
-        self._validate_permission_allowed_for_department(departement, nom)
         droit = self._ensure_business_droits()[nom]
 
         try:

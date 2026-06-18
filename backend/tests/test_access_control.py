@@ -73,6 +73,11 @@ class EffectiveDepartmentPermissionsTest(unittest.TestCase):
 
         self.assertEqual(user_effective_permissions(user), {PERMISSION_DASHBOARD_BAD_DEBTS})
 
+    def test_legacy_elt_result_permission_maps_to_treatment_access(self):
+        user = make_user(ROLE_USER, ["voir_resultat_elt"])
+
+        self.assertEqual(user_effective_permissions(user), {PERMISSION_LANCER_ELT})
+
     def test_super_admin_keeps_global_permissions(self):
         super_admin = SimpleNamespace(role=ROLE_SUPER_ADMIN, departement=None)
 

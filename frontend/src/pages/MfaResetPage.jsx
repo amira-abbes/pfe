@@ -4,13 +4,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import { api, getApiError } from "../api/api";
 import OtpInput from "../components/OtpInput";
-
-function formatSeconds(totalSeconds) {
-  const safe = Math.max(0, Number(totalSeconds) || 0);
-  return `${String(Math.floor(safe / 60)).padStart(2, "0")}:${String(
-    safe % 60
-  ).padStart(2, "0")}`;
-}
+import { formatRemainingTime } from "../utils/time";
 
 export default function MfaResetPage() {
   const navigate = useNavigate();
@@ -147,7 +141,7 @@ export default function MfaResetPage() {
             {error && <div className="alert alert-error">{error}</div>}
             {cooldownSeconds > 0 && (
               <div className="alert alert-info">
-                Réessayer dans {formatSeconds(cooldownSeconds)}
+                Réessayer dans {formatRemainingTime(cooldownSeconds)}
               </div>
             )}
 
@@ -189,7 +183,7 @@ export default function MfaResetPage() {
             {error && <div className="alert alert-error">{error}</div>}
             {totpCooldownSeconds > 0 && (
               <div className="alert alert-info">
-                Réessayer dans {formatSeconds(totpCooldownSeconds)}
+                Réessayer dans {formatRemainingTime(totpCooldownSeconds)}
               </div>
             )}
             {qrCodeBase64 ? (

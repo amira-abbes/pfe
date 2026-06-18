@@ -34,6 +34,7 @@ from app.core.constants import (
     STATUT_PENDING_ACTIVATION,
     STATUT_SUPPRIME,
     TOKEN_PASSWORD_RESET_FROM_LOCKOUT,
+    TOKEN_SUPER_ADMIN_ACCOUNT_REACTIVATION,
 )
 from app.core.security import (
     create_access_token,
@@ -54,6 +55,7 @@ from app.models.code_secours import CodeSecours
 from app.models.identifiant_totp import IdentifiantTotp
 from app.models.jeton_reinitialisation import JetonReinitialisationMotDePasse
 from app.models.journal_audit import JournalAudit
+from app.models.notification_securite import NotificationSecurite
 from app.models.session_utilisateur import SessionUtilisateur
 from app.models.tentative_connexion import TentativeConnexion
 from app.models.utilisateur import Utilisateur
@@ -600,10 +602,10 @@ class AuthService:
             self.db.commit()
 
         clean_code = str(code_secours or "").strip().replace(" ", "").upper()
-        if len(clean_code) < 6 or len(clean_code) > 30:
+        if len(clean_code) != 10:
             return self._json_error(
                 "RECOVERY_CODE_INVALID_FORMAT",
-                "Format du code de secours invalide.",
+                "Le code de secours doit contenir exactement 10 caractères.",
                 status="invalid_format",
                 redirect_to="/auth/recovery-code",
             )
@@ -1765,29 +1767,38 @@ class AuthService:
             user.recovery_code_alert_sent_at = None
             action = "MFA_BLOCKED"
             risk = "CRITIQUE"
-            backup_link, reset_link = self._create_admin_mfa_recovery_links(
-                user=user,
-                adresse_ip=adresse_ip,
-                user_agent=user_agent,
-                now=now,
-            )
-            mail_sent = self._safe_mail_send(
-                lambda: self.mail_service.send_admin_mfa_blocked_email(
-                    to_email=user.email,
-                    backup_code_link=backup_link,
-                    mfa_reset_link=reset_link,
-                    db=self.db,
-                    utilisateur_id=user.id,
+            if role == ROLE_SUPER_ADMIN:
+                mail_sent = self._create_super_admin_reactivation_token_and_email(
+                    user=user,
                     adresse_ip=adresse_ip,
                     user_agent=user_agent,
-                    role=role,
-                ),
-                action="MFA_BLOCKED_EMAIL_EXCEPTION",
-                user=user,
-                adresse_ip=adresse_ip,
-                user_agent=user_agent,
-                details={"attempt": new_count, "type": type_tentative},
-            )
+                    now=now,
+                    source="mfa_lockout",
+                )
+            else:
+                backup_link, reset_link = self._create_admin_mfa_recovery_links(
+                    user=user,
+                    adresse_ip=adresse_ip,
+                    user_agent=user_agent,
+                    now=now,
+                )
+                mail_sent = self._safe_mail_send(
+                    lambda: self.mail_service.send_admin_mfa_blocked_email(
+                        to_email=user.email,
+                        backup_code_link=backup_link,
+                        mfa_reset_link=reset_link,
+                        db=self.db,
+                        utilisateur_id=user.id,
+                        adresse_ip=adresse_ip,
+                        user_agent=user_agent,
+                        role=role,
+                    ),
+                    action="MFA_BLOCKED_EMAIL_EXCEPTION",
+                    user=user,
+                    adresse_ip=adresse_ip,
+                    user_agent=user_agent,
+                    details={"attempt": new_count, "type": type_tentative},
+                )
             self._audit(
                 action="MFA_BLOCKED_EMAIL_SENT" if mail_sent else "MFA_BLOCKED_EMAIL_FAILED",
                 acteur_id=user.id,
@@ -1800,17 +1811,24 @@ class AuthService:
             self._revoke_user_sessions_on_security_lock(user)
             response = self._json_error(
                 "MFA_TEMPORARILY_LOCKED",
-                "Vérification MFA bloquée. Veuillez vérifier votre boîte mail.",
-                status="recovery_required",
-                reason="mfa_blocked",
+                (
+                    "Votre compte est bloqué après plusieurs tentatives de connexion.\n\n"
+                    "Veuillez réactiver votre compte à l’aide du lien sécurisé envoyé à votre adresse e-mail."
+                    if role == ROLE_SUPER_ADMIN
+                    else "Vérification MFA bloquée. Veuillez vérifier votre boîte mail."
+                ),
+                status="account_blocked" if role == ROLE_SUPER_ADMIN else "recovery_required",
+                reason="account_blocked" if role == ROLE_SUPER_ADMIN else "mfa_blocked",
                 role=role,
                 attempts=new_count,
                 mail_sent=bool(mail_sent),
-                can_use_backup_code=True,
-                can_reset_mfa=True,
+                can_use_backup_code=False if role == ROLE_SUPER_ADMIN else True,
+                can_reset_mfa=False if role == ROLE_SUPER_ADMIN else True,
+                can_request_reactivation=False if role == ROLE_SUPER_ADMIN else None,
+                super_admin_reactivation_required=role == ROLE_SUPER_ADMIN,
                 remaining_seconds=900,
                 expires_in_seconds=900,
-                redirect_to="/mfa-blocked",
+                redirect_to="/account-disabled" if role == ROLE_SUPER_ADMIN else "/mfa-blocked",
             )
         else:
             user.blocage_totp_jusqu_a = None
@@ -1911,13 +1929,24 @@ class AuthService:
             mail_sent = False
             if self._should_send_security_email(user, now):
                 try:
-                    mail_sent = bool(self._create_lockout_reset_token_and_email(
-                        user=user,
-                        role=role,
-                        adresse_ip=adresse_ip,
-                        user_agent=user_agent,
-                        now=now,
-                    ))
+                    if role == ROLE_SUPER_ADMIN:
+                        mail_sent = bool(
+                            self._create_super_admin_reactivation_token_and_email(
+                                user=user,
+                                adresse_ip=adresse_ip,
+                                user_agent=user_agent,
+                                now=now,
+                                source="password_relock",
+                            )
+                        )
+                    else:
+                        mail_sent = bool(self._create_lockout_reset_token_and_email(
+                            user=user,
+                            role=role,
+                            adresse_ip=adresse_ip,
+                            user_agent=user_agent,
+                            now=now,
+                        ))
                     user.date_derniere_alerte_securite = now
                     self.db.add(user)
                 except SQLAlchemyError:
@@ -1950,14 +1979,21 @@ class AuthService:
 
             return self._json_error(
                 "ACCOUNT_TEMPORARILY_LOCKED",
-                "Vous ne pouvez plus vous connecter directement. Veuillez vérifier votre boîte mail et suivre les instructions de sécurité.",
-                status="password_lockout",
-                reason="password_blocked",
+                (
+                    "Votre compte est bloqué après plusieurs tentatives de connexion.\n\n"
+                    "Veuillez réactiver votre compte à l’aide du lien sécurisé envoyé à votre adresse e-mail."
+                    if role == ROLE_SUPER_ADMIN
+                    else "Vous ne pouvez plus vous connecter directement. Veuillez vérifier votre boîte mail et suivre les instructions de sécurité."
+                ),
+                status="account_blocked" if role == ROLE_SUPER_ADMIN else "password_lockout",
+                reason="account_blocked" if role == ROLE_SUPER_ADMIN else "password_blocked",
                 role=role,
                 mail_sent=mail_sent,
                 remaining_seconds=900,
                 temps_restant="15:00",
-                redirect_to="/mail-verification-required",
+                can_request_reactivation=False if role == ROLE_SUPER_ADMIN else None,
+                super_admin_reactivation_required=role == ROLE_SUPER_ADMIN,
+                redirect_to="/account-disabled" if role == ROLE_SUPER_ADMIN else "/mail-verification-required",
             )
 
         new_count = current + 1
@@ -2022,13 +2058,22 @@ class AuthService:
             self._revoke_user_sessions_on_security_lock(user)
 
             try:
-                mail_sent = self._create_lockout_reset_token_and_email(
-                    user=user,
-                    role=role,
-                    adresse_ip=adresse_ip,
-                    user_agent=user_agent,
-                    now=now,
-                )
+                if role == ROLE_SUPER_ADMIN:
+                    mail_sent = self._create_super_admin_reactivation_token_and_email(
+                        user=user,
+                        adresse_ip=adresse_ip,
+                        user_agent=user_agent,
+                        now=now,
+                        source="password_lockout",
+                    )
+                else:
+                    mail_sent = self._create_lockout_reset_token_and_email(
+                        user=user,
+                        role=role,
+                        adresse_ip=adresse_ip,
+                        user_agent=user_agent,
+                        now=now,
+                    )
             except SQLAlchemyError:
                 self.db.rollback()
                 mail_sent = False
@@ -2050,14 +2095,21 @@ class AuthService:
 
             return self._json_error(
                 "ACCOUNT_TEMPORARILY_LOCKED",
-                "Vous ne pouvez plus vous connecter directement. Veuillez vérifier votre boîte mail et suivre les instructions de sécurité.",
-                status="password_lockout",
-                reason="password_blocked",
+                (
+                    "Votre compte est bloqué après plusieurs tentatives de connexion.\n\n"
+                    "Veuillez réactiver votre compte à l’aide du lien sécurisé envoyé à votre adresse e-mail."
+                    if role == ROLE_SUPER_ADMIN
+                    else "Vous ne pouvez plus vous connecter directement. Veuillez vérifier votre boîte mail et suivre les instructions de sécurité."
+                ),
+                status="account_blocked" if role == ROLE_SUPER_ADMIN else "password_lockout",
+                reason="account_blocked" if role == ROLE_SUPER_ADMIN else "password_blocked",
                 role=role,
                 mail_sent=bool(mail_sent),
                 remaining_seconds=900,
                 temps_restant="15:00",
-                redirect_to="/mail-verification-required",
+                can_request_reactivation=False if role == ROLE_SUPER_ADMIN else None,
+                super_admin_reactivation_required=role == ROLE_SUPER_ADMIN,
+                redirect_to="/account-disabled" if role == ROLE_SUPER_ADMIN else "/mail-verification-required",
             )
 
         if delay_seconds > 0:
@@ -2618,7 +2670,20 @@ class AuthService:
             synchronize_session=False,
         )
 
-        if role == ROLE_ADMIN:
+        if role == ROLE_SUPER_ADMIN:
+            self._create_super_admin_reactivation_token_and_email(
+                user=user,
+                adresse_ip=adresse_ip,
+                user_agent=user_agent,
+                now=now,
+                source="recovery_code_lockout",
+            )
+            subject = "Compte Super Administrateur bloqué"
+            message = (
+                "Votre compte est bloqué après plusieurs tentatives de connexion.\n\n"
+                "Veuillez réactiver votre compte à l’aide du lien sécurisé envoyé à votre adresse e-mail."
+            )
+        elif role == ROLE_ADMIN:
             subject = "Compte administrateur désactivé"
             message = (
                 "Votre compte administrateur a été désactivé après plusieurs tentatives de récupération invalides.\n\n"
@@ -2631,38 +2696,40 @@ class AuthService:
                 "Pour réactiver votre compte, veuillez utiliser le bouton “Demander la réactivation” depuis la page de connexion."
             )
 
-        self._safe_mail_send(
-            lambda: self.mail_service.send_security_alert_email(
-                to_email=user.email,
-                subject=subject,
-                message=message,
-                db=self.db,
-                utilisateur_id=user.id,
-                adresse_ip=adresse_ip,
-                user_agent=user_agent,
-                details={"type": "ACCOUNT_DISABLED_RECOVERY_CODE_FAILURES", "role": role, "attempts": attempts},
-            ),
-            action="RECOVERY_CODE_ACCOUNT_DISABLED_EMAIL_EXCEPTION",
-            user=user,
-            adresse_ip=adresse_ip,
-            user_agent=user_agent,
-            details={"attempts": attempts, "role": role},
-        )
-        self._safe_mail_send(
-            lambda: self._notify_recovery_code_supervisor(
+        if role != ROLE_SUPER_ADMIN:
+            self._safe_mail_send(
+                lambda: self.mail_service.send_security_alert_email(
+                    to_email=user.email,
+                    subject=subject,
+                    message=message,
+                    db=self.db,
+                    utilisateur_id=user.id,
+                    adresse_ip=adresse_ip,
+                    user_agent=user_agent,
+                    details={"type": "ACCOUNT_DISABLED_RECOVERY_CODE_FAILURES", "role": role, "attempts": attempts},
+                ),
+                action="RECOVERY_CODE_ACCOUNT_DISABLED_EMAIL_EXCEPTION",
                 user=user,
-                role=role,
-                attempts=attempts,
                 adresse_ip=adresse_ip,
                 user_agent=user_agent,
-                disabled=True,
-            ),
-            action="RECOVERY_CODE_ACCOUNT_DISABLED_SUPERVISOR_EMAIL_EXCEPTION",
-            user=user,
-            adresse_ip=adresse_ip,
-            user_agent=user_agent,
-            details={"attempts": attempts, "role": role},
-        )
+                details={"attempts": attempts, "role": role},
+            )
+        if role != ROLE_SUPER_ADMIN:
+            self._safe_mail_send(
+                lambda: self._notify_recovery_code_supervisor(
+                    user=user,
+                    role=role,
+                    attempts=attempts,
+                    adresse_ip=adresse_ip,
+                    user_agent=user_agent,
+                    disabled=True,
+                ),
+                action="RECOVERY_CODE_ACCOUNT_DISABLED_SUPERVISOR_EMAIL_EXCEPTION",
+                user=user,
+                adresse_ip=adresse_ip,
+                user_agent=user_agent,
+                details={"attempts": attempts, "role": role},
+            )
         self._audit(
             action="ACCOUNT_DISABLED_AFTER_RECOVERY_FAILURES",
             acteur_id=user.id,
@@ -2749,7 +2816,59 @@ class AuthService:
         )
 
     def _get_reactivation_supervisor(self, user: Utilisateur, role: str):
-        return self._get_recovery_code_supervisor(user, role)
+        if role == ROLE_ADMIN:
+            candidates = (
+                self.db.query(Utilisateur)
+                .filter(Utilisateur.role == ROLE_SUPER_ADMIN)
+                .filter(Utilisateur.est_actif.is_(True))
+                .filter(Utilisateur.date_suppression.is_(None))
+                .order_by(Utilisateur.date_creation.asc())
+                .all()
+            )
+        else:
+            candidates = (
+                self.db.query(Utilisateur)
+                .filter(Utilisateur.role == ROLE_ADMIN)
+                .filter(Utilisateur.departement_id == user.departement_id)
+                .filter(Utilisateur.est_actif.is_(True))
+                .filter(Utilisateur.date_suppression.is_(None))
+                .order_by(Utilisateur.date_creation.asc())
+                .all()
+            )
+
+        return next(
+            (
+                candidate
+                for candidate in candidates
+                if self._account_status(candidate) == STATUT_ACTIVE
+            ),
+            None,
+        )
+
+    def _reactivation_request_is_pending(
+        self,
+        token_row: JetonReinitialisationMotDePasse,
+        target: Utilisateur,
+        supervisor: Utilisateur,
+    ) -> bool:
+        details = dict(token_row.details or {})
+        request_status = str(details.get("request_status") or "").lower()
+        if request_status:
+            return request_status == "pending"
+
+        notifications = (
+            self.db.query(NotificationSecurite)
+            .filter(NotificationSecurite.utilisateur_id == supervisor.id)
+            .filter(NotificationSecurite.type_notification == "ACCOUNT_REACTIVATION_REQUEST")
+            .filter(NotificationSecurite.email_destinataire == supervisor.email)
+            .filter(NotificationSecurite.statut == "ENVOYE")
+            .filter(NotificationSecurite.date_creation >= token_row.date_creation)
+            .all()
+        )
+        return any(
+            dict(notification.details or {}).get("target_user") == target.email
+            for notification in notifications
+        )
 
     def _reactivate_disabled_account(self, target: Utilisateur, target_role: str, now) -> None:
         target.est_actif = True
@@ -2768,6 +2887,232 @@ class AuthService:
         target.date_modification = now
         target.statut_compte = STATUT_ACTIVE
         self.db.add(target)
+
+    def _get_super_admin_reactivation_token(self, token: str):
+        return (
+            self.db.query(JetonReinitialisationMotDePasse)
+            .filter(JetonReinitialisationMotDePasse.jeton_hash == hash_token(token))
+            .filter(
+                or_(
+                    JetonReinitialisationMotDePasse.type_jeton
+                    == TOKEN_SUPER_ADMIN_ACCOUNT_REACTIVATION,
+                    JetonReinitialisationMotDePasse.type_token
+                    == TOKEN_SUPER_ADMIN_ACCOUNT_REACTIVATION,
+                )
+            )
+            .first()
+        )
+
+    def _invalidate_super_admin_reactivation_tokens(
+        self,
+        user: Utilisateur,
+        now,
+        reason: str,
+    ) -> None:
+        active_tokens = (
+            self.db.query(JetonReinitialisationMotDePasse)
+            .filter(JetonReinitialisationMotDePasse.utilisateur_id == user.id)
+            .filter(
+                or_(
+                    JetonReinitialisationMotDePasse.type_jeton
+                    == TOKEN_SUPER_ADMIN_ACCOUNT_REACTIVATION,
+                    JetonReinitialisationMotDePasse.type_token
+                    == TOKEN_SUPER_ADMIN_ACCOUNT_REACTIVATION,
+                )
+            )
+            .filter(JetonReinitialisationMotDePasse.utilise_a.is_(None))
+            .all()
+        )
+        for token_row in active_tokens:
+            details = dict(token_row.details or {})
+            details["invalidated_reason"] = reason
+            details["invalidated_at"] = now.isoformat()
+            token_row.details = details
+            token_row.utilise_a = now
+            self.db.add(token_row)
+
+    def _create_super_admin_reactivation_token_and_email(
+        self,
+        user: Utilisateur,
+        adresse_ip: str | None,
+        user_agent: str | None,
+        now,
+        source: str,
+    ) -> bool:
+        self._invalidate_super_admin_reactivation_tokens(
+            user=user,
+            now=now,
+            reason="new_link_generated",
+        )
+        raw_token = generate_raw_password_reset_token()
+        token_row = JetonReinitialisationMotDePasse(
+            utilisateur_id=user.id,
+            jeton_hash=hash_token(raw_token),
+            type_jeton=TOKEN_SUPER_ADMIN_ACCOUNT_REACTIVATION,
+            type_token=TOKEN_SUPER_ADMIN_ACCOUNT_REACTIVATION,
+            expire_a=now + timedelta(hours=24),
+            adresse_ip=adresse_ip,
+            user_agent=user_agent,
+            details={
+                "role": ROLE_SUPER_ADMIN,
+                "source": source,
+                "expires_in_hours": 24,
+                "email_status": "pending",
+            },
+        )
+        self.db.add(token_row)
+        self.db.flush()
+
+        reactivation_link = (
+            f"{settings.FRONTEND_BASE_URL}/security/reactivation-action"
+            f"?token={quote(raw_token, safe='')}&action=reactivate"
+        )
+        mail_sent = self._safe_mail_send(
+            lambda: self.mail_service.send_super_admin_account_reactivation_email(
+                to_email=user.email,
+                reactivation_link=reactivation_link,
+                db=self.db,
+                utilisateur_id=user.id,
+                adresse_ip=adresse_ip,
+                user_agent=user_agent,
+                details={"token_id": str(token_row.id), "source": source},
+            ),
+            action="SUPER_ADMIN_REACTIVATION_EMAIL_EXCEPTION",
+            user=user,
+            adresse_ip=adresse_ip,
+            user_agent=user_agent,
+            details={"token_id": str(token_row.id), "source": source},
+        )
+        details = dict(token_row.details or {})
+        details["email_status"] = "sent" if mail_sent else "failed"
+        details["mail_attempted_at"] = utc_now().isoformat()
+        if settings.MAIL_DEBUG_MODE:
+            details["reactivation_link_debug"] = reactivation_link
+        token_row.details = details
+        self.db.add(token_row)
+        self._audit(
+            action=(
+                "SUPER_ADMIN_REACTIVATION_EMAIL_SENT"
+                if mail_sent
+                else "SUPER_ADMIN_REACTIVATION_EMAIL_FAILED"
+            ),
+            acteur_id=user.id,
+            cible_id=user.id,
+            adresse_ip=adresse_ip,
+            user_agent=user_agent,
+            niveau_risque="ELEVE" if mail_sent else "CRITIQUE",
+            details={"token_id": str(token_row.id), "source": source, "mail_sent": bool(mail_sent)},
+        )
+        return bool(mail_sent)
+
+    def _execute_super_admin_reactivation_link(
+        self,
+        token_row: JetonReinitialisationMotDePasse,
+        adresse_ip: str | None,
+        user_agent: str | None,
+    ):
+        now = utc_now()
+        user = (
+            self.db.query(Utilisateur)
+            .filter(Utilisateur.id == token_row.utilisateur_id)
+            .filter(Utilisateur.role == ROLE_SUPER_ADMIN)
+            .filter(Utilisateur.date_suppression.is_(None))
+            .first()
+        )
+        if not user:
+            self._audit(
+                action="SUPER_ADMIN_REACTIVATION_LINK_INVALID",
+                adresse_ip=adresse_ip,
+                user_agent=user_agent,
+                niveau_risque="ELEVE",
+                details={"token_id": str(token_row.id), "reason": "user_not_found"},
+            )
+            self.db.commit()
+            return {"success": False, "status": "invalid", "message": "Ce lien est invalide."}
+        if token_row.utilise_a is not None:
+            self._audit(
+                action="SUPER_ADMIN_REACTIVATION_LINK_ALREADY_USED",
+                acteur_id=user.id,
+                cible_id=user.id,
+                adresse_ip=adresse_ip,
+                user_agent=user_agent,
+                niveau_risque="ELEVE",
+                details={"token_id": str(token_row.id)},
+            )
+            self.db.commit()
+            return {
+                "success": False,
+                "status": "already_used",
+                "message": "Ce lien a déjà été utilisé.",
+            }
+        if ensure_aware_utc(token_row.expire_a) <= now:
+            self._audit(
+                action="SUPER_ADMIN_REACTIVATION_LINK_EXPIRED",
+                acteur_id=user.id,
+                cible_id=user.id,
+                adresse_ip=adresse_ip,
+                user_agent=user_agent,
+                niveau_risque="ELEVE",
+                details={"token_id": str(token_row.id)},
+            )
+            self.db.commit()
+            return {
+                "success": False,
+                "status": "expired",
+                "message": "Le lien de réactivation a expiré.",
+                "can_resend": True,
+            }
+
+        if self._account_status(user) != STATUT_BLOQUE_TENTATIVES:
+            return {
+                "success": False,
+                "status": "not_reactivable",
+                "message": "Ce compte ne peut pas être réactivé par ce lien.",
+            }
+
+        try:
+            token_row.utilise_a = now
+            details = dict(token_row.details or {})
+            details["used_at"] = now.isoformat()
+            details["request_status"] = "approved"
+            token_row.details = details
+            self._reactivate_disabled_account(user, ROLE_SUPER_ADMIN, now)
+            self.db.query(SessionUtilisateur).filter(
+                SessionUtilisateur.utilisateur_id == user.id,
+                SessionUtilisateur.revoque_a.is_(None),
+            ).update(
+                {
+                    "revoque_a": now,
+                    "raison_revocation": "Réactivation Super Admin par lien sécurisé",
+                    "statut_session": SESSION_REVOKED,
+                },
+                synchronize_session=False,
+            )
+            self.db.add(token_row)
+            self.db.add(user)
+            self._audit(
+                action="SUPER_ADMIN_ACCOUNT_REACTIVATED_BY_SECURE_LINK",
+                acteur_id=user.id,
+                cible_id=user.id,
+                adresse_ip=adresse_ip,
+                user_agent=user_agent,
+                niveau_risque="ELEVE",
+                details={"token_id": str(token_row.id), "sessions_revoked": True},
+            )
+            self.db.commit()
+            return {
+                "success": True,
+                "status": "reactivated",
+                "message": "Votre compte Super Administrateur a été réactivé avec succès. Vous pouvez vous connecter.",
+                "redirect_to": "/login",
+            }
+        except Exception:
+            self.db.rollback()
+            return {
+                "success": False,
+                "status": "error",
+                "message": "La réactivation n’a pas pu être effectuée. Veuillez réessayer.",
+            }
 
     def _send_reactivation_success_email(
         self,
@@ -3081,24 +3426,39 @@ class AuthService:
         email_clean = str(email or "").strip().lower()
         user = self._get_user_by_email(email_clean)
         if not user:
-            return {"success": False, "status": "invalid", "message": "Compte introuvable."}
+            return {"success": False, "status": "invalid_user", "message": "Compte introuvable."}
 
         role = self._user_role(user)
         account_status = self._account_status(user)
         if account_status not in {STATUT_DISABLED, STATUT_BLOQUE_TENTATIVES}:
-            return {"success": False, "status": "not_reactivable", "message": "Ce compte ne peut pas être réactivé par cette action."}
+            return {"success": False, "status": "invalid_user", "message": "Ce compte ne peut pas être réactivé par cette action."}
         if role == ROLE_SUPER_ADMIN:
             return {
                 "success": False,
-                "status": "not_allowed",
+                "status": "invalid_user",
                 "message": "La demande automatique de réactivation n’est pas disponible pour ce compte.",
             }
 
         supervisor = self._get_reactivation_supervisor(user, role)
         if not supervisor:
+            self._audit(
+                action="ACCOUNT_REACTIVATION_REQUEST_NO_RECIPIENT",
+                acteur_id=user.id,
+                cible_id=user.id,
+                adresse_ip=adresse_ip,
+                user_agent=user_agent,
+                niveau_risque="ELEVE",
+                details={
+                    "target_role": role,
+                    "target_department_id": (
+                        str(user.departement_id) if user.departement_id else None
+                    ),
+                },
+            )
+            self.db.commit()
             return {
                 "success": False,
-                "status": "supervisor_not_found",
+                "status": "no_recipient",
                 "message": "Aucun responsable actif n’a été trouvé pour traiter cette demande.",
             }
 
@@ -3117,43 +3477,47 @@ class AuthService:
             .all()
         )
         for row in existing:
-            if dict(row.details or {}).get("target_user_id") == str(user.id):
+            if (
+                dict(row.details or {}).get("target_user_id") == str(user.id)
+                and self._reactivation_request_is_pending(row, user, supervisor)
+            ):
                 supervisor_role = self._user_role(supervisor)
                 return {
                     "success": True,
-                    "status": "already_sent",
+                    "status": "already_pending",
                     "message": (
-                        "Une demande de réactivation a déjà été envoyée. Veuillez attendre le traitement par le super administrateur."
+                        "Une demande de réactivation est déjà en attente auprès du super administrateur."
                         if role == ROLE_ADMIN or supervisor_role == ROLE_SUPER_ADMIN
-                        else "Une demande de réactivation a déjà été envoyée. Veuillez attendre le traitement par votre administrateur."
+                        else "Une demande de réactivation est déjà en attente auprès de votre administrateur."
                     ),
                 }
 
         raw_token = generate_raw_password_reset_token()
         department = user.departement.nom_departement if user.departement else "Non renseigné"
-        self.db.add(
-            JetonReinitialisationMotDePasse(
-                utilisateur_id=supervisor.id,
-                jeton_hash=hash_token(raw_token),
-                type_jeton="ACCOUNT_REACTIVATION_REQUEST",
-                type_token="ACCOUNT_REACTIVATION_REQUEST",
-                expire_a=now + timedelta(hours=24),
-                adresse_ip=adresse_ip,
-                user_agent=user_agent,
-                details={
-                    "target_user_id": str(user.id),
-                    "target_email": user.email,
-                    "target_role": role,
-                    "target_department": department,
-                    "supervisor_id": str(supervisor.id),
-                    "supervisor_role": self._user_role(supervisor),
-                    "allowed_actions": ["reactivate", "ignore"],
-                    "source": "disabled_account_login_request",
-                },
-            )
+        token_row = JetonReinitialisationMotDePasse(
+            utilisateur_id=supervisor.id,
+            jeton_hash=hash_token(raw_token),
+            type_jeton="ACCOUNT_REACTIVATION_REQUEST",
+            type_token="ACCOUNT_REACTIVATION_REQUEST",
+            expire_a=now + timedelta(hours=24),
+            adresse_ip=adresse_ip,
+            user_agent=user_agent,
+            details={
+                "target_user_id": str(user.id),
+                "target_email": user.email,
+                "target_role": role,
+                "target_department": department,
+                "supervisor_id": str(supervisor.id),
+                "supervisor_role": self._user_role(supervisor),
+                "allowed_actions": ["reactivate", "ignore"],
+                "source": "disabled_account_login_request",
+                "request_status": "creating",
+                "email_status": "pending",
+            },
         )
+        self.db.add(token_row)
         self._audit(
-            action="ACCOUNT_REACTIVATION_REQUESTED",
+            action="ACCOUNT_REACTIVATION_REQUEST_CREATED",
             acteur_id=user.id,
             cible_id=supervisor.id,
             adresse_ip=adresse_ip,
@@ -3176,25 +3540,130 @@ class AuthService:
                 utilisateur_id=supervisor.id,
                 adresse_ip=adresse_ip,
                 user_agent=user_agent,
-                details={"target_user": user.email, "target_role": role},
+                details={
+                    "request_id": str(token_row.id),
+                    "target_user": user.email,
+                    "target_role": role,
+                },
             ),
             action="ACCOUNT_REACTIVATION_REQUEST_EMAIL_EXCEPTION",
             user=user,
             adresse_ip=adresse_ip,
             user_agent=user_agent,
         )
+
+        token_details = dict(token_row.details or {})
+        token_details["email_status"] = "sent" if mail_sent else "failed"
+        token_details["request_status"] = "pending" if mail_sent else "email_failed"
+        token_details["mail_attempted_at"] = utc_now().isoformat()
+        token_row.details = token_details
+        if not mail_sent:
+            token_row.utilise_a = utc_now()
+
+        self.db.add(token_row)
+        self._audit(
+            action=(
+                "ACCOUNT_REACTIVATION_REQUEST_EMAIL_SENT"
+                if mail_sent
+                else "ACCOUNT_REACTIVATION_REQUEST_EMAIL_FAILED"
+            ),
+            acteur_id=user.id,
+            cible_id=supervisor.id,
+            adresse_ip=adresse_ip,
+            user_agent=user_agent,
+            niveau_risque="ELEVE" if mail_sent else "CRITIQUE",
+            details={
+                "request_id": str(token_row.id),
+                "target_role": role,
+                "supervisor_role": self._user_role(supervisor),
+                "mail_sent": bool(mail_sent),
+            },
+        )
         try:
             self.db.commit()
         except Exception:
             self.db.rollback()
+            return {
+                "success": False,
+                "status": "email_failed",
+                "message": "La demande n’a pas pu être finalisée. Veuillez réessayer.",
+                "mail_sent": bool(mail_sent),
+            }
+
+        if not mail_sent:
+            return {
+                "success": False,
+                "status": "email_failed",
+                "message": "La demande a été enregistrée, mais l’email n’a pas pu être envoyé. Veuillez réessayer.",
+                "mail_sent": False,
+            }
+
         supervisor_role = self._user_role(supervisor)
         return {
             "success": True,
-            "status": "sent",
+            "status": "created",
             "message": (
                 "Votre demande de réactivation a été envoyée au super administrateur."
                 if role == ROLE_ADMIN or supervisor_role == ROLE_SUPER_ADMIN
                 else "Votre demande de réactivation a été envoyée à l’administrateur de votre département."
+            ),
+            "mail_sent": bool(mail_sent),
+        }
+
+    def resend_super_admin_reactivation_link(
+        self,
+        token: str,
+        adresse_ip: str | None = None,
+        user_agent: str | None = None,
+    ):
+        token_row = self._get_super_admin_reactivation_token(token)
+        now = utc_now()
+        if not token_row:
+            self._audit(
+                action="SUPER_ADMIN_REACTIVATION_RESEND_INVALID",
+                adresse_ip=adresse_ip,
+                user_agent=user_agent,
+                niveau_risque="ELEVE",
+                details={"reason": "token_not_found"},
+            )
+            self.db.commit()
+            return {"success": False, "status": "invalid", "message": "Ce lien est invalide."}
+        if token_row.utilise_a is not None:
+            return {
+                "success": False,
+                "status": "already_used",
+                "message": "Ce lien a déjà été utilisé.",
+            }
+
+        user = (
+            self.db.query(Utilisateur)
+            .filter(Utilisateur.id == token_row.utilisateur_id)
+            .filter(Utilisateur.role == ROLE_SUPER_ADMIN)
+            .filter(Utilisateur.date_suppression.is_(None))
+            .first()
+        )
+        if not user or self._account_status(user) != STATUT_BLOQUE_TENTATIVES:
+            return {
+                "success": False,
+                "status": "invalid",
+                "message": "Ce compte ne peut pas être réactivé par ce lien.",
+            }
+
+        mail_sent = self._create_super_admin_reactivation_token_and_email(
+            user=user,
+            adresse_ip=adresse_ip,
+            user_agent=user_agent,
+            now=now,
+            source="expired_link_resend",
+        )
+        self.db.commit()
+        return {
+            "success": bool(mail_sent),
+            "status": "resent" if mail_sent else "email_failed",
+            "message": (
+                "Un nouveau lien de réactivation a été envoyé à votre adresse e-mail."
+                if mail_sent
+                else "Le nouveau lien n’a pas pu être envoyé. Veuillez réessayer."
             ),
             "mail_sent": bool(mail_sent),
         }
@@ -3207,6 +3676,14 @@ class AuthService:
         user_agent: str | None = None,
     ):
         action = str(action or "").lower().strip()
+        super_admin_token = self._get_super_admin_reactivation_token(token)
+        if super_admin_token:
+            return self._execute_super_admin_reactivation_link(
+                token_row=super_admin_token,
+                adresse_ip=adresse_ip,
+                user_agent=user_agent,
+            )
+
         if action not in {"reactivate", "ignore"}:
             return {"success": False, "status": "forbidden", "message": "Action non autorisée."}
 
@@ -3241,6 +3718,13 @@ class AuthService:
         target_role = self._user_role(target)
         try:
             token_row.utilise_a = now
+            token_details = dict(token_row.details or {})
+            token_details["request_status"] = (
+                "ignored" if action == "ignore" else "approved"
+            )
+            token_details["processed_at"] = now.isoformat()
+            token_details["processed_by"] = str(supervisor.id)
+            token_row.details = token_details
             if action == "ignore":
                 self._send_reactivation_ignored_email(target, target_role, adresse_ip, user_agent)
                 self.db.add(token_row)
@@ -3987,12 +4471,18 @@ class AuthService:
 
     def _inactive_account_error(self, user: Utilisateur, role: str, redirect_to: str = "/account-disabled"):
         account_status = self._account_status(user)
+        is_super_admin_blocked = role == ROLE_SUPER_ADMIN and account_status == STATUT_BLOQUE_TENTATIVES
         messages = {
             STATUT_DISABLED: "Votre compte a été désactivé. Contactez un administrateur.",
             STATUT_BLOQUE_TENTATIVES: "Votre compte est bloqué après plusieurs tentatives de connexion. Contactez un administrateur.",
             STATUT_PENDING_ACTIVATION: "Votre compte est en attente de première connexion.",
             STATUT_SUPPRIME: "Ce compte n’est plus disponible.",
         }
+        if is_super_admin_blocked:
+            messages[STATUT_BLOQUE_TENTATIVES] = (
+                "Votre compte est bloqué après plusieurs tentatives de connexion.\n\n"
+                "Veuillez réactiver votre compte à l’aide du lien sécurisé envoyé à votre adresse e-mail."
+            )
         reason_by_status = {
             STATUT_DISABLED: "account_disabled",
             STATUT_BLOQUE_TENTATIVES: "account_blocked",
@@ -4009,6 +4499,7 @@ class AuthService:
             statut_compte=account_status,
             can_request_reactivation=account_status in {STATUT_DISABLED, STATUT_BLOQUE_TENTATIVES}
             and role in {ROLE_USER, ROLE_ADMIN},
+            super_admin_reactivation_required=is_super_admin_blocked,
             redirect_to=redirect_to,
         )
 
