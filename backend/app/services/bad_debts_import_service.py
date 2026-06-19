@@ -1,6 +1,7 @@
 import ast
 import json
 import logging
+import os
 import re
 import shutil
 import subprocess
@@ -20,9 +21,17 @@ PROJECT_DIR = Path(__file__).resolve().parents[3]
 ML_DIR = PROJECT_DIR / "machine_learning"
 RUNTIME_IMPORTS_DIR = PROJECT_DIR / "backend" / "runtime_data" / "ml_imports"
 MERGE_SCRIPT = ML_DIR / "scripts" / "01_build_merged_dataset.py"
+VALIDATE_SEGMENTED_SCRIPT = ML_DIR / "scripts" / "03_validate_clients_segmented.py"
 ML_NOTEBOOK = ML_DIR / "notebooks" / "ml_clustering_baddebts.ipynb"
+POPULATION_FILE = ML_DIR / "data" / "raw" / "Pop ML V PIPE (1).csv"
 MERGED_DATASET = ML_DIR / "data" / "processed" / "merged_dataset_inner.csv"
 SEGMENTED_EXPORT = ML_DIR / "data" / "exports" / "clients_segmented.csv"
+EXECUTED_NOTEBOOK_NAME = "executed_ml_clustering_baddebts.ipynb"
+
+POPULATION_IMPORT_ERROR = (
+    "Ce fichier correspond à la base population historique. Veuillez importer le fichier SOS Solde "
+    "au format XLSX ou un fichier clients_segmented.csv déjà préparé."
+)
 
 SEGMENTED_COLUMNS = [
     "msisdn",
@@ -114,17 +123,38 @@ class BadDebtsImportService:
         self.db = db
 
     async def run_uploaded_import(self, file: UploadFile) -> dict[str, Any]:
-        import_id = self.create_import_run(file.filename or "fichier_importe")
+        original_filename = file.filename or "fichier_importe"
+        import_id = self.create_import_run(original_filename)
         try:
             raw_path = await self.save_uploaded_file(import_id, file)
             raw_df = self.validate_raw_file(raw_path)
-            if self._has_segmented_contract(raw_df):
+            file_type = self._detect_file_type(original_filename, raw_path, raw_df)
+            logger.info(
+                "Bad Debts import received import_id=%s file=%s saved_path=%s detected_type=%s rows=%s columns=%s",
+                import_id,
+                original_filename,
+                raw_path,
+                file_type,
+                raw_df.shape[0],
+                list(raw_df.columns),
+            )
+
+            if file_type == "population":
+                raise BadDebtsImportError(POPULATION_IMPORT_ERROR)
+            if file_type == "segmented":
                 segmented_path = self._copy_segmented_upload(import_id, raw_path)
+                self._publish_segmented_for_scripts(segmented_path)
                 pipeline_type = "segmented"
-            else:
+            elif file_type == "sos":
                 merged_path = self.run_merge_pipeline(import_id, raw_path)
                 segmented_path = self.run_ml_pipeline(import_id, merged_path)
                 pipeline_type = "raw_sos"
+            else:
+                raise BadDebtsImportError(
+                    "Type de fichier Bad Debts non reconnu. Importez un fichier SOS Solde valide "
+                    "ou un fichier clients_segmented.csv déjà préparé."
+                )
+            self._run_segmented_validation_script(segmented_path)
             df = self.validate_segmented_output(segmented_path)
             rows_imported = self.replace_clients_transaction(import_id, df)
             return {
@@ -206,57 +236,128 @@ class BadDebtsImportService:
             raise BadDebtsImportError("Fichier brut invalide : colonne MSISDN introuvable.")
         if not MERGE_SCRIPT.exists():
             raise BadDebtsImportError("Script de fusion ML introuvable.")
+        if not POPULATION_FILE.exists() or POPULATION_FILE.stat().st_size == 0:
+            raise BadDebtsImportError(f"Base population historique introuvable : {POPULATION_FILE}")
 
+        logger.info(
+            "Bad Debts import_id=%s launching merge script=%s pop_file=%s sos_file=%s output=%s",
+            import_id,
+            MERGE_SCRIPT,
+            POPULATION_FILE,
+            raw_path,
+            merged_path,
+        )
         self._run_command(
             [
                 sys.executable,
                 str(MERGE_SCRIPT),
-                "--sos-file",
-                str(raw_path),
-                "--output-file",
-                str(merged_path),
             ],
             cwd=ML_DIR,
             label="fusion du fichier brut SOS",
             timeout_seconds=900,
+            env={
+                "BAD_DEBTS_SOS_FILE": str(raw_path),
+                "BAD_DEBTS_OUTPUT_FILE": str(merged_path),
+            },
         )
         if not merged_path.exists() or merged_path.stat().st_size == 0:
-            raise BadDebtsImportError("merged_dataset_inner.csv n'a pas été généré.")
+            raise BadDebtsImportError(
+                "merged_dataset_inner.csv n'a pas ete genere apres la fusion SOS/population. "
+                f"Script: {MERGE_SCRIPT}. SOS: {raw_path}. Population: {POPULATION_FILE}. "
+                f"Output attendu: {merged_path}."
+            )
         self._best_effort_copy(merged_path, MERGED_DATASET)
         return merged_path
 
     def run_ml_pipeline(self, import_id: int, merged_path: Path) -> Path:
         import_dir = RUNTIME_IMPORTS_DIR / str(import_id)
         segmented_path = import_dir / "clients_segmented.csv"
+        executed_notebook_path = import_dir / EXECUTED_NOTEBOOK_NAME
         if not merged_path.exists() or merged_path.stat().st_size == 0:
             raise BadDebtsImportError("Dataset fusionné introuvable avant lancement ML.")
         if not ML_NOTEBOOK.exists():
             raise BadDebtsImportError("Notebook ML introuvable.")
+        self._ensure_notebook_runtime_available()
         notebook_path = self._prepare_notebook_for_import(import_dir, merged_path)
+        command = [
+            sys.executable,
+            "-m",
+            "nbconvert",
+            "--to",
+            "notebook",
+            "--execute",
+            str(notebook_path),
+            "--output",
+            EXECUTED_NOTEBOOK_NAME,
+            "--output-dir",
+            str(import_dir),
+            "--ExecutePreprocessor.timeout=2400",
+            "--ExecutePreprocessor.kernel_name=python3",
+        ]
 
+        logger.info(
+            "Bad Debts manual notebook test command: cd %s && %s",
+            ML_DIR,
+            " ".join(command),
+        )
+        logger.info(
+            "Bad Debts notebook paths import_id=%s notebook=%s executed_notebook=%s merged_dataset=%s "
+            "segmented_output=%s import_dir=%s processed_dir=%s exports_dir=%s",
+            import_id,
+            notebook_path,
+            executed_notebook_path,
+            merged_path,
+            segmented_path,
+            import_dir,
+            MERGED_DATASET.parent,
+            SEGMENTED_EXPORT.parent,
+        )
         self._run_command(
-            [
-                sys.executable,
-                "-m",
-                "jupyter",
-                "nbconvert",
-                "--to",
-                "notebook",
-                "--execute",
-                str(notebook_path),
-                "--output",
-                "executed_ml_clustering_baddebts.ipynb",
-                "--output-dir",
-                str(import_dir),
-            ],
+            command,
             cwd=ML_DIR,
             label="segmentation ML",
             timeout_seconds=2400,
+            env={
+                "BAD_DEBTS_MERGED_FILE": str(merged_path),
+                "BAD_DEBTS_EXPORT_DIR": str(import_dir),
+                "BAD_DEBTS_CLIENTS_SEGMENTED_FILE": str(segmented_path),
+            },
+            failure_details=lambda result: self._notebook_failure_details(
+                notebook_path=notebook_path,
+                executed_notebook_path=executed_notebook_path,
+                merged_path=merged_path,
+                segmented_path=segmented_path,
+                result=result,
+            ),
         )
         if not segmented_path.exists() or segmented_path.stat().st_size == 0:
-            raise BadDebtsImportError("clients_segmented.csv n'a pas été généré par le notebook ML.")
+            raise BadDebtsImportError(
+                "clients_segmented.csv n'a pas ete genere par le notebook ML. "
+                f"Notebook execute: {executed_notebook_path}. Dataset utilise: {merged_path}. "
+                f"Output attendu: {segmented_path}."
+            )
         self._best_effort_copy(segmented_path, SEGMENTED_EXPORT)
         return segmented_path
+
+    def _publish_segmented_for_scripts(self, segmented_path: Path) -> None:
+        self._best_effort_copy(segmented_path, SEGMENTED_EXPORT)
+
+    def _run_segmented_validation_script(self, segmented_path: Path) -> None:
+        if not VALIDATE_SEGMENTED_SCRIPT.exists():
+            raise BadDebtsImportError("Script de validation clients_segmented.csv introuvable.")
+        self._publish_segmented_for_scripts(segmented_path)
+        logger.info(
+            "Bad Debts launching validation script=%s input=%s canonical_input=%s",
+            VALIDATE_SEGMENTED_SCRIPT,
+            segmented_path,
+            SEGMENTED_EXPORT,
+        )
+        self._run_command(
+            [sys.executable, str(VALIDATE_SEGMENTED_SCRIPT)],
+            cwd=ML_DIR,
+            label="validation du fichier clients_segmented.csv",
+            timeout_seconds=300,
+        )
 
     def _copy_segmented_upload(self, import_id: int, raw_path: Path) -> Path:
         target = RUNTIME_IMPORTS_DIR / str(import_id) / "clients_segmented.csv"
@@ -429,20 +530,55 @@ class BadDebtsImportService:
         path.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(path, index=False, encoding="utf-8-sig")
 
+    def _ensure_notebook_runtime_available(self) -> None:
+        result = subprocess.run(
+            [sys.executable, "-c", "import jupyter, nbconvert, ipykernel"],
+            cwd=str(ML_DIR),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0:
+            return
+        details = "\n".join(part for part in [(result.stdout or "").strip(), (result.stderr or "").strip()] if part)
+        missing_match = re.search(r"No module named ['\"]([^'\"]+)['\"]", details)
+        if missing_match and missing_match.group(1) in {"jupyter", "nbconvert", "ipykernel"}:
+            raise BadDebtsImportError(
+                "Le notebook ML ne peut pas être exécuté car Jupyter/nbconvert/ipykernel "
+                f"n’est pas installé dans le venv backend. Package manquant: {missing_match.group(1)}. "
+                f"Details: {details or 'aucune sortie'}"
+            )
+        missing = f" Package Python manquant: {missing_match.group(1)}." if missing_match else ""
+        if "zmq" in details.lower():
+            missing = " Package Python invalide ou mal installe: pyzmq/zmq."
+        raise BadDebtsImportError(
+            "Le notebook ML ne peut pas être exécuté car l'environnement notebook du venv backend "
+            f"est invalide ou incomplet.{missing} Details: {details or 'aucune sortie'}"
+        )
+
     def _prepare_notebook_for_import(self, import_dir: Path, merged_path: Path) -> Path:
         notebook = json.loads(ML_NOTEBOOK.read_text(encoding="utf-8"))
-        merged_literal = f"Path(r{str(merged_path)!r})"
-        export_literal = f"Path(r{str(import_dir)!r})"
+        merged_literal = f"Path(os.environ.get('BAD_DEBTS_MERGED_FILE', r{str(merged_path)!r}))"
+        export_literal = f"Path(os.environ.get('BAD_DEBTS_EXPORT_DIR', r{str(import_dir)!r}))"
+        clients_literal = f"Path(os.environ.get('BAD_DEBTS_CLIENTS_SEGMENTED_FILE', str(EXPORT_DIR / 'clients_segmented.csv')))"
         replacements = {
+            "from pathlib import Path": "from pathlib import Path\nimport os",
             'DATA_PATH = ML_DIR / "data" / "processed" / "merged_dataset_inner.csv"': f"DATA_PATH = {merged_literal}",
             'EXPORT_DIR = ML_DIR / "data" / "exports"': f"EXPORT_DIR = {export_literal}",
             'OUT_DIR = ML_DIR / "data" / "exports"': f"OUT_DIR = {export_literal}",
+            'OUT_PATH = OUT_DIR / "clients_segmented.csv"': f"OUT_PATH = {clients_literal}",
+            'CLIENTS_FILE = EXPORT_DIR / "clients_segmented.csv"': f"CLIENTS_FILE = {clients_literal}",
         }
         for cell in notebook.get("cells", []):
             source = "".join(cell.get("source", []))
             for old, new in replacements.items():
                 source = source.replace(old, new)
             cell["source"] = source.splitlines(keepends=True)
+        notebook.setdefault("metadata", {})["kernelspec"] = {
+            "display_name": "Python 3",
+            "language": "python",
+            "name": "python3",
+        }
         target = import_dir / "ml_clustering_baddebts_import.ipynb"
         target.write_text(json.dumps(notebook, ensure_ascii=False), encoding="utf-8")
         return target
@@ -456,18 +592,161 @@ class BadDebtsImportService:
             # A locked OneDrive/Excel file must not fail an otherwise valid import.
             return
 
-    def _run_command(self, command: list[str], *, cwd: Path, label: str, timeout_seconds: int) -> None:
-        result = subprocess.run(
+    def _run_command(
+        self,
+        command: list[str],
+        *,
+        cwd: Path,
+        label: str,
+        timeout_seconds: int,
+        env: dict[str, str] | None = None,
+        failure_details: Any | None = None,
+    ) -> None:
+        command_env = os.environ.copy()
+        if env:
+            command_env.update(env)
+        logger.info(
+            "Bad Debts command start label=%s cwd=%s command=%s env_overrides=%s",
+            label,
+            cwd,
             command,
-            cwd=str(cwd),
-            capture_output=True,
-            text=True,
-            timeout=timeout_seconds,
-            check=False,
+            env or {},
+        )
+        try:
+            result = subprocess.run(
+                command,
+                cwd=str(cwd),
+                capture_output=True,
+                text=True,
+                timeout=timeout_seconds,
+                check=False,
+                env=command_env,
+            )
+        except subprocess.TimeoutExpired as exc:
+            stdout = self._decode_subprocess_output(exc.stdout)
+            stderr = self._decode_subprocess_output(exc.stderr)
+            raise BadDebtsImportError(
+                f"Timeout pendant {label} apres {timeout_seconds}s. Commande: {' '.join(command)}. "
+                f"stdout: {stdout or 'vide'}. stderr: {stderr or 'vide'}"
+            ) from exc
+        stdout = (result.stdout or "").strip()
+        stderr = (result.stderr or "").strip()
+        logger.info(
+            "Bad Debts command finished label=%s returncode=%s stdout=%s stderr=%s",
+            label,
+            result.returncode,
+            stdout,
+            stderr,
         )
         if result.returncode != 0:
-            stderr = (result.stderr or result.stdout or "").strip()
-            raise BadDebtsImportError(f"Erreur pendant {label} : {stderr[:1500]}")
+            details = stderr or stdout or "aucune sortie stdout/stderr"
+            extra_details = ""
+            if failure_details is not None:
+                try:
+                    extra_details = str(failure_details(result)).strip()
+                except Exception as detail_exc:
+                    extra_details = f"Impossible d'extraire les details de l'echec: {detail_exc}"
+            raise BadDebtsImportError(
+                f"Erreur pendant {label}. Commande: {' '.join(command)}. "
+                f"returncode: {result.returncode}. stdout: {stdout or 'vide'}. stderr: {details}. "
+                f"{extra_details}"
+            )
+
+    def _decode_subprocess_output(self, value: Any) -> str:
+        if value is None:
+            return ""
+        if isinstance(value, bytes):
+            return value.decode(errors="replace").strip()
+        return str(value).strip()
+
+    def _notebook_failure_details(
+        self,
+        *,
+        notebook_path: Path,
+        executed_notebook_path: Path,
+        merged_path: Path,
+        segmented_path: Path,
+        result: subprocess.CompletedProcess[str],
+    ) -> str:
+        parts = [
+            f"Notebook source: {notebook_path}",
+            f"Notebook execute attendu: {executed_notebook_path}",
+            f"Dataset merge injecte: {merged_path} (exists={merged_path.exists()}, size={merged_path.stat().st_size if merged_path.exists() else 0})",
+            f"Output clients_segmented attendu: {segmented_path}",
+            f"Commande test manuelle: cd {ML_DIR} && {sys.executable} -m nbconvert --to notebook --execute {notebook_path} --output {EXECUTED_NOTEBOOK_NAME} --output-dir {executed_notebook_path.parent} --ExecutePreprocessor.timeout=2400 --ExecutePreprocessor.kernel_name=python3",
+        ]
+        notebook_errors = self._extract_notebook_errors(executed_notebook_path)
+        if notebook_errors:
+            parts.append("Erreurs extraites du notebook execute:")
+            parts.extend(notebook_errors)
+        elif executed_notebook_path.exists():
+            parts.append("Le notebook execute existe, mais aucune sortie de cellule en erreur n'a ete trouvee.")
+        else:
+            parts.append("Le notebook execute n'a pas ete genere par nbconvert.")
+
+        stderr = (result.stderr or "").strip()
+        stdout = (result.stdout or "").strip()
+        missing_match = re.search(r"No module named ['\"]([^'\"]+)['\"]", f"{stderr}\n{stdout}")
+        if missing_match:
+            parts.append(f"Package Python manquant detecte: {missing_match.group(1)}")
+        return "\n".join(parts)
+
+    def _extract_notebook_errors(self, notebook_path: Path) -> list[str]:
+        if not notebook_path.exists():
+            return []
+        try:
+            notebook = json.loads(notebook_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return [f"Impossible de lire le notebook execute {notebook_path}: {exc}"]
+
+        errors: list[str] = []
+        for index, cell in enumerate(notebook.get("cells", []), start=1):
+            for output in cell.get("outputs", []) or []:
+                if output.get("output_type") != "error":
+                    continue
+                ename = output.get("ename") or "Erreur"
+                evalue = output.get("evalue") or ""
+                traceback_lines = output.get("traceback") or []
+                traceback_text = "\n".join(str(line) for line in traceback_lines)
+                errors.append(
+                    f"Cellule {index}: ename={ename}; evalue={evalue}; traceback=\n{traceback_text}"
+                )
+        return errors
+
+    def _detect_file_type(self, filename: str, path: Path, df: pd.DataFrame) -> str:
+        normalized_name = self._normalize_filename(filename or path.name)
+        if normalized_name == self._normalize_filename(POPULATION_FILE.name) or self._looks_like_population_file(df):
+            return "population"
+        if self._has_segmented_contract(df):
+            return "segmented"
+        if self._looks_like_sos_file(df):
+            return "sos"
+        return "unknown"
+
+    def _looks_like_population_file(self, df: pd.DataFrame) -> bool:
+        normalized_columns = {self._normalize_column_name(col) for col in df.columns}
+        population_columns = {"msisdn", "state_in", "subscriber_type_in", "rate_plan", "account_activated_date"}
+        return population_columns.issubset(normalized_columns) and normalized_columns.isdisjoint(self._sos_column_markers())
+
+    def _looks_like_sos_file(self, df: pd.DataFrame) -> bool:
+        normalized_columns = {self._normalize_column_name(col) for col in df.columns}
+        return "msisdn" in normalized_columns and bool(normalized_columns & self._sos_column_markers())
+
+    def _sos_column_markers(self) -> set[str]:
+        return {
+            "avg_credit_amount",
+            "avg_credit_fee",
+            "avg_reimbursed_amount",
+            "avg_fee_reimbursed",
+            "avg_reimburse_ratio",
+            "avg_days_since_credit",
+            "total_outstanding_amount",
+            "total_outstanding_fee",
+            "nb_sos",
+        }
+
+    def _normalize_filename(self, value: str) -> str:
+        return re.sub(r"\s+", " ", Path(value).name.strip().lower())
 
     def _has_segmented_contract(self, df: pd.DataFrame) -> bool:
         normalized_df = self._standardize_segmented_columns(df)
@@ -653,6 +932,8 @@ class BadDebtsImportService:
 
     def _format_exception(self, exc: Exception) -> str:
         message = str(exc).strip() or exc.__class__.__name__
+        if isinstance(exc, BadDebtsImportError):
+            return message
         origin = getattr(exc, "orig", None)
         details = [f"{exc.__class__.__name__}: {message}"]
         if origin is not None:

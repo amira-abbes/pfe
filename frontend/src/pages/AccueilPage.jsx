@@ -95,7 +95,7 @@ export default function AccueilPage() {
   ].filter((module) => module.visible);
 
   return (
-    <Layout>
+    <Layout className="app-shell--home">
       <div className="b2b-home">
         <section className="b2b-hero">
           <div className="b2b-hero-copy">
@@ -139,6 +139,15 @@ export default function AccueilPage() {
         <section className="b2b-section reveal-hidden">
           <div className="b2b-section-heading"><div><span>Gouvernance</span><h2>Profils & permissions</h2></div><p>Une organisation claire des responsabilités et périmètres d’accès.</p></div>
           <div className="b2b-profile-table-wrap"><table className="b2b-profile-table"><thead><tr><th>Profil</th><th>Accès principal</th><th>Périmètre</th></tr></thead><tbody>{profiles.map(([profile, access, scope]) => <tr key={profile}><td><span className="b2b-profile-mark" />{profile}</td><td>{access}</td><td>{scope}</td></tr>)}</tbody></table></div>
+          <div className="b2b-profile-cards">
+            {profiles.map(([profile, access, scope]) => (
+              <article className="b2b-profile-card" key={profile}>
+                <h3><span className="b2b-profile-mark" />{profile}</h3>
+                <p><strong>Accès :</strong> {access}</p>
+                <p><strong>Périmètre :</strong> {scope}</p>
+              </article>
+            ))}
+          </div>
         </section>
 
       </div>

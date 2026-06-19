@@ -184,6 +184,15 @@ body,
   gap: 8px;
 }
 
+.bad-debts-mobile-tabs {
+  display: none;
+}
+
+.bad-debts-client-cards,
+.bad-debts-import-cards {
+  display: none;
+}
+
 .bdx-avatar,
 .bdx-client-cell span {
   display: grid;
@@ -6551,4 +6560,835 @@ body.bad-debts-overview-fullscreen-open {
   .bdx-shell.is-light .bdx-overview .bdx-kpi span {
     white-space: normal;
   }
+}
+
+/* Mobile-only layout for Bad Debts overview */
+@media (max-width: 768px) {
+  .app-shell--bad-debts .bottom-main-content {
+    overflow-x: hidden;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+
+  .bdx-shell:has(.bad-debts-overview-page),
+  .bdx-shell.is-light:has(.bad-debts-overview-page),
+  .bdx-shell:has(.bad-debts-overview-page):has(.bdx-sidebar:hover),
+  .bdx-shell:has(.bad-debts-overview-page):has(.bdx-sidebar.is-open) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    padding: 10px 10px calc(96px + env(safe-area-inset-bottom));
+    overflow-x: hidden;
+  }
+
+  .bdx-shell:has(.bad-debts-overview-page) .bad-debts-sidebar,
+  .bdx-shell.is-light:has(.bad-debts-overview-page) .bad-debts-sidebar,
+  .bdx-shell.is-light:has(.bad-debts-overview-page) .bad-debts-sidebar:is(:hover, .is-open) {
+    display: none;
+  }
+
+  .bad-debts-overview-page .bad-debts-mobile-tabs {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 0 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .bad-debts-overview-page .bad-debts-mobile-tabs a {
+    display: inline-flex;
+    min-width: max-content;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 14px;
+    border: 1px solid rgba(184, 197, 223, 0.76);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    color: #52627a;
+    box-shadow: 0 8px 20px rgba(45, 57, 92, 0.06);
+    font-size: 12px;
+    font-weight: 850;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .bad-debts-overview-page .bad-debts-mobile-tabs a.active {
+    border-color: rgba(37, 99, 235, 0.34);
+    background: linear-gradient(135deg, #2563eb, #6d5df6);
+    color: #fff;
+    box-shadow: 0 12px 22px rgba(37, 99, 235, 0.18);
+  }
+
+  .bdx-shell:has(.bad-debts-overview-page) .bdx-main,
+  .bdx-shell.is-light .bdx-main:has(.bad-debts-overview-page) {
+    grid-column: auto;
+    grid-row: auto;
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  .bad-debts-overview-page {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+
+  .bdx-shell:has(.bad-debts-overview-page) .bdx-overview-kpi-grid,
+  .bdx-shell.is-light .bad-debts-overview-page .bdx-overview-kpi-grid {
+    grid-column: auto;
+    grid-row: auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    gap: 9px;
+    height: auto;
+  }
+
+  .bdx-shell:has(.bad-debts-overview-page) .bdx-overview .bdx-kpi,
+  .bdx-shell.is-light .bad-debts-overview-page .bdx-kpi {
+    grid-template-columns: 46px minmax(0, 1fr);
+    column-gap: 12px;
+    min-height: 78px;
+    height: auto;
+    padding: 11px 14px;
+    border-radius: 15px;
+  }
+
+  .bdx-shell:has(.bad-debts-overview-page) .bdx-overview .bdx-kpi-icon,
+  .bdx-shell.is-light .bad-debts-overview-page .bdx-kpi-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+  }
+
+  .bdx-shell:has(.bad-debts-overview-page) .bdx-overview .bdx-kpi-icon svg,
+  .bdx-shell.is-light .bad-debts-overview-page .bdx-kpi-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .bdx-shell:has(.bad-debts-overview-page) .bdx-overview .bdx-kpi span,
+  .bdx-shell.is-light .bad-debts-overview-page .bdx-kpi span {
+    font-size: 16px;
+    line-height: 1.15;
+    white-space: normal;
+  }
+
+  .bdx-shell:has(.bad-debts-overview-page) .bdx-overview .bdx-kpi strong,
+  .bdx-shell.is-light .bad-debts-overview-page .bdx-kpi strong {
+    font-size: clamp(2.3rem, 12vw, 3rem);
+  }
+
+  .bdx-shell:has(.bad-debts-overview-page) .bdx-overview-main,
+  .bdx-shell.is-light .bad-debts-overview-page .bdx-overview-main {
+    grid-column: auto;
+    grid-row: auto;
+    display: grid;
+    grid-template-rows: auto auto;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .bad-debts-overview-page .bdx-overview-header-row {
+    margin: 0;
+  }
+
+  .bad-debts-overview-page .bdx-header--institutional {
+    margin: 0;
+  }
+
+  .bad-debts-overview-page .bdx-header--institutional .platform-page-title {
+    font-size: clamp(28px, 8vw, 34px);
+    line-height: 1.06;
+    letter-spacing: -0.04em;
+  }
+
+  .bad-debts-overview-page .bdx-header--institutional .platform-page-subtitle {
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .bdx-shell:has(.bad-debts-overview-page) .bdx-chart-grid,
+  .bdx-shell:has(.bad-debts-overview-page) .bdx-overview .bdx-chart-grid,
+  .bdx-shell.is-light .bad-debts-overview-page .bdx-chart-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+  }
+
+  .bad-debts-overview-page .bdx-chart-grid .bdx-panel {
+    min-width: 0;
+    min-height: 0;
+    padding: 16px 14px;
+    border-radius: 16px;
+  }
+
+  .bad-debts-overview-page .bdx-panel h2 {
+    font-size: 17px;
+    line-height: 1.18;
+  }
+
+  .bad-debts-overview-page .bdx-panel-head p {
+    font-size: 12px;
+  }
+
+  .bad-debts-overview-page .bdx-donut-wrap {
+    min-height: 300px;
+  }
+
+  .bad-debts-overview-page .bdx-donut-wrap svg {
+    width: min(100%, 210px);
+    height: auto;
+    margin-inline: auto;
+  }
+
+  .bad-debts-overview-page .bdx-legend {
+    gap: 8px;
+  }
+
+  .bad-debts-overview-page .bdx-legend span {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 8px 10px;
+  }
+
+  .bad-debts-overview-page .bdx-legend strong,
+  .bad-debts-overview-page .bdx-legend small {
+    font-size: 12px;
+  }
+
+  .bad-debts-overview-page .bdx-vbars {
+    width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 4px;
+  }
+
+  .bad-debts-overview-page .bdx-vbars-plot {
+    min-width: 340px;
+    height: 270px;
+    padding: 26px 10px 24px;
+  }
+
+  .bad-debts-overview-page .cluster-bar-item {
+    min-width: 58px;
+  }
+
+  .bad-debts-overview-page .cluster-bar-value {
+    font-size: 11px;
+    transform: translateY(-4px);
+  }
+
+  .bad-debts-overview-page .cluster-bar-label {
+    max-width: 58px;
+    font-size: 10px;
+    line-height: 1.1;
+  }
+
+  .bad-debts-overview-page .score-cluster-list {
+    gap: 10px;
+    min-height: 260px;
+    padding: 2px 0;
+  }
+
+  .bad-debts-overview-page .score-cluster-row {
+    display: grid;
+    grid-template-columns: minmax(92px, 1fr) minmax(70px, 1.2fr) minmax(54px, auto);
+    gap: 8px;
+    min-height: 38px;
+    padding: 6px 2px;
+  }
+
+  .bad-debts-overview-page .score-cluster-label {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 11px;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+  }
+
+  .bad-debts-overview-page .score-cluster-value {
+    min-width: 48px;
+    font-size: 12px;
+    text-align: right;
+  }
+
+  .bad-debts-overview-page .debt-radial-card {
+    gap: 14px;
+    min-height: 0;
+    padding-top: 4px;
+  }
+
+  .bad-debts-overview-page .debt-radial-chart {
+    width: min(100%, 210px);
+    height: 210px;
+    margin-inline: auto;
+  }
+
+  .bad-debts-overview-page .debt-radial-chart svg {
+    width: 190px;
+    height: 190px;
+  }
+
+  .bad-debts-overview-page .debt-radial-center strong {
+    font-size: 30px;
+  }
+
+  .bad-debts-overview-page .debt-risk-cards {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+  }
+
+  .bad-debts-overview-page .debt-risk-mini-card {
+    min-width: 0;
+    padding: 9px 7px;
+  }
+
+  .bad-debts-overview-page .debt-risk-mini-card span {
+    font-size: 12px;
+  }
+
+  .bad-debts-overview-page .debt-risk-mini-card strong,
+  .bad-debts-overview-page .debt-risk-mini-card small {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .bdx-shell:has(.bad-debts-overview-page) .bdx-chart-grid,
+  .bdx-shell:has(.bad-debts-overview-page) .bdx-overview .bdx-chart-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .bdx-shell:has(.bad-debts-overview-page),
+  .bdx-shell.is-light:has(.bad-debts-overview-page) {
+    padding-inline: 8px;
+  }
+
+  .bdx-shell:has(.bad-debts-overview-page) .bdx-side-label {
+    font-size: 9px;
+  }
+
+  .bad-debts-overview-page .bdx-chart-grid .bdx-panel {
+    padding-inline: 12px;
+  }
+
+  .bad-debts-overview-page .score-cluster-row {
+    grid-template-columns: minmax(82px, 1fr) minmax(56px, 0.9fr) minmax(42px, auto);
+  }
+}
+
+/* Final mobile experience for all Bad Debts pages */
+@media (max-width: 768px) {
+  .app-shell--bad-debts .bottom-main-content {
+    overflow-x: hidden;
+    padding-bottom: calc(104px + env(safe-area-inset-bottom));
+  }
+
+  .bdx-shell,
+  .bdx-shell.is-light,
+  .bdx-shell:has(.bdx-sidebar:hover),
+  .bdx-shell:has(.bdx-sidebar.is-open),
+  .bdx-shell.is-light:has(.bdx-sidebar:hover),
+  .bdx-shell.is-light:has(.bdx-sidebar.is-open) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 10px;
+    width: 100%;
+    min-width: 0;
+    padding: 10px 10px calc(104px + env(safe-area-inset-bottom));
+    overflow-x: hidden;
+  }
+
+  .bdx-shell .bad-debts-sidebar,
+  .bdx-shell.is-light .bad-debts-sidebar,
+  .bdx-shell.is-light .bad-debts-sidebar:is(:hover, .is-open) {
+    display: none !important;
+  }
+
+  .bdx-shell .bdx-main,
+  .bdx-shell.is-light .bdx-main,
+  .bdx-shell.is-light .bdx-main:has(.bdx-overview) {
+    grid-column: 1;
+    grid-row: auto;
+    display: grid;
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  .bdx-main > .bad-debts-mobile-tabs {
+    display: flex;
+    order: -10;
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 0 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .bdx-main > .bad-debts-mobile-tabs a {
+    display: inline-flex;
+    min-width: max-content;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 14px;
+    border: 1px solid rgba(184, 197, 223, 0.76);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    color: #52627a;
+    box-shadow: 0 8px 20px rgba(45, 57, 92, 0.06);
+    font-size: 12px;
+    font-weight: 850;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .bdx-main > .bad-debts-mobile-tabs a.active {
+    border-color: rgba(37, 99, 235, 0.34);
+    background: linear-gradient(135deg, #2563eb, #6d5df6);
+    color: #fff;
+    box-shadow: 0 12px 22px rgba(37, 99, 235, 0.18);
+  }
+
+  .bad-debts-page {
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  .bad-debts-page-title {
+    margin: 0;
+    font-size: clamp(1.75rem, 8vw, 2.15rem);
+    line-height: 1.08;
+  }
+
+  .bad-debts-filters-card,
+  .bad-debts-table-card,
+  .bdx-panel {
+    width: 100%;
+    min-width: 0;
+    border-radius: 16px;
+  }
+
+  .bad-debts-filters-card {
+    padding: 14px;
+  }
+
+  .bad-debts-filter-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px;
+  }
+
+  .bad-debts-filter-grid label,
+  .bad-debts-filter-grid select,
+  .bad-debts-filter-grid input,
+  .bad-debts-search {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .bad-debts-filter-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 9px;
+    align-items: stretch;
+  }
+
+  .bad-debts-filter-scope-hint {
+    width: 100%;
+    min-width: 0;
+    white-space: normal;
+  }
+
+  .bad-debts-filter-actions .bad-debts-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .bad-debts-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .bad-debts-stat-card {
+    min-height: 82px;
+    padding: 11px;
+    border-radius: 15px;
+  }
+
+  .bad-debts-stat-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .bad-debts-stat-card p {
+    font-size: 11px;
+    line-height: 1.2;
+  }
+
+  .bad-debts-stat-card strong {
+    font-size: clamp(1.25rem, 7vw, 1.75rem);
+  }
+
+  .bad-debts-table-wrap,
+  .bdx-import-history-wrap {
+    display: none !important;
+  }
+
+  .bad-debts-client-cards,
+  .bad-debts-import-cards {
+    display: grid;
+    gap: 10px;
+  }
+
+  .bad-debts-client-card,
+  .bad-debts-import-card {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    padding: 13px;
+    border: 1px solid rgba(184, 197, 223, 0.72);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 10px 26px rgba(45, 57, 92, 0.07);
+  }
+
+  .is-dark .bad-debts-client-card,
+  .is-dark .bad-debts-import-card {
+    background: rgba(8, 24, 54, 0.9);
+  }
+
+  .bad-debts-client-card header,
+  .bad-debts-import-card header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .bad-debts-client-card header div,
+  .bad-debts-import-card header div {
+    min-width: 0;
+  }
+
+  .bad-debts-client-card header span,
+  .bad-debts-import-card header span {
+    display: block;
+    color: #71809a;
+    font-size: 10px;
+    font-weight: 850;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .bad-debts-client-card header strong,
+  .bad-debts-import-card header strong {
+    display: block;
+    min-width: 0;
+    margin-top: 3px;
+    overflow-wrap: anywhere;
+    color: #0b2144;
+    font-size: 18px;
+    line-height: 1.15;
+  }
+
+  .is-dark .bad-debts-client-card header strong,
+  .is-dark .bad-debts-import-card header strong {
+    color: #f8fafc;
+  }
+
+  .bad-debts-client-card dl,
+  .bad-debts-import-card dl {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .bad-debts-client-card dl div,
+  .bad-debts-import-card dl div {
+    display: grid;
+    grid-template-columns: minmax(96px, 0.42fr) minmax(0, 1fr);
+    gap: 8px;
+    align-items: start;
+    min-width: 0;
+  }
+
+  .bad-debts-client-card dt,
+  .bad-debts-import-card dt {
+    color: #71809a;
+    font-size: 11px;
+    font-weight: 850;
+  }
+
+  .bad-debts-client-card dd,
+  .bad-debts-import-card dd {
+    min-width: 0;
+    margin: 0;
+    color: #273654;
+    font-size: 12px;
+    font-weight: 750;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .is-dark .bad-debts-client-card dd,
+  .is-dark .bad-debts-import-card dd {
+    color: #e5e7eb;
+  }
+
+  .bad-debts-client-card .bad-debts-btn,
+  .bad-debts-import-card .bdx-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .bad-debts-badge {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .bad-debts-pagination-shell {
+    gap: 10px;
+    padding-top: 12px;
+  }
+
+  .bad-debts-pagination {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .bdx-import-form {
+    grid-template-columns: 1fr;
+  }
+
+  .bdx-file-picker,
+  .bdx-import-form .bdx-button,
+  .bdx-import-latest {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .bdx-import-latest {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 430px) {
+  .bad-debts-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .bad-debts-client-card dl div,
+  .bad-debts-import-card dl div {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+}
+
+/* Compact fixed Clients à risque table: all columns visible on desktop. */
+.bad-debts-table-card {
+  max-width: 100%;
+}
+
+.bad-debts-table-card .bad-debts-table-wrap {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden !important;
+  overflow-y: visible;
+}
+
+.bad-debts-table-card .bad-debts-table {
+  width: 100% !important;
+  min-width: 0 !important;
+  table-layout: fixed !important;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.bad-debts-table-card .bad-debts-table :is(th, td) {
+  min-width: 0 !important;
+  max-width: none !important;
+  overflow: hidden;
+  padding-inline: 5px !important;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+
+.bad-debts-table-card .bad-debts-table th {
+  height: 46px;
+  padding-block: 8px !important;
+  font-size: 8px;
+  line-height: 1.15;
+  letter-spacing: 0.025em;
+  white-space: normal;
+}
+
+.bad-debts-table-card .bad-debts-table td {
+  height: 48px;
+  padding-block: 7px !important;
+  font-size: 10.5px;
+  line-height: 1.2;
+}
+
+.bad-debts-table-card .bad-debts-table :is(th, td):nth-child(1) { width: 11% !important; }
+.bad-debts-table-card .bad-debts-table :is(th, td):nth-child(2) { width: 10% !important; }
+.bad-debts-table-card .bad-debts-table :is(th, td):nth-child(3) { width: 7% !important; }
+.bad-debts-table-card .bad-debts-table :is(th, td):nth-child(4) { width: 10% !important; }
+.bad-debts-table-card .bad-debts-table :is(th, td):nth-child(5) { width: 8% !important; }
+.bad-debts-table-card .bad-debts-table :is(th, td):nth-child(6) { width: 7% !important; }
+.bad-debts-table-card .bad-debts-table :is(th, td):nth-child(7) { width: 9% !important; }
+.bad-debts-table-card .bad-debts-table :is(th, td):nth-child(8) { width: 7% !important; }
+.bad-debts-table-card .bad-debts-table :is(th, td):nth-child(9) { width: 14% !important; }
+.bad-debts-table-card .bad-debts-table :is(th, td):nth-child(10) { width: 8% !important; }
+.bad-debts-table-card .bad-debts-table :is(th, td):nth-child(11) { width: 9% !important; }
+
+.bad-debts-table-card .bdx-client-cell,
+.bad-debts-table-card .bdx-score,
+.bad-debts-table-card .bad-debts-row-actions {
+  min-width: 0;
+}
+
+.bad-debts-table-card .bdx-client-cell strong,
+.bad-debts-table-card .bad-debts-segment-cell,
+.bad-debts-table-card .bad-debts-signal-cell,
+.bad-debts-table-card .bad-debts-risk-cell,
+.bad-debts-table-card .bad-debts-anomaly-cell,
+.bad-debts-table-card .bad-debts-priority-cell {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bad-debts-table-card .bad-debts-recommended-action > span {
+  display: -webkit-box;
+  overflow: hidden;
+  line-height: 1.2;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.bad-debts-table-card .bad-debts-badge,
+.bad-debts-table-card .bad-debts-risk-cell .bad-debts-badge,
+.bad-debts-table-card .bad-debts-anomaly-cell .bad-debts-badge,
+.bad-debts-table-card .bad-debts-priority-cell .bad-debts-badge {
+  min-height: 22px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 3px 5px;
+  font-size: 8.5px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.bad-debts-table-card .bad-debts-table .bdx-score {
+  max-width: 100%;
+  gap: 4px;
+}
+
+.bad-debts-table-card .bad-debts-table .bdx-score strong {
+  font-size: 10px;
+}
+
+.bad-debts-table-card .bad-debts-table .bdx-score i {
+  height: 5px;
+}
+
+.bad-debts-table-card .bad-debts-priority-cell,
+.bad-debts-table-card .bad-debts-actions-cell,
+.bad-debts-table-card .bad-debts-table th.bad-debts-priority-cell,
+.bad-debts-table-card .bad-debts-table th.bad-debts-actions-cell {
+  position: static;
+  right: auto;
+  z-index: auto;
+  box-shadow: none;
+}
+
+.bad-debts-table-card .bad-debts-actions-cell .bad-debts-btn.small {
+  width: auto;
+  min-width: 74px;
+  max-width: none;
+  min-height: 28px;
+  gap: 4px;
+  padding-inline: 6px;
+  font-size: 9.5px;
+  white-space: nowrap;
+}
+
+.bad-debts-table-card .bad-debts-actions-cell .bad-debts-btn.small svg {
+  width: 12px;
+  height: 12px;
+}
+
+@media (max-width: 768px) {
+  .bad-debts-table-card .bad-debts-table-wrap {
+    display: none !important;
+  }
+
+  .bad-debts-table-card .bad-debts-client-cards {
+    display: grid !important;
+  }
+}
+
+/* Bad Debts pages use the global platform background only. */
+.bdx-shell:has(:is(.bad-debts-overview-page, .bad-debts-clients-page, .bad-debts-imports-page)),
+.bdx-shell.is-light:has(:is(.bad-debts-overview-page, .bad-debts-clients-page, .bad-debts-imports-page)),
+.bdx-shell.is-dark:has(:is(.bad-debts-overview-page, .bad-debts-clients-page, .bad-debts-imports-page)),
+.bdx-shell:has(:is(.bad-debts-overview-page, .bad-debts-clients-page, .bad-debts-imports-page)):has(.bdx-sidebar:hover),
+.bdx-shell:has(:is(.bad-debts-overview-page, .bad-debts-clients-page, .bad-debts-imports-page)):has(.bdx-sidebar.is-open),
+.bdx-shell.is-light:has(:is(.bad-debts-overview-page, .bad-debts-clients-page, .bad-debts-imports-page)):has(.bdx-sidebar:hover),
+.bdx-shell.is-light:has(:is(.bad-debts-overview-page, .bad-debts-clients-page, .bad-debts-imports-page)):has(.bdx-sidebar.is-open) {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+.bdx-shell:has(:is(.bad-debts-overview-page, .bad-debts-clients-page, .bad-debts-imports-page)) .bdx-main,
+.bdx-shell:has(:is(.bad-debts-overview-page, .bad-debts-clients-page, .bad-debts-imports-page)) .bdx-view,
+.bad-debts-overview-page,
+.bad-debts-clients-page,
+.bad-debts-imports-page {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+.bad-debts-page::before,
+.bad-debts-overview-page::before,
+.bad-debts-clients-page::before,
+.bad-debts-imports-page::before {
+  content: none !important;
+  display: none !important;
+  background: none !important;
 }

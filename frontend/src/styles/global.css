@@ -5746,6 +5746,10 @@ body {
   border-radius: 20px 20px 0 0;
 }
 
+.users-mobile-cards {
+  display: none;
+}
+
 .users-premium-table {
   width: 100%;
   min-width: 1040px;
@@ -5881,6 +5885,48 @@ body {
   background: #f5f8fc;
   color: #58677f;
   font-weight: 700;
+}
+
+.admin-users-page .user-inline-select {
+  width: min(100%, 168px);
+  min-height: 36px;
+  padding: 0 34px 0 12px;
+  border: 1px solid rgba(148, 163, 184, 0.34);
+  border-radius: 12px;
+  outline: 0;
+  appearance: none;
+  background:
+    linear-gradient(45deg, transparent 50%, #64748b 50%) calc(100% - 16px) 15px / 6px 6px no-repeat,
+    linear-gradient(135deg, #64748b 50%, transparent 50%) calc(100% - 12px) 15px / 6px 6px no-repeat,
+    linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 6px 14px rgba(45, 57, 92, 0.05);
+  color: #26334d;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 760;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background-color 180ms ease, color 180ms ease;
+}
+
+.admin-users-page .user-inline-select:hover {
+  border-color: rgba(79, 70, 229, 0.34);
+  background:
+    linear-gradient(45deg, transparent 50%, #4f46e5 50%) calc(100% - 16px) 15px / 6px 6px no-repeat,
+    linear-gradient(135deg, #4f46e5 50%, transparent 50%) calc(100% - 12px) 15px / 6px 6px no-repeat,
+    linear-gradient(180deg, #ffffff 0%, #f3f6ff 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.94), 0 8px 18px rgba(79, 70, 229, 0.1);
+  color: #1f2a44;
+}
+
+.admin-users-page .user-inline-select:focus,
+.admin-users-page .user-inline-select:focus-visible {
+  border-color: #5b5ce2;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.14), 0 8px 20px rgba(79, 70, 229, 0.12);
+}
+
+.admin-users-page .users-inline-department-select.user-inline-select {
+  width: min(100%, 190px);
 }
 
 .users-status-badge i {
@@ -6199,6 +6245,273 @@ body {
 
   .users-inline-editor > span {
     margin-right: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-users-page {
+    width: min(100% - 20px, 1480px);
+    padding: 14px 0 128px;
+    overflow-x: hidden;
+  }
+
+  .admin-users-page .platform-page-header {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .admin-users-page .platform-page-title {
+    font-size: clamp(1.55rem, 7vw, 2rem);
+    line-height: 1.1;
+  }
+
+  .admin-users-page .platform-page-subtitle {
+    margin-top: 5px;
+    font-size: 0.84rem;
+    line-height: 1.45;
+  }
+
+  .admin-users-page .platform-page-actions {
+    width: 100%;
+  }
+
+  .admin-users-page .users-create-button {
+    width: 100%;
+    min-height: 42px;
+  }
+
+  .admin-users-page .users-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+    margin: 14px 0;
+  }
+
+  .admin-users-page .users-kpi-card {
+    min-height: 78px;
+    gap: 9px;
+    padding: 11px;
+    border-radius: 15px;
+  }
+
+  .admin-users-page .users-kpi-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 11px;
+  }
+
+  .admin-users-page .users-kpi-icon svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .admin-users-page .users-kpi-card strong {
+    font-size: 1.18rem;
+  }
+
+  .admin-users-page .users-kpi-card div span {
+    font-size: 0.68rem;
+    line-height: 1.25;
+  }
+
+  .admin-users-page .users-control-panel {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 11px;
+    border-radius: 15px;
+  }
+
+  .admin-users-page .users-search-field {
+    width: 100%;
+    min-height: 40px;
+    box-sizing: border-box;
+  }
+
+  .admin-users-page .users-filter-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .admin-users-page .users-filter-group select,
+  .admin-users-page .users-reset-button,
+  .admin-users-page .users-refresh-button {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    box-sizing: border-box;
+  }
+
+  .admin-users-page .users-filter-group select:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .admin-users-page .users-reset-button {
+    grid-column: 1 / 2;
+  }
+
+  .admin-users-page .users-refresh-button {
+    grid-column: 2 / 3;
+  }
+
+  .admin-users-page .users-results-meta {
+    flex-wrap: wrap;
+    padding-left: 0;
+    line-height: 1.4;
+  }
+
+  .admin-users-page .users-table-shell {
+    border-radius: 16px;
+    overflow: visible;
+  }
+
+  .admin-users-page .users-table-scroll {
+    display: none;
+  }
+
+  .admin-users-page .users-mobile-cards {
+    display: grid;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .admin-users-page .users-mobile-card {
+    position: relative;
+    display: grid;
+    gap: 12px;
+    padding: 13px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 8px 22px rgba(45, 57, 92, 0.06);
+  }
+
+  .admin-users-page .users-mobile-person {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+  }
+
+  .admin-users-page .users-mobile-person strong,
+  .admin-users-page .users-mobile-person span {
+    display: block;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-users-page .users-mobile-person strong {
+    color: #1c2742;
+    font-size: 0.88rem;
+    line-height: 1.25;
+  }
+
+  .admin-users-page .users-mobile-person span {
+    margin-top: 2px;
+    color: #8490a7;
+    font-size: 0.72rem;
+  }
+
+  .admin-users-page .users-mobile-details {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .admin-users-page .users-mobile-details div {
+    display: grid;
+    grid-template-columns: minmax(104px, 0.44fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+  }
+
+  .admin-users-page .users-mobile-details dt {
+    color: #71809a;
+    font-size: 0.7rem;
+    font-weight: 800;
+  }
+
+  .admin-users-page .users-mobile-details dd {
+    min-width: 0;
+    margin: 0;
+    color: #34405a;
+    font-size: 0.76rem;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-users-page .users-mobile-actions {
+    justify-self: stretch;
+  }
+
+  .admin-users-page .users-mobile-actions summary {
+    display: flex;
+    width: 100%;
+    height: 40px;
+    gap: 7px;
+    justify-content: center;
+  }
+
+  .admin-users-page .users-mobile-actions summary span {
+    font-size: 0.76rem;
+    font-weight: 800;
+  }
+
+  .admin-users-page .users-mobile-actions .users-action-menu {
+    left: 0;
+    right: 0;
+    width: auto;
+  }
+
+  .admin-users-page .users-mobile-state {
+    display: grid;
+    min-height: 120px;
+    place-items: center;
+    color: #7c89a1;
+    font-size: 0.82rem;
+    text-align: center;
+  }
+
+  .admin-users-page .users-pagination {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 9px;
+    padding: 12px 10px 16px;
+  }
+
+  .admin-users-page .users-per-page,
+  .admin-users-page .users-pagination nav {
+    justify-content: center;
+  }
+
+  .admin-users-page .users-range {
+    order: -1;
+    font-size: 0.76rem;
+  }
+
+  .admin-users-page .users-pagination nav {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-users-page {
+    width: min(100% - 16px, 1480px);
+  }
+
+  .admin-users-page .users-filter-group {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-users-page .users-reset-button span {
+    display: inline;
+  }
+
+  .admin-users-page .users-mobile-details div {
+    grid-template-columns: 1fr;
+    gap: 3px;
   }
 }
 
@@ -6990,6 +7303,79 @@ body {
   border-radius: 0;
 }
 
+.powerbi-mobile-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  background: #07111f;
+}
+
+.powerbi-mobile-fullscreen iframe {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100vw;
+  height: 100dvh;
+  border: 0;
+  background: #fff;
+}
+
+.powerbi-mobile-close {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 10052;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 13px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  background: rgba(12, 20, 34, 0.86);
+  color: #fff;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.28);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+}
+
+.powerbi-mobile-rotate-note {
+  position: fixed;
+  top: max(60px, calc(env(safe-area-inset-top) + 58px));
+  left: 50%;
+  z-index: 10051;
+  width: min(calc(100vw - 28px), 420px);
+  margin: 0;
+  transform: translateX(-50%);
+  padding: 10px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 14px;
+  background: rgba(12, 20, 34, 0.8);
+  color: #fff;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.4;
+  text-align: center;
+  backdrop-filter: blur(14px);
+}
+
+.app-shell--service-sos.is-powerbi-mobile-fullscreen {
+  overflow: hidden;
+}
+
+.app-shell--service-sos.is-powerbi-mobile-fullscreen .top-header,
+.app-shell--service-sos.is-powerbi-mobile-fullscreen .bottom-navbar {
+  display: none;
+}
+
 .service-sos-toast {
   position: absolute;
   right: 14px;
@@ -7637,4 +8023,470 @@ body.modal-open { overflow: hidden; }
 /* Permission-aware homepage modules grid */
 .b2b-modules-grid {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+}
+
+/* Responsive homepage layout */
+.app-shell--home {
+  overflow-x: hidden;
+}
+
+.app-shell--home .bottom-main-content {
+  overflow-x: hidden;
+  padding-inline: clamp(16px, 3vw, 48px);
+}
+
+.app-shell--home .b2b-home {
+  width: min(100%, 1600px);
+  margin-inline: auto;
+  display: grid;
+  gap: clamp(18px, 2.4vw, 36px);
+  overflow-x: hidden;
+}
+
+.app-shell--home .b2b-hero,
+.app-shell--home .b2b-section {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.app-shell--home .b2b-hero {
+  grid-template-columns: minmax(0, 0.95fr) minmax(360px, 1.05fr);
+  gap: clamp(28px, 4vw, 76px);
+}
+
+.app-shell--home .b2b-hero .b2b-hero-title {
+  max-width: 14ch;
+  overflow-wrap: anywhere;
+  font-size: clamp(2rem, 4.2vw, 5rem);
+}
+
+.app-shell--home .b2b-hero-copy,
+.app-shell--home .b2b-product-stage,
+.app-shell--home .b2b-module-card,
+.app-shell--home .b2b-decision-card {
+  min-width: 0;
+}
+
+.app-shell--home .b2b-hero-description {
+  overflow-wrap: break-word;
+}
+
+.app-shell--home .b2b-hero-actions {
+  max-width: 100%;
+}
+
+.app-shell--home .b2b-btn {
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
+}
+
+.app-shell--home .b2b-product-stage {
+  width: 100%;
+  justify-self: stretch;
+}
+
+.app-shell--home .b2b-product-card {
+  width: min(100%, 520px);
+}
+
+.app-shell--home .b2b-modules-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+}
+
+.app-shell--home .b2b-decision-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.app-shell--home .b2b-profile-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-shell--home .b2b-profile-table {
+  min-width: min(680px, 100vw - 48px);
+}
+
+.app-shell--home .b2b-profile-cards {
+  display: none;
+}
+
+@media (min-width: 1600px) {
+  .app-shell--home .bottom-main-content {
+    padding-inline: clamp(48px, 4vw, 88px);
+  }
+
+  .app-shell--home .b2b-home {
+    width: min(100%, 1680px);
+  }
+
+  .app-shell--home .b2b-hero {
+    min-height: clamp(560px, 42vw, 680px);
+    grid-template-columns: minmax(0, 0.9fr) minmax(520px, 1.1fr);
+    padding: clamp(58px, 4.5vw, 88px);
+  }
+
+  .app-shell--home .b2b-product-card {
+    width: min(100%, 560px);
+  }
+
+  .app-shell--home .b2b-modules-grid {
+    grid-template-columns: repeat(4, minmax(240px, 1fr));
+  }
+
+  .app-shell--home .b2b-section {
+    padding: clamp(36px, 3vw, 56px);
+  }
+
+  .app-shell--home .bottom-navbar {
+    width: min(100%, 1280px);
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    border-radius: 22px 22px 0 0;
+  }
+}
+
+@media (min-width: 769px) {
+  .powerbi-mobile-fullscreen {
+    display: none;
+  }
+}
+
+@media (orientation: landscape) and (max-width: 932px) {
+  .powerbi-mobile-rotate-note {
+    display: none;
+  }
+}
+
+@media (max-width: 1440px) {
+  .app-shell--home .b2b-home {
+    width: min(100%, 1360px);
+  }
+}
+
+@media (max-width: 1024px) {
+  .app-shell--home .bottom-main-content {
+    padding-inline: clamp(16px, 3vw, 28px);
+  }
+
+  .app-shell--home .b2b-hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .app-shell--home .b2b-hero .b2b-hero-title {
+    max-width: 18ch;
+  }
+
+  .app-shell--home .b2b-product-stage {
+    width: min(100%, 680px);
+    margin-inline: auto;
+  }
+
+  .app-shell--home .b2b-modules-grid,
+  .app-shell--home .b2b-decision-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .app-shell--home .bottom-main-content {
+    padding: 12px 12px 112px;
+  }
+
+  .app-shell--home .b2b-home {
+    width: 100%;
+    gap: 12px;
+  }
+
+  .app-shell--home .b2b-hero {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    padding: 18px 14px;
+    border-radius: 18px;
+    gap: 14px;
+  }
+
+  .app-shell--home .b2b-hero .b2b-hero-title {
+    max-width: 13ch;
+    margin-block: 12px 10px;
+    font-size: clamp(1.75rem, 8vw, 2.125rem);
+    line-height: 1.1;
+  }
+
+  .app-shell--home .b2b-hero-copy > p {
+    max-width: 100%;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .app-shell--home .b2b-hero-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .app-shell--home .b2b-btn {
+    width: 100%;
+    min-height: 40px;
+    padding: 10px 12px;
+    font-size: 12px;
+    justify-content: center;
+  }
+
+  .app-shell--home .b2b-hero-meta {
+    align-items: flex-start;
+    margin-top: 12px;
+    font-size: 11px;
+    line-height: 1.45;
+  }
+
+  .app-shell--home .b2b-product-stage {
+    display: block;
+    min-height: auto;
+  }
+
+  .app-shell--home .b2b-product-card {
+    width: 100%;
+    padding: 12px;
+    border-radius: 16px;
+  }
+
+  .app-shell--home .b2b-product-head {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .app-shell--home .b2b-product-head strong {
+    font-size: 13px;
+  }
+
+  .app-shell--home .b2b-product-kpi {
+    margin-top: 12px;
+  }
+
+  .app-shell--home .b2b-product-kpi > strong {
+    font-size: clamp(1.55rem, 7vw, 2rem);
+  }
+
+  .app-shell--home .b2b-product-chart {
+    display: none;
+  }
+
+  .app-shell--home .b2b-product-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .app-shell--home .b2b-product-stats div {
+    padding: 8px 6px;
+  }
+
+  .app-shell--home .b2b-product-stats strong {
+    font-size: 13px;
+  }
+
+  .app-shell--home .b2b-product-stats span {
+    font-size: 9px;
+  }
+
+  .app-shell--home .b2b-float-card {
+    display: none;
+  }
+
+  .app-shell--home .b2b-section {
+    padding: 16px 12px;
+    border-radius: 16px;
+  }
+
+  .app-shell--home .b2b-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .app-shell--home .b2b-section-heading h2 {
+    font-size: clamp(1.375rem, 6vw, 1.625rem);
+  }
+
+  .app-shell--home .b2b-section-heading p {
+    max-width: 100%;
+    text-align: left;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .app-shell--home .b2b-modules-grid,
+  .app-shell--home .b2b-decision-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .app-shell--home .b2b-module-card {
+    min-height: auto;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .app-shell--home .b2b-module-icon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .app-shell--home .b2b-module-icon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .app-shell--home .b2b-module-card h3 {
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+
+  .app-shell--home .b2b-module-card p {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .app-shell--home .b2b-module-arrow {
+    display: none;
+  }
+
+  .app-shell--home .b2b-decision-card {
+    min-height: auto;
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .app-shell--home .b2b-decision-head {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .app-shell--home .b2b-decision-head span {
+    width: 34px;
+    height: 34px;
+  }
+
+  .app-shell--home .b2b-decision-head h3 {
+    font-size: 14px;
+  }
+
+  .app-shell--home .b2b-decision-card p {
+    font-size: 12px;
+    line-height: 1.45;
+    margin-bottom: 10px;
+  }
+
+  .app-shell--home .b2b-mini-chart {
+    height: 56px;
+  }
+
+  .app-shell--home .b2b-mini-flow {
+    height: auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px;
+  }
+
+  .app-shell--home .b2b-mini-flow .b2b-flow-step {
+    display: contents;
+  }
+
+  .app-shell--home .b2b-mini-flow .b2b-flow-step span {
+    padding: 6px 8px;
+    font-size: 8px;
+    border-radius: 999px;
+  }
+
+  .app-shell--home .b2b-mini-flow svg {
+    display: none;
+  }
+
+  .app-shell--home .b2b-profile-table-wrap {
+    display: none;
+  }
+
+  .app-shell--home .b2b-profile-cards {
+    display: grid;
+    gap: 10px;
+  }
+
+  .app-shell--home .b2b-profile-card {
+    padding: 12px;
+    border: 1px solid var(--b2b-line);
+    border-radius: 14px;
+    background: #fff;
+  }
+
+  .app-shell--home .b2b-profile-card h3 {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 8px;
+    color: #252b50;
+    font-size: 14px;
+    line-height: 1.3;
+  }
+
+  .app-shell--home .b2b-profile-card p {
+    margin: 4px 0 0;
+    color: #60697c;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .app-shell--home .b2b-profile-card strong {
+    color: #252b50;
+  }
+
+  .app-shell--home .bottom-navbar {
+    height: 64px;
+    padding: 0 4px max(6px, env(safe-area-inset-bottom));
+  }
+
+  .app-shell--home .bnav-bubble {
+    width: 36px;
+    height: 36px;
+  }
+
+  .app-shell--home .bnav-bubble svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .app-shell--home .bnav-label {
+    max-width: 54px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 380px) {
+  .app-shell--home .bottom-main-content {
+    padding-inline: 10px;
+  }
+
+  .app-shell--home .b2b-hero {
+    padding-inline: 12px;
+  }
+
+  .app-shell--home .b2b-section {
+    padding-inline: 12px;
+  }
 }

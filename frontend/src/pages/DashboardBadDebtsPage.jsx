@@ -506,6 +506,7 @@ function BadDebtsWorkspace({ view }) {
         <BadDebtsSidebar />
         <main className="bdx-main">
           {view !== "overview" && view !== "clients" && headerNode}
+          <BadDebtsMobileTabs />
           {error && <div className="bdx-alert"><AlertTriangle size={18} />{error}</div>}
           {loading ? (
             <div className="bdx-loading"><Loader2 className="spin" size={24} />Chargement Bad Debts...</div>
@@ -517,6 +518,16 @@ function BadDebtsWorkspace({ view }) {
     </Layout>  );
 }
 
+function BadDebtsMobileTabs() {
+  return (
+    <nav className="bad-debts-mobile-tabs" aria-label="Navigation Bad Debts mobile">
+      <NavLink to="/dashboard/bad-debts/overview">Vue globale</NavLink>
+      <NavLink to="/dashboard/bad-debts/clients">Clients à risque</NavLink>
+      <NavLink to="/dashboard/bad-debts/imports">Imports</NavLink>
+    </nav>
+  );
+}
+
 function BadDebtsSidebar() {
   const items = [
     ["overview", "Vue globale", Home],
@@ -525,7 +536,7 @@ function BadDebtsSidebar() {
   ];
 
   return (
-    <aside className="bdx-sidebar">
+    <aside className="bdx-sidebar bad-debts-sidebar">
       <div className="bdx-side-brand" title="Menu">
         <Menu size={19} />
         <span className="bdx-side-label">Menu</span>
@@ -578,7 +589,7 @@ function OverviewPage({ summary, clients, headerNode }) {
   ];
 
   return (
-    <div className="bdx-view bdx-overview">
+    <div className="bdx-view bdx-overview bad-debts-overview-page">
       <section className="bdx-overview-kpi-grid" aria-label="Indicateurs Bad Debts">
         {kpis.map(([label, value, Icon, tone, decimals, to], index) => <KpiCard key={label} label={label} value={value} icon={Icon} tone={tone} index={index} decimals={decimals} onClick={to ? () => navigate(to) : undefined} />)}
       </section>
@@ -764,7 +775,7 @@ function RiskClientsPage({
   }
 
   return (
-    <div className="bdx-view bad-debts-page">
+    <div className="bdx-view bad-debts-page bad-debts-clients-page">
       <h2 className="bad-debts-page-title">Clients à risque</h2>
       <BadDebtsFiltersCard
         filters={filters}
@@ -897,21 +908,52 @@ function BadDebtsClientsTable({ rows, loading, title, meta, activeFilters, page,
                   const isLoading = loadingMsisdn === client.msisdn;
                   return (
                     <tr key={client.msisdn}>
-                      <td><ClientCell value={client.msisdn} /></td>
+                      <td title={client.msisdn}><ClientCell value={client.msisdn} /></td>
                       <td className="bad-debts-segment-cell" title={segmentLabel(client.cluster_name)}>{segmentLabel(client.cluster_name)}</td>
                       <td className="bad-debts-risk-cell"><RiskBadge tier={client.risk_tier} /></td>
                       <td className="bad-debts-signal-cell"><OperationalSignalBadge client={client} /></td>
                       <td><ScoreBar score={client.final_risk_score} tone={client.effective_tier || client.risk_tier} /></td>
-                      <td>{formatNumber(client.total_outstanding_amount)}</td>
-                      <td>{formatPercent(client.avg_reimburse_ratio)}</td>
+                      <td title={`${formatNumber(client.total_outstanding_amount)} TND`}>{formatNumber(client.total_outstanding_amount)}</td>
+                      <td title={formatPercent(client.avg_reimburse_ratio)}>{formatPercent(client.avg_reimburse_ratio)}</td>
                       <td className="bad-debts-anomaly-cell"><AnomalyBadge value={client.is_anomaly} /></td>
                       <td className="bad-debts-recommended-action" title={client.recommended_action_label || actionLabel(actionType)}><span>{client.recommended_action_label || actionLabel(actionType)}</span></td>
-                      <td className="bad-debts-priority-cell"><PriorityBadge priority={priority} label={client.priority_label} /></td>
+                      <td className="bad-debts-priority-cell" title={client.priority_label || priority}><PriorityBadge priority={priority} label={client.priority_label} /></td>
                       <td className="bad-debts-actions-cell"><div className="bad-debts-row-actions"><button className="bad-debts-btn primary small" type="button" onClick={() => onRunAgent(client.msisdn)} disabled={isLoading}>{isLoading ? <Loader2 className="spin" size={15} /> : <Search size={15} />}{isLoading ? "Analyse en cours..." : "Analyser"}</button></div></td>
                     </tr>
                   );
                 })}</tbody>
               </table>
+            </div>
+            <div className="bad-debts-client-cards" aria-label="Clients à risque mobile">
+              {rows.map((client) => {
+                const actionType = recommendedActionForClient(client);
+                const priority = priorityForClient(client);
+                const isLoading = loadingMsisdn === client.msisdn;
+                return (
+                  <article className="bad-debts-client-card" key={client.msisdn}>
+                    <header>
+                      <div>
+                        <span>MSISDN</span>
+                        <strong>{client.msisdn}</strong>
+                      </div>
+                      <RiskBadge tier={client.risk_tier} />
+                    </header>
+                    <dl>
+                      <div><dt>Segment</dt><dd>{segmentLabel(client.cluster_name)}</dd></div>
+                      <div><dt>Score</dt><dd>{formatScore(client.final_risk_score)}</dd></div>
+                      <div><dt>Dette</dt><dd>{formatNumber(client.total_outstanding_amount)} TND</dd></div>
+                      <div><dt>Remboursement</dt><dd>{formatPercent(client.avg_reimburse_ratio)}</dd></div>
+                      <div><dt>Anomalie</dt><dd><AnomalyBadge value={client.is_anomaly} /></dd></div>
+                      <div><dt>Action</dt><dd>{client.recommended_action_label || actionLabel(actionType)}</dd></div>
+                      <div><dt>Priorité</dt><dd><PriorityBadge priority={priority} label={client.priority_label} /></dd></div>
+                    </dl>
+                    <button className="bad-debts-btn primary small" type="button" onClick={() => onRunAgent(client.msisdn)} disabled={isLoading}>
+                      {isLoading ? <Loader2 className="spin" size={15} /> : <Search size={15} />}
+                      {isLoading ? "Analyse en cours..." : "Analyser"}
+                    </button>
+                  </article>
+                );
+              })}
             </div>
             <div className="bad-debts-pagination-shell">
               <p className="bad-debts-pagination-summary">{formatNumber(rangeStart)}–{formatNumber(rangeEnd)} sur {formatNumber(total)} clients</p>
@@ -1393,7 +1435,7 @@ function ImportHistoryPage({ imports, refreshDashboard }) {
   }
 
   return (
-    <div className="bdx-view">
+    <div className="bdx-view bad-debts-imports-page">
       <Panel title="Importer un fichier brut" meta="Nouveau cycle ML Bad Debts">
         <form className="bdx-import-form" onSubmit={submitImport}>
           <label className="bdx-file-picker">
@@ -1433,6 +1475,25 @@ function ImportHistoryPage({ imports, refreshDashboard }) {
               )) : <tr><td colSpan={6}><p className="bdx-empty">Aucun import disponible pour le moment.</p></td></tr>}
             </tbody>
           </table>
+        </div>
+        <div className="bad-debts-import-cards" aria-label="Historique des imports mobile">
+          {rows.length ? rows.map((item) => (
+            <article className="bad-debts-import-card" key={item.id}>
+              <header>
+                <div>
+                  <span>Date</span>
+                  <strong>{formatDate(item.imported_at)}</strong>
+                </div>
+                <Badge tone={statusTone(item.status)}>{importStatusLabel(item.status)}</Badge>
+              </header>
+              <dl>
+                <div><dt>Fichier</dt><dd title={displayValue(item.file_name)}>{displayValue(item.file_name)}</dd></div>
+                <div><dt>Clients importés</dt><dd>{formatNumber(item.rows_imported)}</dd></div>
+                <div><dt>Erreur</dt><dd>{item.error_message || "Aucune erreur signalée"}</dd></div>
+              </dl>
+              <button className="bdx-button bdx-import-details-btn" type="button" onClick={() => setSelectedImportDetails(item)}>Voir détails</button>
+            </article>
+          )) : <p className="bdx-empty">Aucun import disponible pour le moment.</p>}
         </div>
       </Panel>
       {selectedImportDetails && createPortal(

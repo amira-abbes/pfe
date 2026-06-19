@@ -282,7 +282,7 @@ export default function AdminUsersPage() {
 
   return (
     <Layout>
-      <main className="users-admin-page">
+      <main className="users-admin-page admin-users-page">
         <PageHeader
           eyebrow="Administration"
           title="Gestion des utilisateurs"
@@ -390,7 +390,7 @@ export default function AdminUsersPage() {
                     <td>
                       {isSuperAdmin ? (
                         <select
-                          className="users-inline-access-select"
+                          className="users-inline-access-select user-inline-select"
                           value={item.role}
                           aria-label={`Rôle de ${item.email}`}
                           onChange={(event) => updateUserProfile(item, { role: event.target.value })}
@@ -406,7 +406,7 @@ export default function AdminUsersPage() {
                      <td>
                       {isSuperAdmin ? (
                         <select
-                          className="users-inline-access-select users-inline-department-select"
+                          className="users-inline-access-select users-inline-department-select user-inline-select"
                           value={item.departement_nom || ""}
                           aria-label={`Département de ${item.email}`}
                           onChange={(event) => {
@@ -465,6 +465,66 @@ export default function AdminUsersPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          <div className="users-mobile-cards" aria-label="Liste utilisateurs mobile">
+            {loading ? (
+              <div className="users-mobile-state">Chargement des utilisateurs…</div>
+            ) : paginatedUsers.length === 0 ? (
+              <div className="users-mobile-state">Aucun utilisateur ne correspond aux filtres.</div>
+            ) : paginatedUsers.map((item) => {
+              const st = normalizeStatus(item);
+              const statusConfig = {
+                ACTIF: { cls: "is-active", label: "Actif" },
+                EN_ATTENTE_PREMIERE_CONNEXION: { cls: "is-pending", label: "En attente" },
+                DESACTIVE_ADMIN: { cls: "is-inactive", label: "Désactivé" },
+                BLOQUE_TENTATIVES: { cls: "is-blocked", label: "Bloqué" },
+                SUPPRIME: { cls: "is-deleted", label: "Supprimé" },
+              };
+              const cfg = statusConfig[st] || { cls: "is-inactive", label: st };
+              return (
+                <article className="users-mobile-card" key={item.id}>
+                  <div className="users-mobile-person">
+                    <span className="users-avatar">{getInitials(item.nom_complet, item.email)}</span>
+                    <div>
+                      <strong>{item.nom_complet || "Nom non renseigné"}</strong>
+                      <span>{item.email}</span>
+                    </div>
+                  </div>
+                  <dl className="users-mobile-details">
+                    <div>
+                      <dt>Rôle</dt>
+                      <dd><span className={`users-role-badge role-${roleClass(item.role)}`}>{ROLE_LABELS[item.role] || item.role}</span></dd>
+                    </div>
+                    <div>
+                      <dt>Département</dt>
+                      <dd><span className="users-department-tag">{item.departement_nom || "Aucun"}</span></dd>
+                    </div>
+                    <div>
+                      <dt>Statut</dt>
+                      <dd><span className={`users-status-badge ${cfg.cls}`}><i />{cfg.label}</span></dd>
+                    </div>
+                    <div>
+                      <dt>Dernière connexion</dt>
+                      <dd><span className="users-last-login">{formatDate(item.date_derniere_connexion)}</span></dd>
+                    </div>
+                  </dl>
+                  <details className="users-action-dropdown users-mobile-actions">
+                    <summary aria-label={`Actions pour ${item.email}`}><EllipsisVertical size={18} /><span>Actions</span></summary>
+                    <div className="users-action-menu">
+                      <button onClick={() => regenerateRecoveryCodes(item)}><KeyRound size={15} /> Codes de secours</button>
+                      {canDeactivate(item) && (
+                        <button onClick={() => toggleStatus(item)}><UserX size={15} /> Désactiver</button>
+                      )}
+                      {canReactivate(item) && (
+                        <button onClick={() => toggleStatus(item)}><CheckCircle2 size={15} /> Réactiver</button>
+                      )}
+                      <button className="is-danger" onClick={() => deleteUser(item)}><Trash2 size={15} /> Supprimer</button>
+                    </div>
+                  </details>
+                </article>
+              );
+            })}
           </div>
 
           <footer className="users-pagination">

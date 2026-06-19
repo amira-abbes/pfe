@@ -1,4 +1,4 @@
-import { Maximize2, RefreshCw } from "lucide-react";
+import { Maximize2, RefreshCw, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import Layout from "../components/Layout";
@@ -21,11 +21,16 @@ export default function DashboardServiceSosPage() {
   const [iframeKey, setIframeKey] = useState(() => Date.now());
   const [showIframe, setShowIframe] = useState(true);
   const [toast, setToast] = useState("");
+  const [mobileFullscreen, setMobileFullscreen] = useState(false);
 
   const canDisplayDashboard = isValidPowerBiUrl(POWERBI_SERVICE_SOS_URL);
   const iframeSrc = buildIframeSrc(POWERBI_SERVICE_SOS_URL, iframeKey);
 
   const handleFullscreen = () => {
+    if (window.matchMedia("(max-width: 768px)").matches) {
+      setMobileFullscreen(true);
+      return;
+    }
     if (dashboardRef.current?.requestFullscreen) {
       dashboardRef.current.requestFullscreen();
     }
@@ -54,7 +59,7 @@ export default function DashboardServiceSosPage() {
   }, [location.search]);
 
   return (
-    <Layout noScroll className="app-shell--service-sos">
+    <Layout noScroll className={`app-shell--service-sos ${mobileFullscreen ? "is-powerbi-mobile-fullscreen" : ""}`}>
       <div className="service-sos-dashboard-page">
         <div className="service-sos-toolbar">
           <div className="service-sos-toolbar-title">
@@ -89,6 +94,22 @@ export default function DashboardServiceSosPage() {
           {toast && <div className="service-sos-toast">{toast}</div>}
         </div>
       </div>
+      {mobileFullscreen && canDisplayDashboard && (
+        <div className="powerbi-mobile-fullscreen" role="dialog" aria-modal="true" aria-label="Dashboard Power BI en plein écran">
+          <button className="powerbi-mobile-close" type="button" onClick={() => setMobileFullscreen(false)}>
+            <X size={17} /> Fermer
+          </button>
+          <p className="powerbi-mobile-rotate-note">Pour une meilleure lecture, tournez votre téléphone en mode paysage.</p>
+          {showIframe && (
+            <iframe
+              key={`mobile-${iframeKey}`}
+              title="Dashboard Service SOS Power BI - plein écran mobile"
+              src={iframeSrc}
+              allowFullScreen
+            />
+          )}
+        </div>
+      )}
     </Layout>
   );
 }

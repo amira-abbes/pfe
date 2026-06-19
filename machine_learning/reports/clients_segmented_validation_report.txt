@@ -9,9 +9,9 @@ Doublons msisdn : 0
 
 Répartition risk_tier :
 risk_tier
-low       6318
-medium    2197
-high      1233
+low       5964
+medium    2105
+high      1679
 Name: count, dtype: int64
 
 Répartition cluster_name :
@@ -31,8 +31,8 @@ Name: count, dtype: int64
 
 Score final :
 min    0.015
-mean   0.242
+mean   0.275
 max    0.988
 Name: final_risk_score, dtype: float64
 
-VALIDATION : fichier clients_segmented.csv conforme pour intégration agentic/backend.
+VALIDATION : fichier clients_segmented.csv conforme pour intégration agent décisionnel / backend.
