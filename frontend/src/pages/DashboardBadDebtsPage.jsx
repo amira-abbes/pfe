@@ -1408,7 +1408,7 @@ function ImportHistoryPage({ imports, refreshDashboard }) {
         if (pipelineType === "raw_sos") {
           setUploadMessage("Fichier brut détecté : fusion, segmentation ML et import PostgreSQL exécutés.");
         } else if (pipelineType === "segmented") {
-          setUploadMessage("Fichier segmenté détecté : contrôle qualité et import PostgreSQL exécutés.");
+          setUploadMessage("Résultat ML direct détecté : validation 03 et mise à jour PostgreSQL exécutées.");
         } else {
           setUploadMessage("Import terminé avec succès. Les données Bad Debts ont été mises à jour.");
         }
@@ -1436,7 +1436,7 @@ function ImportHistoryPage({ imports, refreshDashboard }) {
 
   return (
     <div className="bdx-view bad-debts-imports-page">
-      <Panel title="Importer un fichier brut" meta="Nouveau cycle ML Bad Debts">
+      <Panel title="Importer un fichier Bad Debts">
         <form className="bdx-import-form" onSubmit={submitImport}>
           <label className="bdx-file-picker">
             <CloudUpload size={20} />
@@ -1445,7 +1445,7 @@ function ImportHistoryPage({ imports, refreshDashboard }) {
           </label>
           <button className="bdx-button primary" type="submit" disabled={!selectedFile || uploading}>
             {uploading ? <Loader2 className="spin" size={18} /> : <CloudUpload size={18} />}
-            Importer un fichier brut
+            Importer
           </button>
         </form>
         {uploadMessage && <div className="bdx-alert success"><CheckCircle2 size={18} />{uploadMessage}</div>}

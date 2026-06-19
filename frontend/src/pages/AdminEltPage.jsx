@@ -12,7 +12,6 @@
   Loader2,
   PlayCircle,
   Power,
-  Printer,
   RefreshCw,
   Search,
   ShieldAlert,
@@ -758,10 +757,6 @@ export default function AdminEltPage() {
     saveBlob(response.data, "rapport-elt.pdf");
   }
 
-  function printReport() {
-    window.print();
-  }
-
   const pageActions = (
     <div className="actions elt-primary-actions">
       <button
@@ -848,7 +843,6 @@ export default function AdminEltPage() {
           txtReport={txtReport}
           onOpenTechnical={openTechnicalTasks}
           onDownloadPdf={downloadPdf}
-          onPrint={printReport}
         />
       )}
 
@@ -913,7 +907,7 @@ function Info({ label, value }) {
   return <div className="elt-info-tile"><span>{label}</span><strong>{value || "-"}</strong></div>;
 }
 
-function ReportsPanel({ report, txtReport, onOpenTechnical, onDownloadPdf, onPrint }) {
+function ReportsPanel({ report, txtReport, onOpenTechnical, onDownloadPdf }) {
   return (
     <section className="elt-panel elt-report-print elt-reveal elt-reveal--delay-2">
       <div className="elt-section-title">
@@ -932,7 +926,6 @@ function ReportsPanel({ report, txtReport, onOpenTechnical, onDownloadPdf, onPri
       <div className="actions elt-report-buttons">
         <button className="btn btn-secondary" onClick={() => onOpenTechnical()}><Eye size={18} />Voir tableau technique</button>
         <button className="btn btn-secondary" onClick={onDownloadPdf}><FileText size={18} />Télécharger rapport PDF</button>
-        <button className="btn btn-primary" onClick={onPrint}><Printer size={18} />Imprimer</button>
       </div>
       <BusinessReportText text={txtReport} />
     </section>

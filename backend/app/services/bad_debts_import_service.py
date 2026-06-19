@@ -20,8 +20,11 @@ from sqlalchemy.orm import Session
 PROJECT_DIR = Path(__file__).resolve().parents[3]
 ML_DIR = PROJECT_DIR / "machine_learning"
 RUNTIME_IMPORTS_DIR = PROJECT_DIR / "backend" / "runtime_data" / "ml_imports"
+CHECK_DATASETS_SCRIPT = ML_DIR / "scripts" / "00_check_datasets.py"
 MERGE_SCRIPT = ML_DIR / "scripts" / "01_build_merged_dataset.py"
+DATA_QUALITY_SCRIPT = ML_DIR / "scripts" / "02_data_quality_audit.py"
 VALIDATE_SEGMENTED_SCRIPT = ML_DIR / "scripts" / "03_validate_clients_segmented.py"
+RUN_NOTEBOOK_SCRIPT = ML_DIR / "scripts" / "run_notebook.py"
 ML_NOTEBOOK = ML_DIR / "notebooks" / "ml_clustering_baddebts.ipynb"
 POPULATION_FILE = ML_DIR / "data" / "raw" / "Pop ML V PIPE (1).csv"
 MERGED_DATASET = ML_DIR / "data" / "processed" / "merged_dataset_inner.csv"
@@ -234,11 +237,28 @@ class BadDebtsImportService:
 
         if not self._find_column(raw_df, {"MSISDN", "msisdn"}):
             raise BadDebtsImportError("Fichier brut invalide : colonne MSISDN introuvable.")
+        if not CHECK_DATASETS_SCRIPT.exists():
+            raise BadDebtsImportError("Script 00_check_datasets.py introuvable.")
         if not MERGE_SCRIPT.exists():
-            raise BadDebtsImportError("Script de fusion ML introuvable.")
+            raise BadDebtsImportError("Script 01_build_merged_dataset.py introuvable.")
+        if not DATA_QUALITY_SCRIPT.exists():
+            raise BadDebtsImportError("Script 02_data_quality_audit.py introuvable.")
         if not POPULATION_FILE.exists() or POPULATION_FILE.stat().st_size == 0:
             raise BadDebtsImportError(f"Base population historique introuvable : {POPULATION_FILE}")
 
+        pipeline_env = {
+            "BAD_DEBTS_POPULATION_FILE": str(POPULATION_FILE),
+            "BAD_DEBTS_SOS_FILE": str(raw_path),
+            "BAD_DEBTS_OUTPUT_FILE": str(merged_path),
+            "BAD_DEBTS_MERGED_FILE": str(merged_path),
+        }
+        self._run_command(
+            [sys.executable, str(CHECK_DATASETS_SCRIPT)],
+            cwd=ML_DIR,
+            label="verification des fichiers sources 00",
+            timeout_seconds=300,
+            env=pipeline_env,
+        )
         logger.info(
             "Bad Debts import_id=%s launching merge script=%s pop_file=%s sos_file=%s output=%s",
             import_id,
@@ -255,10 +275,7 @@ class BadDebtsImportService:
             cwd=ML_DIR,
             label="fusion du fichier brut SOS",
             timeout_seconds=900,
-            env={
-                "BAD_DEBTS_SOS_FILE": str(raw_path),
-                "BAD_DEBTS_OUTPUT_FILE": str(merged_path),
-            },
+            env=pipeline_env,
         )
         if not merged_path.exists() or merged_path.stat().st_size == 0:
             raise BadDebtsImportError(
@@ -267,6 +284,13 @@ class BadDebtsImportService:
                 f"Output attendu: {merged_path}."
             )
         self._best_effort_copy(merged_path, MERGED_DATASET)
+        self._run_command(
+            [sys.executable, str(DATA_QUALITY_SCRIPT)],
+            cwd=ML_DIR,
+            label="audit qualite dataset fusionne 02",
+            timeout_seconds=600,
+            env=pipeline_env,
+        )
         return merged_path
 
     def run_ml_pipeline(self, import_id: int, merged_path: Path) -> Path:
@@ -277,22 +301,21 @@ class BadDebtsImportService:
             raise BadDebtsImportError("Dataset fusionné introuvable avant lancement ML.")
         if not ML_NOTEBOOK.exists():
             raise BadDebtsImportError("Notebook ML introuvable.")
+        if not RUN_NOTEBOOK_SCRIPT.exists():
+            raise BadDebtsImportError("Script run_notebook.py introuvable.")
         self._ensure_notebook_runtime_available()
         notebook_path = self._prepare_notebook_for_import(import_dir, merged_path)
         command = [
             sys.executable,
-            "-m",
-            "nbconvert",
-            "--to",
-            "notebook",
-            "--execute",
+            str(RUN_NOTEBOOK_SCRIPT),
+            "--input",
             str(notebook_path),
             "--output",
-            EXECUTED_NOTEBOOK_NAME,
-            "--output-dir",
-            str(import_dir),
-            "--ExecutePreprocessor.timeout=2400",
-            "--ExecutePreprocessor.kernel_name=python3",
+            str(executed_notebook_path),
+            "--timeout",
+            "2400",
+            "--kernel",
+            "python3",
         ]
 
         logger.info(
@@ -532,7 +555,7 @@ class BadDebtsImportService:
 
     def _ensure_notebook_runtime_available(self) -> None:
         result = subprocess.run(
-            [sys.executable, "-c", "import jupyter, nbconvert, ipykernel"],
+            [sys.executable, "-c", "import ipykernel"],
             cwd=str(ML_DIR),
             capture_output=True,
             text=True,
@@ -542,10 +565,10 @@ class BadDebtsImportService:
             return
         details = "\n".join(part for part in [(result.stdout or "").strip(), (result.stderr or "").strip()] if part)
         missing_match = re.search(r"No module named ['\"]([^'\"]+)['\"]", details)
-        if missing_match and missing_match.group(1) in {"jupyter", "nbconvert", "ipykernel"}:
+        if missing_match and missing_match.group(1) == "ipykernel":
             raise BadDebtsImportError(
-                "Le notebook ML ne peut pas être exécuté car Jupyter/nbconvert/ipykernel "
-                f"n’est pas installé dans le venv backend. Package manquant: {missing_match.group(1)}. "
+                "Le notebook ML ne peut pas etre execute car ipykernel "
+                f"n'est pas installe dans le venv backend. Package manquant: {missing_match.group(1)}. "
                 f"Details: {details or 'aucune sortie'}"
             )
         missing = f" Package Python manquant: {missing_match.group(1)}." if missing_match else ""
@@ -574,6 +597,9 @@ class BadDebtsImportService:
             for old, new in replacements.items():
                 source = source.replace(old, new)
             cell["source"] = source.splitlines(keepends=True)
+            if cell.get("cell_type") == "code":
+                cell["outputs"] = []
+                cell["execution_count"] = None
         notebook.setdefault("metadata", {})["kernelspec"] = {
             "display_name": "Python 3",
             "language": "python",
@@ -673,7 +699,7 @@ class BadDebtsImportService:
             f"Notebook execute attendu: {executed_notebook_path}",
             f"Dataset merge injecte: {merged_path} (exists={merged_path.exists()}, size={merged_path.stat().st_size if merged_path.exists() else 0})",
             f"Output clients_segmented attendu: {segmented_path}",
-            f"Commande test manuelle: cd {ML_DIR} && {sys.executable} -m nbconvert --to notebook --execute {notebook_path} --output {EXECUTED_NOTEBOOK_NAME} --output-dir {executed_notebook_path.parent} --ExecutePreprocessor.timeout=2400 --ExecutePreprocessor.kernel_name=python3",
+            f"Commande test manuelle: cd {ML_DIR} && {sys.executable} {RUN_NOTEBOOK_SCRIPT} --input {notebook_path} --output {executed_notebook_path} --timeout 2400 --kernel python3",
         ]
         notebook_errors = self._extract_notebook_errors(executed_notebook_path)
         if notebook_errors:
@@ -682,7 +708,7 @@ class BadDebtsImportService:
         elif executed_notebook_path.exists():
             parts.append("Le notebook execute existe, mais aucune sortie de cellule en erreur n'a ete trouvee.")
         else:
-            parts.append("Le notebook execute n'a pas ete genere par nbconvert.")
+            parts.append("Le notebook execute n'a pas ete genere par nbclient.")
 
         stderr = (result.stderr or "").strip()
         stdout = (result.stdout or "").strip()
@@ -912,13 +938,14 @@ class BadDebtsImportService:
         for record in df.to_dict(orient="records"):
             normalized_record: dict[str, Any] = {}
             for key, value in record.items():
+                if isinstance(value, (list, dict)):
+                    normalized_record[key] = json.dumps(value, ensure_ascii=False)
+                    continue
                 normalized_record[key] = self._normalize_record_value(value)
             records.append(normalized_record)
         return records
 
     def _normalize_record_value(self, value: Any) -> Any:
-        if isinstance(value, (list, dict)):
-            return value
         if isinstance(value, pd.Timestamp):
             return value.to_pydatetime()
         if hasattr(value, "item"):

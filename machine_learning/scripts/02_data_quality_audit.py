@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
@@ -22,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 PROCESSED_DIR = BASE_DIR / "data" / "processed"
 REPORTS_DIR = BASE_DIR / "reports"
 
-DATASET_FILE = PROCESSED_DIR / "merged_dataset_inner.csv"
+DATASET_FILE = Path(os.environ.get("BAD_DEBTS_MERGED_FILE", PROCESSED_DIR / "merged_dataset_inner.csv"))
 PDF_REPORT_FILE = REPORTS_DIR / "data_quality_report.pdf"
 FORMATTED_TABLES_FILE = REPORTS_DIR / "data_quality_tables.xlsx"
 

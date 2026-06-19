@@ -1,20 +1,42 @@
 ==========================================================================================
 Validation du fichier clients_segmented.csv
 ==========================================================================================
+
+1. Dimensions
 Lignes  : 9748
 Colonnes: 25
 
-Colonnes obligatoires manquantes : aucune
-Doublons msisdn : 0
+2. Colonnes obligatoires
+Toutes les colonnes obligatoires sont présentes.
 
-Répartition risk_tier :
+3. Doublons et identifiants
+Doublons msisdn : 0
+msisdn vides    : 0
+
+4. Valeurs risk_tier
 risk_tier
 low       5964
 medium    2105
 high      1679
 Name: count, dtype: int64
+Tous les risk_tier sont valides : low / medium / high.
 
-Répartition cluster_name :
+5. Scores de risque
+Score min  : 0.0147659804981626
+Score max  : 0.9879573150650623
+Score mean : 0.2751779376071788
+Scores < 0        : 0
+Scores > 1        : 0
+Scores manquants  : 0
+
+6. Cohérence score / risk_tier
+           count       min      mean       max
+risk_tier                                     
+high        1679  0.207878  0.681678  0.987957
+low         5964  0.014766  0.132249  0.246615
+medium      2105  0.245017  0.355898  0.454979
+
+7. Clusters
 cluster_name
 Standard        6602
 Bon-payeur      2606
@@ -23,16 +45,30 @@ DISCONNECTED      28
 ON-HOLD           15
 Name: count, dtype: int64
 
-Anomalies :
+8. Anomalies
 is_anomaly
 False    9471
 True      277
 Name: count, dtype: int64
 
-Score final :
-min    0.015
-mean   0.275
-max    0.988
-Name: final_risk_score, dtype: float64
+9. top_drivers
+top_drivers manquants : 0
+top_drivers vides     : 0
 
-VALIDATION : fichier clients_segmented.csv conforme pour intégration agent décisionnel / backend.
+10. Aperçu
+        msisdn  ...                                        top_drivers
+0  21696330926  ...  [{"feature": "full_repayer", "value": 0.0, "z_...
+1  21699807992  ...  [{"feature": "reimburse_ratio", "value": 0.4, ...
+2  21699128564  ...  [{"feature": "has_debt", "value": 0.0, "z_scor...
+3  21696139573  ...  [{"feature": "never_repaid", "value": 1.0, "z_...
+4  21696480322  ...  [{"feature": "has_debt", "value": 0.0, "z_scor...
+5  21697035088  ...  [{"feature": "has_debt", "value": 0.0, "z_scor...
+6  21697050056  ...  [{"feature": "has_debt", "value": 0.0, "z_scor...
+7  21697049265  ...  [{"feature": "TOTAL_OUTSTANDING_AMOUNT", "valu...
+8  21697082122  ...  [{"feature": "full_repayer", "value": 0.0, "z_...
+9  21697041343  ...  [{"feature": "debt_to_credit", "value": 9.011,...
+
+[10 rows x 6 columns]
+
+11. Conclusion
+VALIDATION : fichier clients_segmented.csv conforme pour intégration agentic/backend.

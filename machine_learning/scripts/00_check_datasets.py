@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 #pandas sert à manipuler des tableaux de données sous forme de DataFrame.
 from pathlib import Path
@@ -11,8 +12,8 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 RAW_DIR = BASE_DIR / "data" / "raw" 
 
 #Ce bloc définit les deux fichiers sources utilisés dans le Machine Learning.
-pop_file = RAW_DIR / "Pop ML V PIPE (1).csv"
-sos_file = RAW_DIR / "SOS_SOLDE_DATA_ML_10K 1 (1).xlsx"
+pop_file = Path(os.environ.get("BAD_DEBTS_POPULATION_FILE", RAW_DIR / "Pop ML V PIPE (1).csv"))
+sos_file = Path(os.environ.get("BAD_DEBTS_SOS_FILE", RAW_DIR / "SOS_SOLDE_DATA_ML_10K 1 (1).xlsx"))
 
 
 def read_csv_safely(path: Path) -> pd.DataFrame:
